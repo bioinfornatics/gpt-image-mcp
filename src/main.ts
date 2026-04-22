@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';

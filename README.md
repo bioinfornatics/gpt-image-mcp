@@ -25,10 +25,73 @@
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.1 **or** Docker
+- [Bun](https://bun.sh) ≥ 1.1 **or** Node.js ≥ 18 **or** Docker
 - An OpenAI API key **or** Azure OpenAI resource
 
-### 1 — Install & configure
+---
+
+### Option A — Zero-install with `bun x` (recommended)
+
+Run directly from npm without cloning the repository:
+
+```bash
+# stdio transport (Claude Desktop, Goose, Cursor)
+bun x --bun gpt-image-mcp
+
+# HTTP transport (remote/browser clients)
+bun x --bun gpt-image-mcp --http
+```
+
+Pass configuration as environment variables:
+
+```bash
+# OpenAI — stdio
+PROVIDER=openai OPENAI_API_KEY=sk-... \
+  bun x --bun gpt-image-mcp
+
+# OpenAI — HTTP on port 3000
+PROVIDER=openai OPENAI_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 \
+  bun x --bun gpt-image-mcp
+
+# Azure OpenAI — stdio
+PROVIDER=azure \
+  AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com \
+  AZURE_OPENAI_API_KEY=... \
+  AZURE_OPENAI_DEPLOYMENT=my-gpt-image-deployment \
+  bun x --bun gpt-image-mcp
+```
+
+> **`--bun` flag** — forces Bun to run the server instead of Node.js.  
+> Omit it to run with Node.js (`bun x gpt-image-mcp`). Both work.
+
+**Pinning a specific version:**
+
+```bash
+bun x --bun gpt-image-mcp@0.1.0
+```
+
+**With `npx` (Node.js users):**
+
+```bash
+PROVIDER=openai OPENAI_API_KEY=sk-... npx gpt-image-mcp
+```
+
+---
+
+### Option B — Install globally
+
+```bash
+# Install once
+bun add -g gpt-image-mcp         # Bun
+npm  install -g gpt-image-mcp    # npm
+
+# Run anywhere
+PROVIDER=openai OPENAI_API_KEY=sk-... gpt-image-mcp
+```
+
+---
+
+### Option C — Clone & run from source
 
 ```bash
 git clone https://github.com/your-org/gpt-image-mcp
@@ -36,24 +99,14 @@ cd gpt-image-mcp
 bun install
 cp .env.example .env
 # Edit .env — set PROVIDER and your API key (see Configuration below)
+
+bun run start:http    # HTTP transport on :3000
+bun run start:stdio   # stdio transport
 ```
 
-### 2 — Run (HTTP mode)
+---
 
-```bash
-bun run start:http
-# MCP endpoint:  http://localhost:3000/mcp
-# Health:        http://localhost:3000/health/live
-# Metrics:       http://localhost:3000/metrics
-```
-
-### 3 — Run (stdio mode for Claude Desktop / Goose)
-
-```bash
-bun run start:stdio
-```
-
-### 4 — Docker
+### Option D — Docker
 
 ```bash
 docker build -t gpt-image-mcp .
@@ -110,7 +163,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "gpt-image-mcp": {
       "command": "bun",
-      "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
+      "args": ["x", "--bun", "gpt-image-mcp"],
       "env": {
         "PROVIDER": "openai",
         "OPENAI_API_KEY": "sk-...",
@@ -122,7 +175,64 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-> **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+> **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`  
+> If `bun` is not on the system PATH for Claude Desktop, use the full path:  
+> `"command": "/home/youruser/.bun/bin/bun"` (Linux/macOS) or  
+> `"command": "C:\\Users\\you\\.bun\\bin\\bun.exe"` (Windows)
+
+**Pinning a version** (recommended for stability):
+
+```json
+{
+  "mcpServers": {
+    "gpt-image-mcp": {
+      "command": "bun",
+      "args": ["x", "--bun", "gpt-image-mcp@0.1.0"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-...",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
+```
+
+**Using a local clone instead of npm:**
+
+```json
+{
+  "mcpServers": {
+    "gpt-image-mcp": {
+      "command": "bun",
+      "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-...",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
+```
+
+**Using `npx` (no Bun required):**
+
+```json
+{
+  "mcpServers": {
+    "gpt-image-mcp": {
+      "command": "npx",
+      "args": ["-y", "gpt-image-mcp"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-...",
+        "MCP_TRANSPORT": "stdio"
+      }
+    }
+  }
+}
+```
 
 ### Goose
 
@@ -130,16 +240,24 @@ Add to your Goose config (`.config/goose/config.yaml`):
 
 ```yaml
 extensions:
+  # Option A: via bun x (no clone needed)
   - name: gpt-image-mcp
     type: stdio
     cmd: bun
-    args:
-      - run
-      - /absolute/path/to/gpt-image-mcp/src/main.ts
+    args: [x, --bun, gpt-image-mcp]
     env:
       PROVIDER: openai
       OPENAI_API_KEY: sk-...
       MCP_TRANSPORT: stdio
+
+  # Option B: from a local clone
+  # - name: gpt-image-mcp
+  #   type: stdio
+  #   cmd: bun
+  #   args: [run, /absolute/path/to/gpt-image-mcp/src/main.ts]
+  #   env:
+  #     PROVIDER: openai
+  #     OPENAI_API_KEY: sk-...
 ```
 
 ### HTTP / Remote Client

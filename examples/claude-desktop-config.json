@@ -1,26 +1,50 @@
 {
-  "_comment": "Add this block inside the 'mcpServers' object in your Claude Desktop config.",
+  "_comment": "Add the 'mcpServers' block you need to your Claude Desktop config.",
   "_config_location_macos": "~/Library/Application Support/Claude/claude_desktop_config.json",
   "_config_location_windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
+  "_config_location_linux": "~/.config/Claude/claude_desktop_config.json",
 
   "mcpServers": {
-    "gpt-image-mcp-stdio": {
-      "_comment": "Option A: Run as a local Bun subprocess (stdio transport)",
+
+    "gpt-image-mcp": {
+      "_comment": "RECOMMENDED — bun x pulls the package automatically, no clone needed.",
       "command": "bun",
-      "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
+      "args": ["x", "--bun", "gpt-image-mcp"],
       "env": {
         "PROVIDER": "openai",
         "OPENAI_API_KEY": "sk-replace-with-your-key",
         "MCP_TRANSPORT": "stdio",
-        "DEFAULT_MODEL": "gpt-image-1",
         "LOG_LEVEL": "error"
       }
     },
 
-    "gpt-image-mcp-azure-stdio": {
-      "_comment": "Option B: Azure OpenAI via stdio",
+    "gpt-image-mcp-pinned": {
+      "_comment": "Pin a specific version for reproducibility.",
       "command": "bun",
-      "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
+      "args": ["x", "--bun", "gpt-image-mcp@0.1.0"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "MCP_TRANSPORT": "stdio",
+        "LOG_LEVEL": "error"
+      }
+    },
+
+    "gpt-image-mcp-npx": {
+      "_comment": "npx variant — for users without Bun installed.",
+      "command": "npx",
+      "args": ["-y", "gpt-image-mcp"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "MCP_TRANSPORT": "stdio"
+      }
+    },
+
+    "gpt-image-mcp-azure": {
+      "_comment": "Azure OpenAI provider via bun x.",
+      "command": "bun",
+      "args": ["x", "--bun", "gpt-image-mcp"],
       "env": {
         "PROVIDER": "azure",
         "AZURE_OPENAI_ENDPOINT": "https://my-resource.openai.azure.com",
@@ -32,12 +56,24 @@
       }
     },
 
+    "gpt-image-mcp-local": {
+      "_comment": "From a local clone — useful for development / unreleased changes.",
+      "command": "bun",
+      "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
+      "env": {
+        "PROVIDER": "openai",
+        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "MCP_TRANSPORT": "stdio"
+      }
+    },
+
     "gpt-image-mcp-docker-http": {
-      "_comment": "Option C: Connect to a running Docker container (HTTP transport) — requires mcp-remote or a proxy",
-      "_note": "Claude Desktop does not natively support remote HTTP MCP servers. Use mcp-remote: https://github.com/geelen/mcp-remote",
+      "_comment": "Connect to a running Docker container via HTTP — requires mcp-remote proxy.",
+      "_note": "Claude Desktop doesn't support remote HTTP MCP servers natively. Use mcp-remote: https://github.com/geelen/mcp-remote",
       "command": "npx",
       "args": ["mcp-remote", "http://localhost:3000/mcp"],
       "env": {}
     }
+
   }
 }

@@ -1,30 +1,49 @@
 # Goose configuration for gpt-image-mcp
-# Add this to: ~/.config/goose/config.yaml
+# Merge the relevant extension block into: ~/.config/goose/config.yaml
 #
 # Documentation: https://block.github.io/goose/docs/configuration
 
 extensions:
-  # Option A: OpenAI via stdio (recommended for local use)
+
+  # ─── Option A: bun x — no clone needed (RECOMMENDED) ────────────────────
   - name: gpt-image-mcp
     type: stdio
     cmd: bun
     args:
-      - run
-      - /absolute/path/to/gpt-image-mcp/src/main.ts
+      - x
+      - --bun
+      - gpt-image-mcp          # latest published version
     env:
       PROVIDER: openai
       OPENAI_API_KEY: sk-replace-with-your-key
       MCP_TRANSPORT: stdio
-      DEFAULT_MODEL: gpt-image-1
       LOG_LEVEL: error
 
-  # Option B: Azure OpenAI via stdio
+  # ─── Option B: pin a specific version ────────────────────────────────────
+  # - name: gpt-image-mcp
+  #   type: stdio
+  #   cmd: bun
+  #   args: [x, --bun, "gpt-image-mcp@0.1.0"]
+  #   env:
+  #     PROVIDER: openai
+  #     OPENAI_API_KEY: sk-replace-with-your-key
+  #     MCP_TRANSPORT: stdio
+
+  # ─── Option C: npx (no Bun required) ─────────────────────────────────────
+  # - name: gpt-image-mcp
+  #   type: stdio
+  #   cmd: npx
+  #   args: [-y, gpt-image-mcp]
+  #   env:
+  #     PROVIDER: openai
+  #     OPENAI_API_KEY: sk-replace-with-your-key
+  #     MCP_TRANSPORT: stdio
+
+  # ─── Option D: Azure OpenAI ───────────────────────────────────────────────
   # - name: gpt-image-mcp-azure
   #   type: stdio
   #   cmd: bun
-  #   args:
-  #     - run
-  #     - /absolute/path/to/gpt-image-mcp/src/main.ts
+  #   args: [x, --bun, gpt-image-mcp]
   #   env:
   #     PROVIDER: azure
   #     AZURE_OPENAI_ENDPOINT: https://my-resource.openai.azure.com
@@ -32,9 +51,20 @@ extensions:
   #     AZURE_OPENAI_DEPLOYMENT: my-gpt-image-deployment
   #     MCP_TRANSPORT: stdio
 
-  # Option C: Remote HTTP server (if running via Docker)
+  # ─── Option E: local clone (development) ─────────────────────────────────
+  # - name: gpt-image-mcp-dev
+  #   type: stdio
+  #   cmd: bun
+  #   args: [run, /absolute/path/to/gpt-image-mcp/src/main.ts]
+  #   env:
+  #     PROVIDER: openai
+  #     OPENAI_API_KEY: sk-replace-with-your-key
+  #     MCP_TRANSPORT: stdio
+
+  # ─── Option F: HTTP transport (remote server) ─────────────────────────────
   # - name: gpt-image-mcp-remote
   #   type: streamable_http
   #   uri: http://localhost:3000/mcp
-  #   env:
-  #     GOOSE_MCP_AUTHORIZATION: Bearer your-mcp-api-key
+  #   # If MCP_API_KEY is set on the server, add the Authorization header:
+  #   # headers:
+  #   #   Authorization: "Bearer your-mcp-api-key"
