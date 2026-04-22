@@ -125,14 +125,17 @@ The `(server as any)` cast works around TS2589 deep-type instantiation from Zod 
 ```typescript
 async execute(rawParams: unknown, server?: unknown): Promise<ToolResult>
 ```
-`server` is optional — all M4 features (Elicitation, Sampling, Roots) gracefully no-op when `server` is `undefined`. The `register()` callback passes `extra?.server`.
+`server` is optional — all M4 features (Elicitation, Sampling, Roots) gracefully no-op when
+`server` is `undefined`. The `register()` callback passes `extra?.server`.
 
 ### MCP protocol capabilities
-- **Elicitation / Sampling / Roots** are **client** capabilities — the *client* declares them in `initialize`. The server checks `clientCapabilities.X` at runtime before calling them.
+- **Elicitation / Sampling / Roots** are **client** capabilities — the *client* declares them in
+  `initialize`. The server checks `clientCapabilities.X` at runtime before calling them.
 - The server advertises `{ tools: {}, logging: {} }` in its own capabilities.
 
 ### Transport
-- **HTTP** (default): stateless, one `StreamableHTTPServerTransport` per request — horizontally scalable, no session state.
+- **HTTP** (default): stateless, one `StreamableHTTPServerTransport` per request —
+  horizontally scalable, no session state.
 - **stdio**: single persistent connection, for Claude Desktop / Goose / Cursor.
 
 ### Response formats
@@ -153,16 +156,134 @@ interface IImageProvider {
 Injected as `PROVIDER_TOKEN`. Switch provider with `PROVIDER=openai|azure` env var.
 
 ### Error handling
-- All tool `execute()` methods catch and return `{ isError: true, content: [{ type: "text", text: "Error: ..." }] }`
+- All tool `execute()` methods catch and return
+  `{ isError: true, content: [{ type: "text", text: "Error: ..." }] }`
 - API keys are **never** in error messages — `maskSecret()` is called on all error strings
-- Provider `normalizeError()` maps HTTP status codes to user-friendly messages (401 → auth, 403 → access denied / gpt-image-2 limited access, 429 → rate limit, 404 → not found)
+- Provider `normalizeError()` maps HTTP status codes to user-friendly messages
+  (401 → auth, 403 → access denied / gpt-image-2 limited access, 429 → rate limit, 404 → not found)
 
 ### gpt-image-2 (Azure only)
-Requires explicit access approval from Microsoft. A 403 response triggers a clear "request access via Azure portal" error. The `provider_list` tool annotates it as `(limited access)`.
+Requires explicit access approval from Microsoft. A 403 response triggers a clear
+"request access via Azure portal" error. The `provider_list` tool annotates it as `(limited access)`.
 
 ---
 
-## 4 — TDD Workflow
+## 4 — Non-Obvious Gotchas
+
+These are real pitfalls discovered during development that will bite you if you forget them.
+
+### 4.1 HTTP transport requires a specific `Accept` header
+
+Every `POST /mcp` request **must** include:
+```
+Accept: application/json, text/event-stream
+```
+The MCP SDK's `StreamableHTTPServerTransport` returns **HTTP 406** if either MIME type is missing.
+This is enforced by `webStandardStreamableHttp.js` in the SDK. In tests, always use the helper:
+```typescript
+// test/integration/mcp/http-transport.integration.spec.ts
+const MCP_ACCEPT = 'application/json, text/event-stream';
+function mcpPost(srv, body) {
+  return request(srv)
+    .post('/mcp')
+    .set('Accept', MCP_ACCEPT)
+    .set('Content-Type', 'application/json')
+    .send(body);
+}
+```
+Plain `supertest` calls without this header will silently return 406 errors.
+
+### 4.2 MCP SDK version installed is v1.29.0 (not v1.10.x from package.json)
+
+`package.json` pins `^1.10.2`, but bun resolved `1.29.0`. The API changed significantly:
+
+| What we use | Correct name in v1.29 | Notes |
+|-------------|----------------------|-------|
+| `(server as any).request(...)` | `server.elicitInput(params)` | Elicitation |
+| `(server as any).request(...)` | `server.createMessage(params)` | Sampling |
+| `(server as any).request(...)` | `server.listRoots(params)` | Roots |
+
+The feature services currently use the low-level `server.request()` method with raw JSON-RPC
+method strings. This works but bypasses the SDK's built-in client-capability checks. If the SDK
+changes its internal wire format these calls will break silently. Prefer the named methods.
+
+### 4.3 `extra.server` does not exist — `extra` is `RequestHandlerExtra`
+
+In tool handler callbacks, `extra` is typed as `RequestHandlerExtra` which contains:
+`{ signal, sessionId, requestInfo, authInfo }` — **no `.server` property**.
+
+The `image-generate.tool.ts` currently reads `extra?.server` in the handler:
+```typescript
+async (params: unknown, extra?: Record<string, unknown>) => {
+  const mcpServer = extra?.server as AnyServer | undefined;  // ← always undefined
+  return self.execute(params, mcpServer);
+}
+```
+This means Elicitation, Sampling, and Roots are **never triggered** from within a tool call
+via this path. To actually invoke them, pass the `McpServer` instance captured in `register()`
+via closure instead:
+```typescript
+register(server: McpServer) {
+  const self = this;
+  (server as any).registerTool('image_generate', meta,
+    async (params: unknown) => self.execute(params, server)  // ← close over server
+  );
+}
+```
+
+### 4.4 Elicitation action is `"accept"`, not `"submit"`
+
+The MCP spec (and SDK v1.29) defines elicitation result actions as:
+```typescript
+action: 'accept' | 'decline' | 'cancel'
+```
+Early drafts used `"submit"`. The old test fixtures in `tests/mcp-features.test.ts` (now removed)
+used `"submit"`. Any new tests or mocks must use `"accept"`.
+
+### 4.5 `"type": "module"` conflicts with CommonJS dist
+
+`tsconfig.json` compiles to `module: "CommonJS"`. Adding `"type": "module"` to `package.json`
+breaks `node dist/main.js` with `ReferenceError: exports is not defined`. It was removed.
+Do **not** add it back. Use `.mjs` extensions explicitly if ESM output is ever needed.
+
+### 4.6 `SECRET_BACKEND` is reserved by libsecret on Linux
+
+The env var `SECRET_BACKEND` is used by `libsecret` (GNOME keyring backend selector).
+Setting it to anything other than a valid libsecret value will crash or hang the secret service.
+This project uses `MCP_SECRET_BACKEND` instead.
+
+### 4.7 `(server as any).registerTool` — why the cast
+
+`McpServer.registerTool()` is typed with deep Zod generics. TypeScript error TS2589
+("Type instantiation is excessively deep") is triggered when NestJS decorators meet the
+Zod inference. The `(server as any)` cast is the correct, intentional workaround.
+Do not attempt to type it — the cast is load-bearing.
+
+### 4.8 keytar is an `optionalDependency`
+
+`keytar` requires native build tools (`libsecret-dev` on Linux, Xcode on macOS). It will
+silently fail to install on Alpine-based Docker images and minimal CI runners. The server
+always starts without it — `resolveKeytarSecrets()` catches import errors and falls back
+to `_FILE` resolution. Never move keytar to `dependencies`.
+
+### 4.9 Protocol version in integration tests
+
+The SDK supports `['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05', '2024-10-07']`.
+Integration tests use `protocolVersion: '2025-11-05'` — **this is not a real version** (note
+day `05` vs month `06` or `03`). The SDK accepts it via negotiation fallback. Use a real version
+string (`'2025-03-26'`) in new tests to avoid confusion.
+
+### 4.10 Bun test runner uses Jest-compatible API but is not Jest
+
+`bun test` supports `jest.fn()`, `jest.mock()`, `jest.spyOn()`, but:
+- `jest.mock()` hoisting works differently — declare mocks **before** the `import` of the
+  module under test, or use `mock.module()` from `bun:test`
+- `mock.module()` (Bun's own API) is more reliable for module-level mocks than `jest.mock()`
+- `jest.useFakeTimers()` is **not** supported — avoid timer-dependent tests
+
+---
+
+## 5 — TDD Workflow
 
 This project follows **Red → Green → Refactor** strictly.
 
@@ -193,7 +314,7 @@ feat(scope): short description
 
 ---
 
-## 5 — Environment Variables
+## 6 — Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -223,7 +344,7 @@ MCP_TRANSPORT=http · PORT=3001 · LOG_LEVEL=error
 
 ---
 
-## 6 — Docs & References
+## 7 — Docs & References
 
 | File | Contents |
 |------|----------|
