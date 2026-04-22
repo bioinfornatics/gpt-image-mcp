@@ -1,0 +1,80 @@
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { PROVIDER_TOKEN } from '../../providers/provider.interface';
+import type { IImageProvider } from '../../providers/provider.interface';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfig } from '../../config/app.config';
+
+@Injectable()
+export class ProviderListTool {
+  private readonly logger = new Logger(ProviderListTool.name);
+
+  constructor(
+    @Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider,
+    private readonly configService: ConfigService,
+  ) {}
+
+  register(server: McpServer) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (server as any).registerTool(
+      'provider_list',
+      {
+        title: 'List Providers',
+        description: `List all configured image generation providers and their status.
+
+Returns: List of providers with name, configuration status, and available models.
+Use provider_validate to test connectivity before generating images.`,
+        inputSchema: z.object({}),
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      async () => this.execute(),
+    );
+  }
+
+  async execute() {
+    const defaultModel = this.configService.get<AppConfig['defaults']>('defaults')!.model;
+    const providerName = this.provider.name;
+
+    const modelsByProvider: Record<string, string[]> = {
+      openai: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini', 'dall-e-3', 'dall-e-2'],
+      azure: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'dall-e-3'],
+    };
+
+    const output = {
+      configured_provider: providerName,
+      default_model: defaultModel,
+      providers: [
+        {
+          name: providerName,
+          configured: true,
+          available_models: modelsByProvider[providerName] ?? [],
+          status: 'configured',
+        },
+      ],
+    };
+
+    const text = [
+      `# Configured Providers`,
+      ``,
+      `**Active Provider:** ${providerName}`,
+      `**Default Model:** ${defaultModel}`,
+      ``,
+      `## ${providerName}`,
+      `- Status: configured`,
+      `- Available models: ${(modelsByProvider[providerName] ?? []).join(', ')}`,
+      ``,
+      `Run \`provider_validate\` to test connectivity.`,
+    ].join('\n');
+
+    return {
+      content: [{ type: 'text' as const, text }],
+      structuredContent: output,
+    };
+  }
+}
