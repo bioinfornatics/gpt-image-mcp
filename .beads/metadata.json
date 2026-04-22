@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "gpt_image_mcp",
+  "project_id": "27f65bc9-b795-4016-8ac6-9331dcc9e889"
+}
