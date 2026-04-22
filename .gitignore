@@ -1,21 +1,39 @@
-# Dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
-bun.lockb
 
-# Build
+# ─── Build output ─────────────────────────────────────────────────────────────
 dist/
 *.tsbuildinfo
 
-# Environment
+# ─── npm pack artefact ────────────────────────────────────────────────────────
+*.tgz
+
+# ─── Environment & secrets ────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
+# Do NOT ignore .env.example — it must be committed as a template
 
-# Coverage
+# ─── Test & coverage ──────────────────────────────────────────────────────────
 coverage/
 .nyc_output/
 
-# IDE
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-debug.log*
+
+# ─── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# ─── IDE & editor ─────────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.suo
@@ -23,16 +41,26 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
 
-# OS
-.DS_Store
-Thumbs.db
+# ─── Beads issue tracker (runtime state — NOT the issue database) ─────────────
+# Keep: .beads/issues.jsonl  (issue database — committed)
+# Keep: .beads/config.json   (project config — committed)
+# Keep: .beads/README.md     (documentation — committed)
+.beads/export-state.json
+.beads/interactions.jsonl
+.beads/last-touched
+.beads/.local_version
+.beads/embeddeddolt/
 
-# Logs
-logs/
-*.log
-npm-debug.log*
+# ─── Docker ───────────────────────────────────────────────────────────────────
+# .dockerignore is committed — do not ignore it
 
-# Test artifacts
-test-results/
-mutation-report/
+# ─── Misc ────────────────────────────────────────────────────────────────────
+*.pid
+*.seed
+*.pid.lock
+.cache/
+.temp/
+tmp/
