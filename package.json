@@ -25,7 +25,12 @@
     "type-check": "node --max-old-space-size=8192 node_modules/.bin/tsc -p tsconfig.build.json --noEmit",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
     "secret:store": "bun run src/cli/store-secret.ts",
-    "secret:delete": "bun run src/cli/store-secret.ts"
+    "secret:delete": "bun run src/cli/store-secret.ts",
+    "prepublishOnly": "bun test && bun run build",
+    "publish:dry": "npm pack --dry-run",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",

@@ -57,6 +57,11 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Verify bin entrypoint is executable
+        run: |
+          test -x dist/main.js && echo "dist/main.js is executable ✅" || (echo "dist/main.js is NOT executable ❌" && exit 1)
+          head -1 dist/main.js | grep -q "^#!" && echo "shebang present ✅" || (echo "shebang missing ❌" && exit 1)
+
       - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
@@ -139,7 +144,6 @@ jobs:
             -e OPENAI_API_KEY=sk-fake-ci-key \
             -p 3002:3000 \
             gpt-image-mcp:ci
-          # Wait for startup
           for i in $(seq 1 12); do
             if curl -sf http://localhost:3002/health/live; then
               echo "Container healthy after ${i}×5s"
@@ -179,11 +183,80 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Release Notes ─────────────────────────────────────────────────────────
-  release:
-    name: Create Release
+  # ─── npm Publish ──────────────────────────────────────────────────────────
+  # Triggered only on semver tags (v1.2.3).
+  # Requires secret: NPM_TOKEN (Automation token from npmjs.com → Access Tokens).
+  # The package is published as public under the name in package.json.
+  #
+  # One-time setup:
+  #   1. npm login  (or create account at npmjs.com)
+  #   2. npm token create --type=automation  → copy the token
+  #   3. GitHub repo → Settings → Secrets → Actions → New secret
+  #      Name: NPM_TOKEN  Value: <paste token>
+  #
+  # To publish: git tag v0.1.0 && git push origin v0.1.0
+  # ────────────────────────────────────────────────────────────────────────────
+  publish-npm:
+    name: Publish to npm
     runs-on: ubuntu-latest
-    needs: docker
+    needs: [quality, docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
+      id-token: write   # Required for npm provenance attestation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.1.38'
+
+      - name: Install dependencies (production only)
+        run: bun install --frozen-lockfile --production
+
+      - name: Build
+        run: bun run build
+
+      - name: Setup Node.js for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify package version matches tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "❌ Tag v$TAG does not match package.json version $PKG_VERSION"
+            echo "   Update package.json version before tagging."
+            exit 1
+          fi
+          echo "✅ Tag v$TAG matches package.json version"
+
+      - name: Check package contents (dry run)
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Confirm published version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Published: https://www.npmjs.com/package/gpt-image-mcp/v/$VERSION"
+          echo "Users can now run: npx -y gpt-image-mcp@$VERSION"
+
+  # ─── GitHub Release Notes ──────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: publish-npm
     if: startsWith(github.ref, 'refs/tags/v')
 
     permissions:
@@ -200,11 +273,32 @@ jobs:
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
+            const version = tag.replace(/^v/, '');
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
               name: `Release ${tag}`,
+              body: [
+                `## Install`,
+                ``,
+                `\`\`\`bash`,
+                `# Zero-install (Claude Desktop / Goose):`,
+                `npx -y gpt-image-mcp@${version}`,
+                `bun x --bun gpt-image-mcp@${version}`,
+                ``,
+                `# Global install:`,
+                `npm install -g gpt-image-mcp@${version}`,
+                `\`\`\``,
+                ``,
+                `## Docker`,
+                `\`\`\`bash`,
+                `docker pull ghcr.io/\${{ github.repository }}:${version}`,
+                `\`\`\``,
+                ``,
+                `---`,
+                ``,
+              ].join('\n'),
               generate_release_notes: true,
               draft: false,
               prerelease: tag.includes('-'),
