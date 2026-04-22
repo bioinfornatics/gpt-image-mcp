@@ -5,58 +5,7 @@ Stack: **Bun ≥ 1.1 · NestJS 10 · TypeScript strict · MCP SDK v1.x**
 
 ---
 
-## 1 — Issue Tracking (Beads)
-
-This project uses **bd** (beads) for all task tracking.
-
-```bash
-bd prime                    # Full workflow context + session protocol
-bd ready                    # Find available work (no blockers)
-bd show <id>                # View issue details
-bd update <id> --claim      # Claim work atomically
-bd close <id>               # Mark complete
-bd dolt push                # Push beads data to remote
-```
-
-**Rules — no exceptions:**
-- Use `bd` for ALL task tracking — never TodoWrite, TaskCreate, or markdown TODO lists
-- Use `bd remember` for persistent notes — never MEMORY.md files
-- Run `bd prime` at the start of every session
-
----
-
-## 2 — Session Completion Protocol
-
-**Work is NOT complete until `git push` succeeds.**
-
-```bash
-# 1. File issues for anything unfinished
-bd create --type=task --title="..."
-
-# 2. Quality gates (if any code changed)
-bun test            # must be 0 failures
-bun run type-check  # must be 0 errors
-bun run lint        # must be 0 errors
-
-# 3. Update issue status
-bd close <id>       # for completed work
-
-# 4. Push everything — MANDATORY
-git add -A && git commit -m "..."
-git pull --rebase
-bd dolt push
-git push
-git status          # MUST show "up to date with origin"
-```
-
-**Critical rules:**
-- NEVER stop before pushing — that leaves work stranded locally
-- NEVER say "ready to push when you are" — YOU must push
-- If `git push` fails, resolve and retry until it succeeds
-
----
-
-## 3 — Development Commands
+## 1 — Development Commands
 
 ```bash
 # Run (pick one)
@@ -68,18 +17,17 @@ bun run start:dev           # HTTP, auto-restart on file change
 bun test                    # all tests + coverage report
 bun test --watch            # watch mode
 bun test <path>             # single file
-bun test --coverage         # explicit coverage
 
 # Quality
 bun run lint                # ESLint
 bun run lint:fix            # ESLint --fix
-bun run type-check          # tsc --noEmit (no output files)
+bun run type-check          # tsc --noEmit
 bun run format              # Prettier
 
 # Build (produces dist/)
 bun run build               # tsc -p tsconfig.build.json + chmod +x dist/main.js
 
-# Keychain (keytar optional backend)
+# Keychain (keytar — optional backend)
 bun run secret:store OPENAI_API_KEY     # store in OS keychain
 bun run secret:store MCP_API_KEY
 
@@ -98,7 +46,7 @@ bun test && bun run type-check && bun run lint
 
 ---
 
-## 4 — Project Architecture
+## 2 — Project Architecture
 
 ```
 src/
@@ -158,7 +106,7 @@ test/
 
 ---
 
-## 5 — Key Design Decisions
+## 3 — Key Design Decisions
 
 ### Secret resolution (startup order)
 ```
@@ -214,7 +162,7 @@ Requires explicit access approval from Microsoft. A 403 response triggers a clea
 
 ---
 
-## 6 — TDD Workflow
+## 4 — TDD Workflow
 
 This project follows **Red → Green → Refactor** strictly.
 
@@ -245,7 +193,7 @@ feat(scope): short description
 
 ---
 
-## 7 — Environment Variables
+## 5 — Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -275,28 +223,7 @@ MCP_TRANSPORT=http · PORT=3001 · LOG_LEVEL=error
 
 ---
 
-## 8 — Non-Interactive Shell Commands
-
-Shell commands like `cp`, `mv`, `rm` may be aliased to interactive mode on some systems — the agent will hang indefinitely waiting for input.
-
-**Always use:**
-```bash
-cp -f  source dest          # NOT: cp source dest
-mv -f  source dest          # NOT: mv source dest
-rm -f  file                 # NOT: rm file
-rm -rf directory            # NOT: rm -r directory
-cp -rf source dest          # NOT: cp -r source dest
-```
-
-Other commands that may prompt:
-- `scp` → use `-o BatchMode=yes`
-- `ssh` → use `-o BatchMode=yes`
-- `apt-get` → use `-y`
-- `brew` → prefix `HOMEBREW_NO_AUTO_UPDATE=1`
-
----
-
-## 9 — Docs & References
+## 6 — Docs & References
 
 | File | Contents |
 |------|----------|
