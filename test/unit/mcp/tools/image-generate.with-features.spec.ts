@@ -18,6 +18,8 @@ const MOCK_RESULT: ImageResult = {
   created: 1_700_000_000,
 };
 
+const mockImageResult = MOCK_RESULT;
+
 function makeMockServer(overrides: Record<string, jest.Mock> = {}): any {
   return {
     request: jest.fn(),
@@ -68,6 +70,40 @@ describe('ImageGenerateTool — with M4 features', () => {
     }).compile();
 
     tool = module.get(ImageGenerateTool);
+  });
+
+  // ── register() closure ───────────────────────────────────────────────────
+
+  describe('register() — server closure', () => {
+    it('should pass the McpServer instance to execute() via closure, not via extra.server', async () => {
+      mockProvider.generate.mockResolvedValue([mockImageResult]);
+      mockSampling.enhancePrompt.mockResolvedValue('enhanced prompt');
+
+      let capturedParams: unknown;
+      let capturedServer: unknown;
+
+      // Mock the tool's execute method to capture what it receives
+      const executeSpy = jest.spyOn(tool, 'execute').mockImplementation(async (p, s) => {
+        capturedParams = p;
+        capturedServer = s;
+        return { content: [{ type: 'text' as const, text: '' }] };
+      });
+
+      // Simulate register() and call the registered handler
+      const mockMcpServer = {
+        registerTool: jest.fn((_name: string, _meta: unknown, handler: (p: unknown) => unknown) => {
+          // Call handler with NO extra.server (as the real SDK does)
+          return handler({ prompt: 'test' });
+        }),
+      };
+
+      tool.register(mockMcpServer as any);
+
+      // The server passed to execute should be mockMcpServer (from closure), not undefined
+      expect(capturedServer).toBe(mockMcpServer);
+      expect(capturedParams).toEqual({ prompt: 'test' });
+      executeSpy.mockRestore();
+    });
   });
 
   // ── Sampling ─────────────────────────────────────────────────────────────
@@ -218,6 +254,25 @@ describe('ImageGenerateTool — with M4 features', () => {
       expect(result.isError).toBeFalsy();
       const text: string = result.content[0].text;
       expect(text).not.toContain('Saved to');
+    });
+  });
+
+  // ── H4: output_format in data URI ────────────────────────────────────────
+
+  describe('H4: output_format in data URI', () => {
+    it('should use png in data URI when output_format not specified', async () => {
+      const result = await tool.execute({ prompt: 'a cat' });
+      expect(result.content[0].text).toContain('data:image/png;base64,');
+    });
+
+    it('should use webp in data URI when output_format=webp', async () => {
+      const result = await tool.execute({ prompt: 'a cat', output_format: 'webp' });
+      expect(result.content[0].text).toContain('data:image/webp;base64,');
+    });
+
+    it('should use jpeg in data URI when output_format=jpeg', async () => {
+      const result = await tool.execute({ prompt: 'a cat', output_format: 'jpeg' });
+      expect(result.content[0].text).toContain('data:image/jpeg;base64,');
     });
   });
 

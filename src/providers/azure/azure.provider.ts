@@ -42,6 +42,7 @@ export class AzureOpenAIProvider implements IImageProvider {
         n: params.n,
         size: params.size as Parameters<AzureOpenAI['images']['generate']>[0]['size'],
         quality: params.quality as Parameters<AzureOpenAI['images']['generate']>[0]['quality'],
+        response_format: 'b64_json' as const,
       });
 
       return (response.data ?? []).map((img) => ({
@@ -71,6 +72,7 @@ export class AzureOpenAIProvider implements IImageProvider {
         model: this.deployment,
         n: params.n,
         size: params.size as Parameters<AzureOpenAI['images']['edit']>[0]['size'],
+        response_format: 'b64_json' as const,
       });
 
       return (response.data ?? []).map((img) => ({

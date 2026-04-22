@@ -20,6 +20,8 @@ async function bootstrap() {
     bufferLogs: false,
   });
 
+  app.set('trust proxy', 1); // Trust first proxy — required for correct IP in rate limiting
+
   // Parse JSON bodies for MCP requests
   app.use(express.json({ limit: '50mb' }));
 

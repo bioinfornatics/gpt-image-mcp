@@ -15,14 +15,22 @@ const VALID_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+
 describe('ImageEditTool', () => {
   let tool: ImageEditTool;
   let mockProvider: jest.Mocked<Pick<IImageProvider, 'edit' | 'name'>>;
+  let mockRoots: jest.Mocked<RootsService>;
+
+  const mockServer = { request: jest.fn() };
 
   beforeEach(async () => {
     mockProvider = { name: 'openai', edit: jest.fn() };
+    mockRoots = {
+      saveImageToWorkspace: jest.fn().mockResolvedValue(null),
+      getRoots: jest.fn().mockResolvedValue([]),
+    } as unknown as jest.Mocked<RootsService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ImageEditTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
-        { provide: RootsService, useValue: { saveImageToWorkspace: jest.fn().mockResolvedValue(null), getRoots: jest.fn().mockResolvedValue([]) } },
+        { provide: RootsService, useValue: mockRoots },
       ],
     }).compile();
     tool = module.get(ImageEditTool);
@@ -75,6 +83,21 @@ describe('ImageEditTool', () => {
       await tool.execute({ image: VALID_B64, prompt: 'add a hat', model: 'dall-e-2' });
       expect(mockProvider.edit).toHaveBeenCalledWith(expect.objectContaining({ model: 'dall-e-2' }));
     });
+
+    it('should use correct MIME type for output_format=jpeg in markdown', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'jpeg' });
+      expect(result.content[0].text).toContain('data:image/jpeg;base64,');
+    });
+
+    it('should use correct MIME type for output_format=webp in markdown', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'webp' });
+      expect(result.content[0].text).toContain('data:image/webp;base64,');
+    });
+
+    it('should default to png MIME type when output_format not set', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
+      expect(result.content[0].text).toContain('data:image/png;base64,');
+    });
   });
 
   describe('Error Handling', () => {
@@ -83,6 +106,78 @@ describe('ImageEditTool', () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('API error');
+    });
+  });
+
+  describe('save_to_workspace (H3)', () => {
+    beforeEach(() => mockProvider.edit.mockResolvedValue([{ b64_json: 'ZWRpdA==', model: 'gpt-image-1', created: 0 }]));
+
+    it('should call roots.saveImageToWorkspace when save_to_workspace=true and server provided', async () => {
+      mockRoots.saveImageToWorkspace.mockResolvedValue('/workspace/generated/img.png');
+
+      const result = await tool.execute(
+        { image: VALID_B64, prompt: 'test', save_to_workspace: true },
+        mockServer,
+      );
+
+      expect(mockRoots.saveImageToWorkspace).toHaveBeenCalledTimes(1);
+      expect(result.content[0].text).toContain('Saved to');
+    });
+
+    it('should include saved path in markdown output', async () => {
+      const savedPath = '/workspace/generated/img.png';
+      mockRoots.saveImageToWorkspace.mockResolvedValue(savedPath);
+
+      const result = await tool.execute(
+        { image: VALID_B64, prompt: 'test', save_to_workspace: true },
+        mockServer,
+      );
+
+      expect(result.content[0].text).toContain(savedPath);
+    });
+
+    it('should NOT call roots.saveImageToWorkspace when server not provided', async () => {
+      await tool.execute({ image: VALID_B64, prompt: 'test', save_to_workspace: true });
+      expect(mockRoots.saveImageToWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('should NOT call roots.saveImageToWorkspace when save_to_workspace=false', async () => {
+      await tool.execute({ image: VALID_B64, prompt: 'test', save_to_workspace: false }, mockServer);
+      expect(mockRoots.saveImageToWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('should not include Saved to in output when save returns null', async () => {
+      mockRoots.saveImageToWorkspace.mockResolvedValue(null);
+
+      const result = await tool.execute(
+        { image: VALID_B64, prompt: 'test', save_to_workspace: true },
+        mockServer,
+      );
+
+      expect(result.content[0].text).not.toContain('Saved to');
+    });
+  });
+
+  describe('register() — server closure', () => {
+    it('should pass the McpServer instance to execute() via closure', async () => {
+      mockProvider.edit.mockResolvedValue([mockResult]);
+
+      let capturedServer: unknown;
+      const executeSpy = jest.spyOn(tool, 'execute').mockImplementation(async (_p, s) => {
+        capturedServer = s;
+        return { content: [{ type: 'text' as const, text: '' }] };
+      });
+
+      const mockMcpServer = {
+        registerTool: jest.fn((_name: string, _meta: unknown, handler: (p: unknown) => unknown) => {
+          return handler({ image: VALID_B64, prompt: 'test' });
+        }),
+      };
+
+      tool.register(mockMcpServer as any);
+
+      expect(capturedServer).toBe(mockMcpServer);
+      executeSpy.mockRestore();
     });
   });
 });

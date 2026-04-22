@@ -9,6 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import type { AppConfig } from '../config/app.config';
 
+// NOTE: In production behind a load balancer, ensure Express trust proxy is
+// configured (app.set('trust proxy', 1) in main.ts) so request.ip reflects
+// the real client IP from X-Forwarded-For, not the proxy's IP.
+
 interface RateLimitEntry {
   count: number;
   windowStart: number;
@@ -28,6 +32,13 @@ export class RateLimitGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const clientKey = request.ip ?? 'unknown';
     const now = Date.now();
+
+    // Evict expired entries to prevent unbounded memory growth
+    for (const [key, entry] of this.store.entries()) {
+      if (now - entry.windowStart > this.windowMs) {
+        this.store.delete(key);
+      }
+    }
 
     const entry = this.store.get(clientKey);
 

@@ -64,4 +64,44 @@ describe('RateLimitGuard', () => {
       expect(response.error.message).toMatch(/rate limit/i);
     }
   });
+
+  it('should evict expired entries on next request', () => {
+    const guard = makeGuard(2);
+    const store = (guard as any).store as Map<string, { count: number; windowStart: number }>;
+    const ctx = makeContext('10.0.3.1');
+
+    // Fill up the limit
+    guard.canActivate(ctx); // 1
+    guard.canActivate(ctx); // 2
+    expect(() => guard.canActivate(ctx)).toThrow(HttpException); // 3rd → blocked
+
+    // Manually expire the entry by backdating windowStart
+    const entry = store.get('10.0.3.1')!;
+    entry.windowStart = Date.now() - 61_000; // 61s ago — expired
+
+    // A new request from a different IP should trigger eviction of the expired entry
+    const ctx2 = makeContext('10.0.3.2');
+    guard.canActivate(ctx2); // triggers eviction loop
+
+    // Expired entry should have been deleted
+    expect(store.has('10.0.3.1')).toBe(false);
+  });
+
+  it('should reset count after window expires (new request from same IP)', () => {
+    const guard = makeGuard(2);
+    const store = (guard as any).store as Map<string, { count: number; windowStart: number }>;
+    const ctx = makeContext('10.0.4.1');
+
+    // Fill up the limit
+    guard.canActivate(ctx); // 1
+    guard.canActivate(ctx); // 2
+    expect(() => guard.canActivate(ctx)).toThrow(HttpException); // blocked
+
+    // Expire the entry
+    const entry = store.get('10.0.4.1')!;
+    entry.windowStart = Date.now() - 61_000;
+
+    // Same IP — new window opens
+    expect(guard.canActivate(ctx)).toBe(true);
+  });
 });

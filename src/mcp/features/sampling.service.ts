@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { AppConfig } from '../../config/app.config';
+import { sanitisePrompt } from '../../security/sanitise';
 
 @Injectable()
 export class SamplingService {
@@ -23,37 +24,38 @@ export class SamplingService {
     }
 
     try {
-      const result = await (server as any).request(
-        {
-          method: 'sampling/createMessage',
-          params: {
-            messages: [
-              {
-                role: 'user',
-                content: {
-                  type: 'text',
-                  text: [
-                    `You are an expert at writing image generation prompts for ${model}.`,
-                    `Enhance the following prompt to be more detailed, specific, and likely to produce`,
-                    `a high-quality image. Return ONLY the enhanced prompt text, nothing else.`,
-                    ``,
-                    `Original prompt: "${originalPrompt}"`,
-                  ].join('\n'),
-                },
-              },
-            ],
-            maxTokens: 300,
-            systemPrompt:
-              'You enhance image generation prompts. Return only the enhanced prompt, no explanation.',
+      // SDK v1.29: server.createMessage() — includes client capability pre-check
+      const result = await (server as any).createMessage({
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: [
+                `You are an expert at writing image generation prompts for ${model}.`,
+                `Enhance the following prompt to be more detailed, specific, and likely to produce`,
+                `a high-quality image. Return ONLY the enhanced prompt text, nothing else.`,
+                ``,
+                `Original prompt: "${originalPrompt}"`,
+              ].join('\n'),
+            },
           },
-        },
-        {} as any,
-      );
+        ],
+        maxTokens: 300,
+        systemPrompt:
+          'You enhance image generation prompts. Return only the enhanced prompt, no explanation.',
+      });
 
       if (result?.content?.type === 'text' && result.content.text) {
         const enhanced = String(result.content.text).trim();
         this.logger.debug(`Prompt enhanced: ${enhanced.substring(0, 80)}...`);
-        return enhanced;
+        // Re-sanitise: LLM output is untrusted — strip null bytes, enforce length
+        try {
+          return sanitisePrompt(enhanced, 32_000);
+        } catch {
+          this.logger.warn('Sampling response exceeded max length, falling back to original prompt');
+          return originalPrompt;
+        }
       }
       return originalPrompt;
     } catch (err) {

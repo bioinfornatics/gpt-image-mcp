@@ -48,4 +48,23 @@ describe('AuthGuard', () => {
     const ctx = makeContext({ authorization: 'Basic my-secret' });
     expect(() => guard.canActivate(ctx)).toThrow(UnauthorizedException);
   });
+
+  it('should reject a token that is a prefix of the correct token (different lengths)', () => {
+    const guard = makeGuard('my-secret-long');
+    const ctx = makeContext({ authorization: 'Bearer my-secret' });
+    expect(() => guard.canActivate(ctx)).toThrow(UnauthorizedException);
+  });
+
+  it('should reject a token that has the correct token as a prefix (different lengths)', () => {
+    const guard = makeGuard('my-secret');
+    const ctx = makeContext({ authorization: 'Bearer my-secret-extra' });
+    expect(() => guard.canActivate(ctx)).toThrow(UnauthorizedException);
+  });
+
+  it('should use constant-time comparison (timingSafeEqual) — same-length wrong token rejected', () => {
+    // Same length as 'my-secret' (9 chars), different value
+    const guard = makeGuard('my-secret');
+    const ctx = makeContext({ authorization: 'Bearer xx-secret' });
+    expect(() => guard.canActivate(ctx)).toThrow(UnauthorizedException);
+  });
 });

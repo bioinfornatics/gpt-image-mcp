@@ -11,21 +11,39 @@ describe('RootsService', () => {
   });
 
   describe('getRoots()', () => {
-    it('should return empty array when server.request throws', async () => {
-      const mockServer = { request: jest.fn().mockRejectedValue(new Error('no roots cap')) };
+    it('should return empty array when server.listRoots throws', async () => {
+      const mockServer = { listRoots: jest.fn().mockRejectedValue(new Error('no roots cap')) };
       const roots = await service.getRoots(mockServer as any);
       expect(roots).toEqual([]);
     });
 
     it('should return roots from server response', async () => {
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        listRoots: jest.fn().mockResolvedValue({
           roots: [{ uri: 'file:///home/user/project', name: 'my-project' }],
         }),
       };
       const roots = await service.getRoots(mockServer as any);
       expect(roots).toHaveLength(1);
       expect(roots[0].uri).toBe('file:///home/user/project');
+    });
+
+    it('should call server.listRoots (not server.request)', async () => {
+      const mockServer = {
+        listRoots: jest.fn().mockResolvedValue({ roots: [] }),
+        request: jest.fn(),
+      };
+      await service.getRoots(mockServer as any);
+      expect(mockServer.listRoots).toHaveBeenCalledTimes(1);
+      expect(mockServer.request).not.toHaveBeenCalled();
+    });
+
+    it('should return empty array when roots list is empty', async () => {
+      const mockServer = {
+        listRoots: jest.fn().mockResolvedValue({ roots: [] }),
+      };
+      const roots = await service.getRoots(mockServer as any);
+      expect(roots).toEqual([]);
     });
   });
 
@@ -41,14 +59,14 @@ describe('RootsService', () => {
     });
 
     it('should return null when no roots are available', async () => {
-      const mockServer = { request: jest.fn().mockRejectedValue(new Error('no cap')) };
+      const mockServer = { listRoots: jest.fn().mockRejectedValue(new Error('no cap')) };
       const result = await service.saveImageToWorkspace(mockServer as any, 'ZmFrZQ==');
       expect(result).toBeNull();
     });
 
     it('should save image file and return the path', async () => {
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        listRoots: jest.fn().mockResolvedValue({
           roots: [{ uri: `file://${tmpDir}`, name: 'test' }],
         }),
       };
@@ -63,7 +81,7 @@ describe('RootsService', () => {
 
     it('should create the generated/ subdirectory', async () => {
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        listRoots: jest.fn().mockResolvedValue({
           roots: [{ uri: `file://${tmpDir}`, name: 'test' }],
         }),
       };
@@ -74,15 +92,14 @@ describe('RootsService', () => {
       expect(stat.isDirectory()).toBe(true);
     });
 
-    it('should send roots/list method to server', async () => {
+    it('should use server.listRoots (not server.request) when saving', async () => {
       const mockServer = {
-        request: jest.fn().mockResolvedValue({ roots: [] }),
+        listRoots: jest.fn().mockResolvedValue({ roots: [] }),
+        request: jest.fn(),
       };
       await service.saveImageToWorkspace(mockServer as any, 'ZmFrZQ==');
-      expect(mockServer.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: 'roots/list' }),
-        expect.anything(),
-      );
+      expect(mockServer.listRoots).toHaveBeenCalledTimes(1);
+      expect(mockServer.request).not.toHaveBeenCalled();
     });
   });
 });

@@ -2,13 +2,17 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
+import { RootsService } from '../features/roots.service';
 import { ImageVariationSchema, ResponseFormat } from './schemas';
 
 @Injectable()
 export class ImageVariationTool {
   private readonly logger = new Logger(ImageVariationTool.name);
 
-  constructor(@Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider) {}
+  constructor(
+    @Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider,
+    private readonly roots: RootsService,
+  ) {}
 
   register(server: McpServer) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,11 +39,11 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
           openWorldHint: true,
         },
       },
-      async (params: unknown) => this.execute(params),
+      async (params: unknown) => this.execute(params, server),
     );
   }
 
-  async execute(rawParams: unknown) {
+  async execute(rawParams: unknown, server?: unknown) {
     const parseResult = ImageVariationSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -76,10 +80,19 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
         size: params.size,
       });
 
+      // M4: Roots — save to workspace if requested and server available
+      const savedPaths: string[] = [];
+      if (params.save_to_workspace && server) {
+        for (const img of results) {
+          const saved = await this.roots.saveImageToWorkspace(server as never, img.b64_json, 'png');
+          if (saved) savedPaths.push(saved);
+        }
+      }
+
       const text =
         params.response_format === ResponseFormat.JSON
           ? JSON.stringify({ count: results.length, images: results }, null, 2)
-          : this.formatMarkdown(results);
+          : this.formatMarkdown(results, savedPaths);
 
       return { content: [{ type: 'text' as const, text }] };
     } catch (err) {
@@ -91,10 +104,13 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
     }
   }
 
-  private formatMarkdown(results: ImageResult[]): string {
+  private formatMarkdown(results: ImageResult[], savedPaths: string[] = []): string {
     const lines = [`# Image Variation(s)`, ``];
     for (const [i, img] of results.entries()) {
       lines.push(`## Variation ${i + 1}`);
+      if (savedPaths[i]) {
+        lines.push(`**Saved to:** ${savedPaths[i]}`);
+      }
       lines.push(`**Data:** data:image/png;base64,${img.b64_json}`);
       lines.push('');
     }

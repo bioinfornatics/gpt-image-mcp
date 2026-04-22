@@ -27,7 +27,7 @@ services:
       - "3000:3000"
     environment:
       - PROVIDER=${PROVIDER:-openai}
-      - SECRET_BACKEND=file             # read *_FILE vars from /run/secrets/
+      - MCP_SECRET_BACKEND=file          # read *_FILE vars from /run/secrets/
       # Point to Docker secret mounts — server reads file contents at startup
       - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
       - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
@@ -48,11 +48,11 @@ services:
       - azure_openai_api_key
       - mcp_api_key
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health/live || exit 1"]
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
 
   prometheus:

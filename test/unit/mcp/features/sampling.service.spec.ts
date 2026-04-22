@@ -41,9 +41,9 @@ describe('SamplingService', () => {
       expect(result).toBe('a cat');
     });
 
-    it('should return original prompt when server.request throws', async () => {
+    it('should return original prompt when server.createMessage throws', async () => {
       const svc = await makeService(true);
-      const mockServer = { request: jest.fn().mockRejectedValue(new Error('not supported')) };
+      const mockServer = { createMessage: jest.fn().mockRejectedValue(new Error('not supported')) };
       const result = await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
       expect(result).toBe('a cat');
     });
@@ -52,7 +52,7 @@ describe('SamplingService', () => {
       const svc = await makeService(true);
       const enhanced = 'A fluffy orange tabby cat sitting on a sun-drenched windowsill, photorealistic, 8K';
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        createMessage: jest.fn().mockResolvedValue({
           content: { type: 'text', text: enhanced },
         }),
       };
@@ -63,39 +63,76 @@ describe('SamplingService', () => {
     it('should return original prompt when sampling response has no text', async () => {
       const svc = await makeService(true);
       const mockServer = {
-        request: jest.fn().mockResolvedValue({ content: { type: 'image' } }),
+        createMessage: jest.fn().mockResolvedValue({ content: { type: 'image' } }),
       };
       const result = await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
       expect(result).toBe('a cat');
     });
 
-    it('should send sampling/createMessage method to server', async () => {
+    it('should call server.createMessage (not server.request)', async () => {
       const svc = await makeService(true);
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        createMessage: jest.fn().mockResolvedValue({
           content: { type: 'text', text: 'enhanced prompt' },
         }),
+        request: jest.fn(),
       };
       await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
-      expect(mockServer.request).toHaveBeenCalledWith(
-        expect.objectContaining({ method: 'sampling/createMessage' }),
-        expect.anything(),
-      );
+      expect(mockServer.createMessage).toHaveBeenCalledTimes(1);
+      expect(mockServer.request).not.toHaveBeenCalled();
     });
 
     it('should include original prompt in sampling request', async () => {
       const svc = await makeService(true);
-      let capturedRequest: any = null;
+      let capturedParams: any = null;
       const mockServer = {
-        request: jest.fn().mockImplementation((req: any) => {
-          capturedRequest = req;
+        createMessage: jest.fn().mockImplementation((params: any) => {
+          capturedParams = params;
           return Promise.resolve({ content: { type: 'text', text: 'enhanced' } });
         }),
       };
       await svc.enhancePrompt(mockServer as any, 'my original prompt', 'gpt-image-1');
-      const messages = capturedRequest?.params?.messages ?? [];
+      const messages = capturedParams?.messages ?? [];
       const content = messages.map((m: any) => m.content?.text ?? '').join(' ');
       expect(content).toContain('my original prompt');
+    });
+
+    it('should sanitise LLM response containing null bytes', async () => {
+      const svc = await makeService(true);
+      const malicious = 'enhanced prompt\0with null byte';
+      const mockServer = {
+        createMessage: jest.fn().mockResolvedValue({
+          content: { type: 'text', text: malicious },
+        }),
+      };
+      const result = await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
+      expect(result).not.toContain('\0');
+      expect(result).toBe('enhanced promptwith null byte');
+    });
+
+    it('should fall back to original prompt when LLM response exceeds 32000 chars', async () => {
+      const svc = await makeService(true);
+      const tooLong = 'x'.repeat(33_000);
+      const mockServer = {
+        createMessage: jest.fn().mockResolvedValue({
+          content: { type: 'text', text: tooLong },
+        }),
+      };
+      const result = await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
+      expect(result).toBe('a cat');
+    });
+
+    it('should sanitise LLM response with bidi/RTL override characters', async () => {
+      const svc = await makeService(true);
+      const withBidi = 'enhanced\u202Eprompt'; // RTL override
+      const mockServer = {
+        createMessage: jest.fn().mockResolvedValue({
+          content: { type: 'text', text: withBidi },
+        }),
+      };
+      const result = await svc.enhancePrompt(mockServer as any, 'a cat', 'gpt-image-1');
+      expect(result).not.toContain('\u202E');
+      expect(result).toBe('enhancedprompt');
     });
   });
 });

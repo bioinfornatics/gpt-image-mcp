@@ -88,7 +88,7 @@ describe('MCP HTTP Transport — Integration', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-05',
+          protocolVersion: '2025-03-26',
           capabilities: {},
           clientInfo: { name: 'test-client', version: '1.0.0' },
         },
@@ -109,7 +109,7 @@ describe('MCP HTTP Transport — Integration', () => {
         id: 1,
         method: 'initialize',
         params: {
-          protocolVersion: '2025-11-05',
+          protocolVersion: '2025-03-26',
           capabilities: {
             // Advertise client-side elicitation support for testing
             elicitation: { form: {}, url: {} },

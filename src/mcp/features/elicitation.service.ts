@@ -75,22 +75,11 @@ export class ElicitationService {
     }
 
     try {
-      // Note: elicitation/create is a client-initiated protocol feature
-      // The server sends this request during a tool call
-      const result = await (server as any).request(
-        {
-          method: 'elicitation/create',
-          params: {
-            message: 'Please refine your image generation preferences:',
-            requestedSchema: {
-              type: 'object',
-              properties,
-            },
-          },
-        },
-        // ElicitationResultSchema — using any since SDK types may vary
-        {} as any,
-      );
+      // SDK v1.29: server.elicitInput() — includes client capability pre-check
+      const result = await (server as any).elicitInput({
+        message: 'Please refine your image generation preferences:',
+        requestedSchema: { type: 'object' as const, properties },
+      });
 
       if (result?.action === 'accept' && result?.content) {
         return result.content as Record<string, unknown>;

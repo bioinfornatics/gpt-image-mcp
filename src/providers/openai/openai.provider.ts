@@ -30,17 +30,22 @@ export class OpenAIProvider implements IImageProvider {
   async generate(params: GenerateParams): Promise<ImageResult[]> {
     this.logger.log(`Generating image with model=${params.model} n=${params.n ?? 1}`);
     try {
+      const isDallE = params.model.startsWith('dall-e');
       const response = await this.client.images.generate({
         prompt: params.prompt,
         model: params.model,
         n: params.n,
         size: params.size as Parameters<OpenAI['images']['generate']>[0]['size'],
         quality: params.quality as Parameters<OpenAI['images']['generate']>[0]['quality'],
-        background: params.background,
-        output_format: params.output_format,
-        output_compression: params.output_compression,
-        moderation: params.moderation,
-      });
+        // For DALL-E models, must explicitly request b64_json (default is URL).
+        // GPT-image models always return base64 and don't accept this param.
+        ...(isDallE ? { response_format: 'b64_json' as const } : {
+          background: params.background,
+          output_format: params.output_format,
+          output_compression: params.output_compression,
+          moderation: params.moderation,
+        }),
+      } as Parameters<OpenAI['images']['generate']>[0]);
 
       return (response.data ?? []).map((img) => ({
         b64_json: img.b64_json ?? '',
@@ -70,6 +75,7 @@ export class OpenAIProvider implements IImageProvider {
         model: params.model,
         n: params.n,
         size: params.size as Parameters<OpenAI['images']['edit']>[0]['size'],
+        response_format: 'b64_json' as const,
       });
 
       return (response.data ?? []).map((img) => ({

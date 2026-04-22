@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
+import { RootsService } from '../features/roots.service';
 import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
 import { sanitisePrompt } from '../../security/sanitise';
 
@@ -9,7 +10,10 @@ import { sanitisePrompt } from '../../security/sanitise';
 export class ImageEditTool {
   private readonly logger = new Logger(ImageEditTool.name);
 
-  constructor(@Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider) {}
+  constructor(
+    @Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider,
+    private readonly roots: RootsService,
+  ) {}
 
   register(server: McpServer) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,11 +45,11 @@ Returns: Base64-encoded edited image(s).`,
           openWorldHint: true,
         },
       },
-      async (params: unknown) => this.execute(params),
+      async (params: unknown) => this.execute(params, server),
     );
   }
 
-  async execute(rawParams: unknown) {
+  async execute(rawParams: unknown, server?: unknown) {
     const parseResult = ImageEditSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -85,10 +89,21 @@ Returns: Base64-encoded edited image(s).`,
         output_compression: params.output_compression,
       });
 
+      // M4: Roots — save to workspace if requested and server available
+      const savedPaths: string[] = [];
+      if (params.save_to_workspace && server) {
+        for (const img of results) {
+          const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
+          const saved = await this.roots.saveImageToWorkspace(server as never, img.b64_json, format);
+          if (saved) savedPaths.push(saved);
+        }
+      }
+
+      const outputFormat = params.output_format ?? 'png';
       const text =
         params.response_format === ResponseFormat.JSON
           ? JSON.stringify({ count: results.length, images: results }, null, 2)
-          : this.formatMarkdown(results, params.prompt);
+          : this.formatMarkdown(results, params.prompt, savedPaths, outputFormat);
 
       return { content: [{ type: 'text' as const, text }] };
     } catch (err) {
@@ -100,12 +115,20 @@ Returns: Base64-encoded edited image(s).`,
     }
   }
 
-  private formatMarkdown(results: ImageResult[], prompt: string): string {
+  private formatMarkdown(
+    results: ImageResult[],
+    prompt: string,
+    savedPaths: string[] = [],
+    outputFormat = 'png',
+  ): string {
     const lines = [`# Edited Image(s)`, ``, `**Prompt:** ${prompt}`, ``];
     for (const [i, img] of results.entries()) {
       lines.push(`## Image ${i + 1}`);
       lines.push(`**Model:** ${img.model}`);
-      lines.push(`**Data:** data:image/png;base64,${img.b64_json}`);
+      if (savedPaths[i]) {
+        lines.push(`**Saved to:** ${savedPaths[i]}`);
+      }
+      lines.push(`**Data:** data:image/${outputFormat};base64,${img.b64_json}`);
       lines.push('');
     }
     return lines.join('\n');

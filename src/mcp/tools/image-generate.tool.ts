@@ -8,9 +8,6 @@ import { RootsService } from '../features/roots.service';
 import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
 import { sanitisePrompt } from '../../security/sanitise';
 
-// McpServer type alias for clarity
-type AnyServer = unknown;
-
 @Injectable()
 export class ImageGenerateTool {
   private readonly logger = new Logger(ImageGenerateTool.name);
@@ -23,7 +20,6 @@ export class ImageGenerateTool {
   ) {}
 
   register(server: McpServer) {
-    const self = this;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (server as any).registerTool(
       'image_generate',
@@ -57,14 +53,11 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
           openWorldHint: true,
         },
       },
-      async (params: unknown, extra?: Record<string, unknown>) => {
-        const mcpServer = extra?.server as AnyServer | undefined;
-        return self.execute(params, mcpServer);
-      },
+      async (params: unknown) => this.execute(params, server),
     );
   }
 
-  async execute(rawParams: unknown, server?: AnyServer) {
+  async execute(rawParams: unknown, server?: unknown) {
     const parseResult = ImageGenerateSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -147,10 +140,11 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
         }
       }
 
+      const outputFormat = params.output_format ?? 'png';
       const text =
         params.response_format === ResponseFormat.JSON
           ? this.formatJson(results, params.model, savedPaths)
-          : this.formatMarkdown(results, prompt, savedPaths);
+          : this.formatMarkdown(results, prompt, savedPaths, outputFormat);
 
       return {
         content: [{ type: 'text' as const, text }],
@@ -165,7 +159,12 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
     }
   }
 
-  private formatMarkdown(results: ImageResult[], prompt: string, savedPaths: string[] = []): string {
+  private formatMarkdown(
+    results: ImageResult[],
+    prompt: string,
+    savedPaths: string[] = [],
+    outputFormat = 'png',
+  ): string {
     const lines = [`# Generated Image(s)`, ``, `**Prompt:** ${prompt}`, ``];
     for (const [i, img] of results.entries()) {
       lines.push(`## Image ${i + 1}`);
@@ -176,7 +175,7 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
       if (savedPaths[i]) {
         lines.push(`**Saved to:** ${savedPaths[i]}`);
       }
-      lines.push(`**Data:** data:image/png;base64,${img.b64_json}`);
+      lines.push(`**Data:** data:image/${outputFormat};base64,${img.b64_json}`);
       lines.push('');
     }
     return lines.join('\n');

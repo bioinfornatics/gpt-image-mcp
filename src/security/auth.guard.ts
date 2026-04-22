@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
 import type { Request } from 'express';
 import type { AppConfig } from '../config/app.config';
 
@@ -28,7 +29,15 @@ export class AuthGuard implements CanActivate {
     }
 
     const token = authHeader.slice('Bearer '.length);
-    if (token !== mcpConfig.apiKey) {
+
+    // Use constant-time comparison to prevent timing-based brute-force attacks
+    const providedBuf = Buffer.from(token);
+    const expectedBuf = Buffer.from(mcpConfig.apiKey);
+    const isValid =
+      providedBuf.length === expectedBuf.length &&
+      timingSafeEqual(providedBuf, expectedBuf);
+
+    if (!isValid) {
       throw new UnauthorizedException('Invalid API key.');
     }
 

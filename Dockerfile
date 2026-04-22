@@ -13,6 +13,7 @@ RUN bun install --frozen-lockfile
 COPY tsconfig.json tsconfig.build.json ./
 COPY src/ ./src/
 RUN bun run build
+RUN bun install --frozen-lockfile --production
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
@@ -47,4 +48,4 @@ ENV MCP_TRANSPORT=http
 ENV PORT=3000
 ENV LOG_LEVEL=info
 
-ENTRYPOINT ["bun", "run", "start"]
+ENTRYPOINT ["node", "dist/main.js"]

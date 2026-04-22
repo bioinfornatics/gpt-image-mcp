@@ -1,9 +1,12 @@
+import * as path from 'path';
+
 /**
  * Masks secrets in strings to prevent accidental logging.
  * Patterns covered:
  *  - OpenAI API keys: sk-...
- *  - Azure keys: 32+ char alphanumeric strings
+ *  - Azure API keys: UUID/GUID format (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
  *  - Bearer tokens
+ *  - Long alphanumeric strings (32+ chars)
  */
 
 const SECRET_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
@@ -11,6 +14,8 @@ const SECRET_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /sk-[A-Za-z0-9_-]{20,}/g, replacement: 'sk-***' },
   // Bearer tokens
   { pattern: /Bearer\s+[A-Za-z0-9._-]{16,}/gi, replacement: 'Bearer ***' },
+  // Azure API keys are 32-char hex GUIDs (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  { pattern: /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, replacement: '***-guid-***' },
   // Long alphanumeric strings likely to be keys (32+ chars)
   { pattern: /\b[A-Za-z0-9]{32,}\b/g, replacement: '***' },
 ];
@@ -26,12 +31,17 @@ export function maskSecret(input: string): string {
 /**
  * Sanitises user-supplied prompt strings.
  * - Removes null bytes
+ * - Removes Unicode bidi/control characters that can reverse text display or hide injections
  * - Trims whitespace
  * - Enforces maximum length
  */
 export function sanitisePrompt(prompt: string, maxLength: number): string {
   // Remove null bytes
   let clean = prompt.replace(/\0/g, '');
+  // Remove Unicode bidi/control characters that can reverse text display or hide injections:
+  // RTL override (U+202E), LTR override (U+202D), bidi embeddings (U+202A-U+202C),
+  // zero-width chars (U+200B-U+200F), word joiners (U+2060), variation selectors (U+FE00-U+FE0F)
+  clean = clean.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFE00-\uFE0F]/g, '');
   // Trim
   clean = clean.trim();
   // Enforce length
@@ -47,7 +57,6 @@ export function sanitisePrompt(prompt: string, maxLength: number): string {
  * Validates a file path is within an allowed root and has no traversal.
  */
 export function validateFilePath(filePath: string, allowedRoot: string): string {
-  const path = require('path') as typeof import('path');
   const resolved = path.resolve(filePath);
   const root = path.resolve(allowedRoot);
 

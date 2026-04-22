@@ -18,10 +18,8 @@ export class RootsService {
    */
   async getRoots(server: Server): Promise<WorkspaceRoot[]> {
     try {
-      const result = await (server as any).request(
-        { method: 'roots/list', params: {} },
-        {} as any,
-      );
+      // SDK v1.29: server.listRoots() — includes client capability pre-check
+      const result = await (server as any).listRoots();
       return (result?.roots as WorkspaceRoot[]) ?? [];
     } catch (err) {
       this.logger.debug(`Roots not available: ${String(err)}`);

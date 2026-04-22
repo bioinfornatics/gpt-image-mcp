@@ -53,9 +53,9 @@ describe('ElicitationService', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null when server.request throws (client has no elicitation cap)', async () => {
+    it('should return null when server.elicitInput throws (client has no elicitation cap)', async () => {
       const svc = await makeService(true);
-      const mockServer = { request: jest.fn().mockRejectedValue(new Error('not supported')) };
+      const mockServer = { elicitInput: jest.fn().mockRejectedValue(new Error('not supported')) };
       const result = await svc.requestImageParams(
         mockServer as any,
         { hasQuality: false, hasSize: false, hasStyle: false },
@@ -66,7 +66,7 @@ describe('ElicitationService', () => {
     it('should return content when client accepts elicitation', async () => {
       const svc = await makeService(true);
       const mockServer = {
-        request: jest.fn().mockResolvedValue({
+        elicitInput: jest.fn().mockResolvedValue({
           action: 'accept',
           content: { quality: 'high', size: '1024x1024' },
         }),
@@ -81,7 +81,19 @@ describe('ElicitationService', () => {
     it('should return null when client declines', async () => {
       const svc = await makeService(true);
       const mockServer = {
-        request: jest.fn().mockResolvedValue({ action: 'decline' }),
+        elicitInput: jest.fn().mockResolvedValue({ action: 'decline' }),
+      };
+      const result = await svc.requestImageParams(
+        mockServer as any,
+        { hasQuality: false, hasSize: false, hasStyle: false },
+      );
+      expect(result).toBeNull();
+    });
+
+    it('should return null when client cancels', async () => {
+      const svc = await makeService(true);
+      const mockServer = {
+        elicitInput: jest.fn().mockResolvedValue({ action: 'cancel' }),
       };
       const result = await svc.requestImageParams(
         mockServer as any,
@@ -94,8 +106,8 @@ describe('ElicitationService', () => {
       const svc = await makeService(true);
       let capturedParams: any = null;
       const mockServer = {
-        request: jest.fn().mockImplementation((req: any) => {
-          capturedParams = req.params;
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          capturedParams = params;
           return Promise.resolve({ action: 'decline' });
         }),
       };
@@ -106,6 +118,20 @@ describe('ElicitationService', () => {
       const props = capturedParams?.requestedSchema?.properties ?? {};
       const fieldNames = Object.keys(props).join(' ').toLowerCase();
       expect(fieldNames).not.toMatch(/password|secret|key|token|credential/);
+    });
+
+    it('should call server.elicitInput (not server.request)', async () => {
+      const svc = await makeService(true);
+      const mockServer = {
+        elicitInput: jest.fn().mockResolvedValue({ action: 'accept', content: {} }),
+        request: jest.fn(),
+      };
+      await svc.requestImageParams(
+        mockServer as any,
+        { hasQuality: false, hasSize: false, hasStyle: false },
+      );
+      expect(mockServer.elicitInput).toHaveBeenCalledTimes(1);
+      expect(mockServer.request).not.toHaveBeenCalled();
     });
   });
 });

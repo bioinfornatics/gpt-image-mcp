@@ -21,6 +21,13 @@ describe('maskSecret', () => {
     expect(result).not.toContain(azureKey);
   });
 
+  it('should mask Azure GUID/UUID format keys', () => {
+    const azureGuid = '12345678-abcd-ef01-2345-6789abcdef01';
+    const result = maskSecret(`api-key: ${azureGuid}`);
+    expect(result).not.toContain(azureGuid);
+    expect(result).toContain('***-guid-***');
+  });
+
   it('should leave safe strings unchanged', () => {
     const safe = 'Model gpt-image-1 returned 200 OK';
     expect(maskSecret(safe)).toBe(safe);
@@ -45,6 +52,47 @@ describe('sanitisePrompt', () => {
   it('should accept prompt at exactly maxLength', () => {
     const result = sanitisePrompt('a'.repeat(100), 100);
     expect(result).toHaveLength(100);
+  });
+
+  it('should strip RTL override character (U+202E)', () => {
+    const input = 'hello\u202Eworld';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).toBe('helloworld');
+    expect(result).not.toContain('\u202E');
+  });
+
+  it('should strip zero-width space character (U+200B)', () => {
+    const input = 'hello\u200Bworld';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).toBe('helloworld');
+    expect(result).not.toContain('\u200B');
+  });
+
+  it('should strip LTR override character (U+202D)', () => {
+    const input = 'test\u202Dprompt';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).toBe('testprompt');
+    expect(result).not.toContain('\u202D');
+  });
+
+  it('should strip word joiner character (U+2060)', () => {
+    const input = 'word\u2060joiner';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).toBe('wordjoiner');
+    expect(result).not.toContain('\u2060');
+  });
+
+  it('should strip variation selector (U+FE00)', () => {
+    const input = 'test\uFE00prompt';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).toBe('testprompt');
+    expect(result).not.toContain('\uFE00');
+  });
+
+  it('should strip multiple bidi/control characters', () => {
+    const input = '\u202Ahidden\u202B injection\u202C attempt\u202E';
+    const result = sanitisePrompt(input, 1000);
+    expect(result).not.toMatch(/[\u202A-\u202E]/);
   });
 });
 
