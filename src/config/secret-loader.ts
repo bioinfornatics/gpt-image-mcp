@@ -6,10 +6,10 @@
  *   2. keytar          → OS keychain (macOS Keychain, GNOME Keyring, Windows Credential Manager)
  *   3. plain env var   → fallback (least secure, convenient for dev)
  *
- * The active backend is selected by SECRET_BACKEND env var:
- *   SECRET_BACKEND=file    (default) — _FILE vars only, plain vars as fallback
- *   SECRET_BACKEND=keytar  — keytar first, then _FILE, then plain
- *   SECRET_BACKEND=env     — plain env vars only (opt-out of _FILE resolution)
+ * The active backend is selected by MCP_SECRET_BACKEND env var:
+ *   MCP_SECRET_BACKEND=file    (default) — _FILE vars only, plain vars as fallback
+ *   MCP_SECRET_BACKEND=keytar  — keytar first, then _FILE, then plain
+ *   MCP_SECRET_BACKEND=env     — plain env vars only (opt-out of _FILE resolution)
  *
  * SECURITY NOTES:
  *   - File paths in *_FILE vars are validated to prevent path traversal.
@@ -131,7 +131,7 @@ const KEYTAR_ACCOUNT_MAP: Record<FileSourceableVar, string> = {
 /**
  * Attempt to load secrets from the OS keychain via keytar.
  * keytar is an *optional* peer dependency — if not installed this is a no-op
- * (with a clear startup warning if SECRET_BACKEND=keytar was requested).
+ * (with a clear startup warning if MCP_SECRET_BACKEND=keytar was requested).
  *
  * Requires: `bun add keytar` (native Node addon, needs build tools).
  */
@@ -145,7 +145,7 @@ export async function resolveKeytarSecrets(): Promise<void> {
     keytar = await import('keytar' as string); // cast avoids TS2307 when not installed
   } catch {
     process.stderr.write(
-      `[gpt-image-mcp] WARNING: SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
+      `[gpt-image-mcp] WARNING: MCP_SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
       `  Install with: bun add keytar\n` +
       `  Falling back to _FILE and plain env var resolution.\n`,
     );
@@ -209,7 +209,7 @@ export async function deleteKeytarSecret(varName: FileSourceableVar): Promise<bo
  */
 export async function resolveSecrets(): Promise<void> {
   const backend: SecretBackend =
-    (process.env['SECRET_BACKEND'] as SecretBackend | undefined) ?? 'file';
+    (process.env['MCP_SECRET_BACKEND'] as SecretBackend | undefined) ?? 'file';
 
   if (backend === 'env') {
     // Explicit opt-out — plain env vars only, no file or keychain resolution

@@ -7,7 +7,7 @@
  *   bun run src/cli/store-secret.ts AZURE_OPENAI_API_KEY
  *   bun run src/cli/store-secret.ts MCP_API_KEY
  *
- * Then in your .env / config set: SECRET_BACKEND=keytar
+ * Then in your .env / config set: MCP_SECRET_BACKEND=keytar
  * (and remove the plain-text API key env var entirely)
  *
  * Requires: bun add keytar  (native Node addon — needs build tools)
@@ -82,4 +82,4 @@ if (!value.trim()) {
 }
 
 await storeKeytarSecret(varName, value.trim());
-console.log(`✅ ${varName} stored in OS keychain. Set SECRET_BACKEND=keytar in your config.`);
+console.log(`✅ ${varName} stored in OS keychain. Set MCP_SECRET_BACKEND=keytar in your config.`);

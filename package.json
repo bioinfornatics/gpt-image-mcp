@@ -38,6 +38,9 @@
     "winston": "^3.17.0",
     "zod": "^3.24.2"
   },
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
+  },
   "devDependencies": {
     "@nestjs/testing": "^10.4.15",
     "@types/express": "^4.17.21",
