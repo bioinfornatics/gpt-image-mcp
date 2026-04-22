@@ -8,7 +8,6 @@ export interface GenerateParams {
   output_format?: 'png' | 'jpeg' | 'webp';
   output_compression?: number;
   moderation?: 'auto' | 'low';
-  stream?: boolean;
 }
 
 export interface EditParams {

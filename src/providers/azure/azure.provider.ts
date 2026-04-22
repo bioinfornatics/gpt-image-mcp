@@ -111,6 +111,13 @@ export class AzureOpenAIProvider implements IImageProvider {
       if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
         return new Error('Authentication failed: invalid API key for Azure OpenAI provider.');
       }
+      if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
+        return new Error(
+          `Access denied (Azure): ${msg}. ` +
+          `If using gpt-image-2, this model requires explicit access approval — ` +
+          `request access via the Azure portal before using it.`,
+        );
+      }
       if (msg.includes('404')) {
         return new Error(`Deployment not found: ${this.deployment}. Check AZURE_OPENAI_DEPLOYMENT.`);
       }

@@ -43,7 +43,7 @@ Use provider_validate to test connectivity before generating images.`,
 
     const modelsByProvider: Record<string, string[]> = {
       openai: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini', 'dall-e-3', 'dall-e-2'],
-      azure: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2', 'dall-e-3'],
+      azure: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2 (limited access)', 'dall-e-3'],
     };
 
     const output = {
@@ -68,6 +68,11 @@ Use provider_validate to test connectivity before generating images.`,
       `## ${providerName}`,
       `- Status: configured`,
       `- Available models: ${(modelsByProvider[providerName] ?? []).join(', ')}`,
+      ...(providerName === 'azure' ? [
+        ``,
+        `> ⚠️ **gpt-image-2** requires explicit access approval via the Azure portal.`,
+        `> A 403 error means your subscription does not have access yet.`,
+      ] : []),
       ``,
       `Run \`provider_validate\` to test connectivity.`,
     ].join('\n');
