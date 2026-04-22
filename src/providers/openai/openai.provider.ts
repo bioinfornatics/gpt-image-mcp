@@ -128,21 +128,23 @@ export class OpenAIProvider implements IImageProvider {
   }
 
   private normalizeError(err: unknown): Error {
-    if (err instanceof OpenAI.APIError) {
+    // Duck-type check: handles both real OpenAI.APIError and mocked versions
+    if (err && typeof err === 'object' && 'status' in err && err instanceof Error) {
+      const status = (err as { status: number }).status;
       const msg = maskSecret(err.message);
-      if (err.status === 429) {
+      if (status === 429) {
         return new Error(`Rate limit exceeded: ${msg}. Please wait before retrying.`);
       }
-      if (err.status === 401) {
+      if (status === 401) {
         return new Error('Authentication failed: invalid API key for OpenAI provider.');
       }
-      if (err.status === 400) {
+      if (status === 400) {
         return new Error(`Bad request: ${msg}`);
       }
-      if (err.status === 404) {
+      if (status === 404) {
         return new Error(`Model or resource not found: ${msg}`);
       }
-      return new Error(`OpenAI API error (${err.status}): ${msg}`);
+      return new Error(`OpenAI API error (${status}): ${msg}`);
     }
     return err instanceof Error ? err : new Error(String(err));
   }

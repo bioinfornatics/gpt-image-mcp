@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { appConfig } from './config/app.config';
+import { appConfig, configValidationSchema } from './config/app.config';
 import { McpModule } from './mcp/mcp.module';
 import { ProvidersModule } from './providers/providers.module';
 import { SecurityModule } from './security/security.module';
@@ -11,6 +11,8 @@ import { HealthModule } from './health/health.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig],
+      validationSchema: configValidationSchema,
+      validationOptions: { abortEarly: false },
       envFilePath: ['.env.local', '.env'],
     }),
     SecurityModule,

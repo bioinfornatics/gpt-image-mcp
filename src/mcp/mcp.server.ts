@@ -40,11 +40,14 @@ export class McpServerService implements OnModuleInit {
     this.providerValidateTool.register(this.server);
   }
 
+  /**
+   * Returns what this server declares in initialize response.
+   * Note: elicitation/sampling/roots are CLIENT capabilities the server checks at runtime.
+   * The server itself advertises: tools, logging.
+   */
   get capabilities() {
-    const mcpConfig = this.configService.get<AppConfig['mcp']>('mcp')!;
     return {
       tools: {},
-      ...(mcpConfig.useElicitation ? { elicitation: {} } : {}),
       logging: {},
     };
   }

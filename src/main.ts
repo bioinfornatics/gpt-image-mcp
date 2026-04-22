@@ -4,6 +4,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -12,6 +13,9 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     bufferLogs: false,
   });
+
+  // Parse JSON bodies for MCP requests
+  app.use(express.json({ limit: '50mb' }));
 
   const configService = app.get(ConfigService);
   const transport = configService.get<string>('MCP_TRANSPORT', 'http');

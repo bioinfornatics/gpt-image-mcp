@@ -4,4 +4,4 @@ coverageReporter = ["lcov", "text"]
 coverageDir = "coverage"
 # Threshold rises per milestone: M1=60, M3=75, M5=90
 coverageThreshold = { lines = 60, branches = 55 }
-preload = ["reflect-metadata"]
+preload = ["reflect-metadata", "./test/setup.ts"]
