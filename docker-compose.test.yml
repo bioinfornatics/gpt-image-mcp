@@ -1,0 +1,21 @@
+version: '3.9'
+
+# Overrides for integration testing with a fake API key
+services:
+  gpt-image-mcp:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - PROVIDER=openai
+      - OPENAI_API_KEY=sk-test-fake-key-for-ci
+      - MCP_TRANSPORT=http
+      - PORT=3000
+      - LOG_LEVEL=error
+      - MAX_REQUESTS_PER_MINUTE=100
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

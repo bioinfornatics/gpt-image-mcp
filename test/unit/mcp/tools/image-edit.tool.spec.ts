@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { ImageEditTool } from '../../../../src/mcp/tools/image-edit.tool';
 import { PROVIDER_TOKEN } from '../../../../src/providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
+import { RootsService } from '../../../../src/mcp/features/roots.service';
 
 const mockResult: ImageResult = {
   b64_json: 'ZWRpdGVkaW1hZ2U=',
@@ -21,6 +22,7 @@ describe('ImageEditTool', () => {
       providers: [
         ImageEditTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
+        { provide: RootsService, useValue: { saveImageToWorkspace: jest.fn().mockResolvedValue(null), getRoots: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
     tool = module.get(ImageEditTool);

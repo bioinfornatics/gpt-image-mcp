@@ -2,7 +2,8 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
-import { ImageEditSchema, ResponseFormat } from './schemas';
+import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
+import { sanitisePrompt } from '../../security/sanitise';
 
 @Injectable()
 export class ImageEditTool {
@@ -61,11 +62,21 @@ Returns: Base64-encoded edited image(s).`,
     const params = parseResult.data;
 
     try {
+      let sanitisedPrompt: string;
+      try {
+        sanitisedPrompt = sanitisePrompt(params.prompt, PROMPT_MAX_LENGTH_GPT);
+      } catch (sanitiseErr) {
+        const msg = sanitiseErr instanceof Error ? sanitiseErr.message : String(sanitiseErr);
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `Input sanitisation error: ${msg}` }],
+        };
+      }
       this.logger.log(`image_edit: model=${params.model}`);
       const results = await this.provider.edit({
         image: params.image,
         mask: params.mask,
-        prompt: params.prompt,
+        prompt: sanitisedPrompt,
         model: params.model,
         n: params.n,
         size: params.size,

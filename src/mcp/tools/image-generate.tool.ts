@@ -5,7 +5,11 @@ import type { IImageProvider, ImageResult } from '../../providers/provider.inter
 import { ElicitationService } from '../features/elicitation.service';
 import { SamplingService } from '../features/sampling.service';
 import { RootsService } from '../features/roots.service';
-import { ImageGenerateSchema, ResponseFormat } from './schemas';
+import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
+import { sanitisePrompt } from '../../security/sanitise';
+
+// McpServer type alias for clarity
+type AnyServer = unknown;
 
 @Injectable()
 export class ImageGenerateTool {
@@ -19,6 +23,7 @@ export class ImageGenerateTool {
   ) {}
 
   register(server: McpServer) {
+    const self = this;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (server as any).registerTool(
       'image_generate',
@@ -52,13 +57,14 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
           openWorldHint: true,
         },
       },
-      async (params: unknown) => {
-        return this.execute(params);
+      async (params: unknown, extra?: Record<string, unknown>) => {
+        const mcpServer = extra?.server as AnyServer | undefined;
+        return self.execute(params, mcpServer);
       },
     );
   }
 
-  async execute(rawParams: unknown) {
+  async execute(rawParams: unknown, server?: AnyServer) {
     const parseResult = ImageGenerateSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -75,8 +81,49 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
     const params = parseResult.data;
 
     try {
-      let prompt = params.prompt;
+      // US-018: Sanitise prompt (strips null bytes, trims, enforces max length)
+      let prompt: string;
+      try {
+        prompt = sanitisePrompt(params.prompt, PROMPT_MAX_LENGTH_GPT);
+      } catch (sanitiseErr) {
+        const msg = sanitiseErr instanceof Error ? sanitiseErr.message : String(sanitiseErr);
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `Input error: ${msg}` }],
+        };
+      }
+
+      // Guard: if sanitised prompt is empty, reject
+      if (!prompt) {
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: 'Validation error: prompt is required and cannot be empty' }],
+        };
+      }
+
       this.logger.log(`image_generate: model=${params.model} n=${params.n}`);
+
+      // M4: Sampling — enhance prompt via client LLM if server available
+      if (server) {
+        prompt = await this.sampling.enhancePrompt(server as never, prompt, params.model);
+      }
+
+      // M4: Elicitation — request missing params from user if client supports it
+      if (server) {
+        const elicited = await this.elicitation.requestImageParams(server as never, {
+          hasQuality: params.quality !== 'auto' && params.quality !== undefined,
+          hasSize: params.size !== 'auto' && params.size !== undefined,
+          hasStyle: false,
+        });
+        if (elicited) {
+          if (typeof elicited['quality'] === 'string') {
+            params.quality = elicited['quality'] as typeof params.quality;
+          }
+          if (typeof elicited['size'] === 'string') {
+            params.size = elicited['size'] as typeof params.size;
+          }
+        }
+      }
 
       const results = await this.provider.generate({
         prompt,
@@ -90,10 +137,20 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
         moderation: params.moderation,
       });
 
+      // M4: Roots — save to workspace if requested and server available
+      const savedPaths: string[] = [];
+      if (params.save_to_workspace && server) {
+        for (const img of results) {
+          const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
+          const path = await this.roots.saveImageToWorkspace(server as never, img.b64_json, format);
+          if (path) savedPaths.push(path);
+        }
+      }
+
       const text =
         params.response_format === ResponseFormat.JSON
-          ? this.formatJson(results, params.model)
-          : this.formatMarkdown(results, prompt);
+          ? this.formatJson(results, params.model, savedPaths)
+          : this.formatMarkdown(results, prompt, savedPaths);
 
       return {
         content: [{ type: 'text' as const, text }],
@@ -108,7 +165,7 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
     }
   }
 
-  private formatMarkdown(results: ImageResult[], prompt: string): string {
+  private formatMarkdown(results: ImageResult[], prompt: string, savedPaths: string[] = []): string {
     const lines = [`# Generated Image(s)`, ``, `**Prompt:** ${prompt}`, ``];
     for (const [i, img] of results.entries()) {
       lines.push(`## Image ${i + 1}`);
@@ -116,13 +173,16 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
       if (img.revised_prompt) {
         lines.push(`**Revised prompt:** ${img.revised_prompt}`);
       }
+      if (savedPaths[i]) {
+        lines.push(`**Saved to:** ${savedPaths[i]}`);
+      }
       lines.push(`**Data:** data:image/png;base64,${img.b64_json}`);
       lines.push('');
     }
     return lines.join('\n');
   }
 
-  private formatJson(results: ImageResult[], model: string): string {
+  private formatJson(results: ImageResult[], model: string, savedPaths: string[] = []): string {
     return JSON.stringify(
       {
         model,
@@ -132,6 +192,7 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
           b64_json: img.b64_json,
           revised_prompt: img.revised_prompt,
           created: img.created,
+          ...(savedPaths[i] ? { saved_to: savedPaths[i] } : {}),
         })),
       },
       null,

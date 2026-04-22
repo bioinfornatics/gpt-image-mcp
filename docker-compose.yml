@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  gpt-image-mcp:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PROVIDER=${PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2025-04-01-preview}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - PORT=3000
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-image-1}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - USE_ELICITATION=${USE_ELICITATION:-true}
+      - USE_SAMPLING=${USE_SAMPLING:-true}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health/live || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - gpt-image-mcp
+    profiles:
+      - monitoring

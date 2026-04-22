@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+test/
+docs/
+.git/
+.beads/
+.github/
+*.log
+*.md
+!README.md
