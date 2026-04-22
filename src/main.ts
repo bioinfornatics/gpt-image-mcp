@@ -5,8 +5,13 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import express from 'express';
+import { resolveSecrets } from './config/secret-loader';
 
 async function bootstrap() {
+  // Resolve secrets BEFORE NestJS bootstrap so Joi validation sees the real values.
+  // Supports: *_FILE env vars (Docker/K8s secrets), OS keychain (keytar), plain env vars.
+  await resolveSecrets();
+
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

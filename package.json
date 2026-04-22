@@ -16,7 +16,9 @@
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' 'test/**/*.ts' --fix",
     "type-check": "node --max-old-space-size=8192 node_modules/.bin/tsc -p tsconfig.build.json --noEmit",
-    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'"
+    "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
+    "secret:store": "bun run src/cli/store-secret.ts",
+    "secret:delete": "bun run src/cli/store-secret.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",

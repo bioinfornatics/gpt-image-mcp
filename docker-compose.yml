@@ -1,5 +1,25 @@
 version: '3.9'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# RECOMMENDED: use Docker secrets instead of plain env vars for API keys.
+#
+#   echo "sk-your-real-key" | docker secret create openai_api_key -
+#   echo "your-mcp-key"     | docker secret create mcp_api_key -
+#
+# Then deploy with:
+#   docker stack deploy -c docker-compose.yml gpt-image-mcp
+#
+# Plain OPENAI_API_KEY / AZURE_OPENAI_API_KEY env vars still work for dev.
+# ─────────────────────────────────────────────────────────────────────────────
+
+secrets:
+  openai_api_key:
+    external: true          # created with: docker secret create openai_api_key -
+  azure_openai_api_key:
+    external: true
+  mcp_api_key:
+    external: true
+
 services:
   gpt-image-mcp:
     build: .
@@ -7,9 +27,13 @@ services:
       - "3000:3000"
     environment:
       - PROVIDER=${PROVIDER:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - SECRET_BACKEND=file             # read *_FILE vars from /run/secrets/
+      # Point to Docker secret mounts — server reads file contents at startup
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
+      - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
+      - MCP_API_KEY_FILE=/run/secrets/mcp_api_key
+      # Non-secret config
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-}
       - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2025-04-01-preview}
       - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
@@ -17,9 +41,12 @@ services:
       - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-image-1}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
-      - MCP_API_KEY=${MCP_API_KEY:-}
       - USE_ELICITATION=${USE_ELICITATION:-true}
       - USE_SAMPLING=${USE_SAMPLING:-true}
+    secrets:
+      - openai_api_key
+      - azure_openai_api_key
+      - mcp_api_key
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/health/live || exit 1"]
       interval: 30s

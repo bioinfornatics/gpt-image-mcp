@@ -29,6 +29,9 @@ export interface AppConfig {
 }
 
 export const configValidationSchema = Joi.object({
+  // Secret backend selection (resolved before validation, so not in AppConfig)
+  SECRET_BACKEND: Joi.string().valid('file', 'keytar', 'env').optional().default('file'),
+
   PROVIDER: Joi.string().valid('openai', 'azure').required().messages({
     'any.required': 'PROVIDER is required (openai|azure)',
     'any.only': 'PROVIDER must be "openai" or "azure"',
