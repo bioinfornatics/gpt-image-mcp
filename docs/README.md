@@ -6,7 +6,7 @@
 [![Bun](https://img.shields.io/badge/runtime-Bun-black)](https://bun.sh)
 [![NestJS](https://img.shields.io/badge/framework-NestJS-red)](https://nestjs.com)
 [![TDD](https://img.shields.io/badge/methodology-TDD-green)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]()
+[![License: CeCILL-2.1](https://img.shields.io/badge/License-CeCILL--2.1-blue.svg)](./LICENSE)
 
 ---
 

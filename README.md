@@ -435,4 +435,5 @@ See [`docs/TDD_STRATEGY.md`](docs/TDD_STRATEGY.md) for the full TDD workflow.
 
 ## License
 
-MIT
+[CeCILL-2.1](./LICENSE) — a French open-source license compatible with GNU GPL, endorsed by CEA, CNRS, and Inria.  
+© 2026 the gpt-image-mcp contributors.
