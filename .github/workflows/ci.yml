@@ -3,10 +3,16 @@ name: CI
 on:
   push:
     branches: [main, master, develop]
+    tags: ['v*.*.*']
   pull_request:
     branches: [main, master]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
+  # ─── Quality Gate ──────────────────────────────────────────────────────────
   quality:
     name: Lint · Type-check · Test · Build
     runs-on: ubuntu-latest
@@ -30,9 +36,8 @@ jobs:
         run: bun run type-check
 
       - name: Unit & Integration Tests
-        run: bun run test:coverage
+        run: bun test --coverage
         env:
-          # Use fake credentials for tests — never real keys
           PROVIDER: openai
           OPENAI_API_KEY: sk-test-fake-key-for-ci
           MCP_TRANSPORT: http
@@ -47,18 +52,19 @@ jobs:
           path: coverage/
           retention-days: 7
 
-      - name: Build
+      - name: Build TypeScript
         run: bun run build
         env:
           NODE_ENV: production
 
-      - name: Upload build artifact
+      - name: Upload dist artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
           retention-days: 1
 
+  # ─── Security Audit ────────────────────────────────────────────────────────
   security:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -77,4 +83,129 @@ jobs:
 
       - name: Audit dependencies
         run: bun pm audit --audit-level=high
-        continue-on-error: true  # warn only until baseline established
+        continue-on-error: true
+
+  # ─── Docker Build + Trivy Scan ─────────────────────────────────────────────
+  docker:
+    name: Docker Build · Trivy Scan
+    runs-on: ubuntu-latest
+    needs: quality
+
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: gpt-image-mcp:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Test container health
+        run: |
+          docker run -d --name mcp-test \
+            -e PROVIDER=openai \
+            -e OPENAI_API_KEY=sk-fake-ci-key \
+            -p 3002:3000 \
+            gpt-image-mcp:ci
+          # Wait for startup
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:3002/health/live; then
+              echo "Container healthy after ${i}×5s"
+              break
+            fi
+            echo "Waiting... ($i/12)"
+            sleep 5
+          done
+          curl -f http://localhost:3002/health/live || (docker logs mcp-test && exit 1)
+          docker stop mcp-test
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: gpt-image-mcp:ci
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '0'   # warn only — change to '1' to block on vulnerabilities
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Build and push to ghcr.io (on tag or main branch)
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/'))
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Release Notes ─────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: docker
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Release Notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              generate_release_notes: true,
+              draft: false,
+              prerelease: tag.includes('-'),
+            });
