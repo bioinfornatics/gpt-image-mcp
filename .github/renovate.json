@@ -1,0 +1,127 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Renovate dependency automation — gpt-image-mcp (Bun · NestJS 10 · TypeScript)",
+
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    "npm:unpublishSafe"
+  ],
+
+  "timezone": "UTC",
+  "dependencyDashboardTitle": "🔄 Renovate Dependency Dashboard",
+  "labels": ["dependencies"],
+
+  "rangeStrategy": "bump",
+
+  "osvVulnerabilityAlerts": true,
+
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 4,
+
+  "packageRules": [
+
+    {
+      "description": "Automerge patch updates for devDependencies (lowest risk)",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "addLabels": ["automerge"]
+    },
+
+    {
+      "description": "Automerge patch updates for production deps — wait 3 days for yanked-release safety",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": "3 days",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "addLabels": ["automerge"]
+    },
+
+    {
+      "description": "Group all NestJS packages into a single PR",
+      "matchPackageNames": ["/^@nestjs\\//"],
+      "groupName": "NestJS packages",
+      "addLabels": ["nestjs"]
+    },
+
+    {
+      "description": "Group TypeScript + @types/* together",
+      "matchPackageNames": [
+        "typescript",
+        "/^@types\\//"
+      ],
+      "groupName": "TypeScript & type definitions",
+      "addLabels": ["typescript"]
+    },
+
+    {
+      "description": "Group ESLint + Prettier into one PR",
+      "matchPackageNames": [
+        "/eslint/",
+        "/prettier/"
+      ],
+      "groupName": "Linting & formatting",
+      "addLabels": ["linting"]
+    },
+
+    {
+      "description": "Group all Docker-related GitHub Actions together",
+      "matchPackageNames": [
+        "/^docker\\//",
+        "aquasecurity/trivy-action",
+        "github/codeql-action"
+      ],
+      "matchManagers": ["github-actions"],
+      "groupName": "Docker & security GitHub Actions",
+      "addLabels": ["github-actions", "docker"]
+    },
+
+    {
+      "description": "Bun runtime — keep in a dedicated PR",
+      "matchPackageNames": ["bun", "oven-sh/setup-bun"],
+      "addLabels": ["bun", "runtime"],
+      "groupName": "Bun runtime"
+    },
+
+    {
+      "description": "MCP SDK — dedicated PR, keep visible",
+      "matchPackageNames": ["@modelcontextprotocol/sdk"],
+      "addLabels": ["mcp"],
+      "minimumReleaseAge": "3 days"
+    },
+
+    {
+      "description": "OpenAI SDK — dedicated PR",
+      "matchPackageNames": ["openai"],
+      "addLabels": ["openai"],
+      "minimumReleaseAge": "3 days"
+    },
+
+    {
+      "description": "optionalDependencies — never automerge (native addon, requires manual test)",
+      "matchDepTypes": ["optionalDependencies"],
+      "automerge": false,
+      "addLabels": ["optional", "native-addon"]
+    },
+
+    {
+      "description": "Major updates — require explicit approval via Dependency Dashboard",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true,
+      "automerge": false,
+      "addLabels": ["major-update"]
+    },
+
+    {
+      "description": "GitHub Actions manager — label all action updates",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["github-actions"]
+    }
+  ]
+}
