@@ -72,9 +72,9 @@ describe('OpenAICompatibleProvider (Azure strategy)', () => {
       await expect(makeProvider('my-dep').generate({ prompt: 'test', model: 'gpt-image-1' })).rejects.toThrow('my-dep');
     });
 
-    it('should throw a helpful 403/access error for gpt-image-2', async () => {
-      mockGenerate.mockRejectedValueOnce(new Error('403 Forbidden: Access denied to model gpt-image-2'));
-      await expect(makeProvider().generate({ prompt: 'test', model: 'gpt-image-2' })).rejects.toThrow('Azure portal');
+    it('should throw a helpful 403/access error with registration link for gpt-image-1.x', async () => {
+      mockGenerate.mockRejectedValueOnce(new Error('403 Forbidden: Access denied to model gpt-image-1'));
+      await expect(makeProvider().generate({ prompt: 'test', model: 'gpt-image-1' })).rejects.toThrow('aka.ms/oai/gptimage1access');
     });
   });
 

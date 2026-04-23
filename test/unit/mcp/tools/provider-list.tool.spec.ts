@@ -43,7 +43,8 @@ describe('ProviderListTool', () => {
 
     it('should list expected OpenAI models', async () => {
       const result = await tool.execute();
-      expect(result.content[0].text).toContain('dall-e-3');
+      expect(result.content[0].text).toContain('dall-e-2');
+      expect(result.content[0].text).not.toContain('dall-e-3'); // retired 2026-03-04
     });
   });
 

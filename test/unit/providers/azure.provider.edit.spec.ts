@@ -70,8 +70,8 @@ describe('OpenAICompatibleProvider — Azure edit()', () => {
     expect(mockEdit).toHaveBeenCalledTimes(1);
   });
 
-  it('should throw a helpful 403/gpt-image-2 error', async () => {
-    mockEdit.mockRejectedValueOnce(new Error('403 Forbidden: Access denied to model gpt-image-2'));
-    await expect(makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'gpt-image-2' })).rejects.toThrow('Azure portal');
+  it('should throw a helpful 403/access error with registration link for gpt-image-1.x', async () => {
+    mockEdit.mockRejectedValueOnce(new Error('403 Forbidden: Access denied to model gpt-image-1'));
+    await expect(makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'gpt-image-1' })).rejects.toThrow('aka.ms/oai/gptimage1access');
   });
 });

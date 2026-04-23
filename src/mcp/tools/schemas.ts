@@ -20,7 +20,10 @@ export const ImageGenerateSchema = z.object({
     .string()
     .optional()
     .default(LATEST_MODEL)
-    .describe(`Model to use. OpenAI: ${OPENAI_MODELS.join(', ')}. Azure: ${AZURE_MODELS.join(', ')}`),
+    .describe(
+      `Model to use. OpenAI: ${OPENAI_MODELS.join(', ')}. Azure: ${AZURE_MODELS.join(', ')}. ` +
+      `Note: dall-e-3 was retired 2026-03-04. gpt-image-2 is the recommended default.`,
+    ),
   n: z
     .number()
     .int()

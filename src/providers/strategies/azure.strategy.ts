@@ -37,8 +37,9 @@ export class AzureStrategy implements ProviderStrategy {
       if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
         return new Error(
           `Access denied (Azure): ${msg}. ` +
-          `If using gpt-image-2, this model requires explicit access approval — ` +
-          `request access via the Azure portal before using it.`,
+          `gpt-image-1, gpt-image-1.5, and gpt-image-1-mini require limited-access registration — ` +
+          `apply at https://aka.ms/oai/gptimage1access. ` +
+          `gpt-image-2 is Public Preview and does not require prior approval.`,
         );
       }
       if (msg.includes('404')) {

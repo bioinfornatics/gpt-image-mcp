@@ -44,7 +44,13 @@ Use provider_validate to test connectivity before generating images.`,
 
     const modelsByProvider: Record<string, string[]> = {
       openai: [...OPENAI_MODELS],
-      azure: AZURE_MODELS.map(m => m === 'gpt-image-2' ? 'gpt-image-2 (limited access)' : m),
+      // gpt-image-2 is Public Preview on Azure (no application needed).
+      // gpt-image-1.x variants still require limited-access registration.
+      azure: AZURE_MODELS.map(m =>
+        (m === 'gpt-image-1' || m === 'gpt-image-1.5' || m === 'gpt-image-1-mini')
+          ? `${m} (limited access)`
+          : m,
+      ),
       together: [
         'black-forest-labs/FLUX.1-schnell-Free',
         'black-forest-labs/FLUX.1-schnell',
@@ -78,8 +84,10 @@ Use provider_validate to test connectivity before generating images.`,
       `- Available models: ${(modelsByProvider[providerName] ?? []).join(', ')}`,
       ...(providerName === 'azure' ? [
         ``,
-        `> ⚠️ **gpt-image-2** requires explicit access approval via the Azure portal.`,
-        `> A 403 error means your subscription does not have access yet.`,
+        `> ✅ **gpt-image-2** is Public Preview — no access application required.`,
+        `> ⚠️ **gpt-image-1, gpt-image-1.5, gpt-image-1-mini** require Limited Access registration:`,
+        `> apply at https://aka.ms/oai/gptimage1access`,
+        `> ⛔ **dall-e-3** was retired 2026-03-04 and is no longer available.`,
       ] : []),
       ...(providerName === 'together' ? [
         ``,
