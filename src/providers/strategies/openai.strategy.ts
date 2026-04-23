@@ -1,6 +1,7 @@
 import { maskSecret } from '../../security/sanitise';
 import type { ProviderStrategy } from './provider.strategy';
 import type { GenerateParams, EditParams } from '../provider.interface';
+import { LATEST_MODEL } from '../../config/models';
 
 export class OpenAIStrategy implements ProviderStrategy {
   readonly name = 'openai' as const;
@@ -8,7 +9,7 @@ export class OpenAIStrategy implements ProviderStrategy {
   readonly supportsVariation = true;
 
   resolveModel(params: Pick<GenerateParams, 'model'>): string {
-    return params.model ?? 'gpt-image-1';
+    return params.model ?? LATEST_MODEL;
   }
 
   buildGenerateExtras(params: GenerateParams, model: string): Record<string, unknown> {

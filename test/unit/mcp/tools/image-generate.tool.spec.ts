@@ -5,6 +5,7 @@ import { ElicitationService } from '../../../../src/mcp/features/elicitation.ser
 import { SamplingService } from '../../../../src/mcp/features/sampling.service';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
+import { LATEST_MODEL } from '../../../../src/config/models';
 
 const mockImageResult: ImageResult = {
   b64_json: 'ZmFrZWJhc2U2NA==',
@@ -66,7 +67,7 @@ describe('ImageGenerateTool', () => {
       const result = await tool.execute({ prompt: 'a cat' });
       expect(result.isError).toBeUndefined();
       expect(mockProvider.generate).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt: 'a cat', model: 'gpt-image-1', n: 1 }),
+        expect.objectContaining({ prompt: 'a cat', model: LATEST_MODEL, n: 1 }),
       );
     });
   });

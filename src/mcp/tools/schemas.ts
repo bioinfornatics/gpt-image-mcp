@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LATEST_MODEL, OPENAI_MODELS, AZURE_MODELS } from '../../config/models';
 
 export enum ResponseFormat {
   MARKDOWN = 'markdown',
@@ -18,8 +19,8 @@ export const ImageGenerateSchema = z.object({
   model: z
     .string()
     .optional()
-    .default('gpt-image-1')
-    .describe('Model to use: gpt-image-1, gpt-image-1.5, gpt-image-1-mini, dall-e-3, dall-e-2'),
+    .default(LATEST_MODEL)
+    .describe(`Model to use. OpenAI: ${OPENAI_MODELS.join(', ')}. Azure: ${AZURE_MODELS.join(', ')}`),
   n: z
     .number()
     .int()
@@ -86,7 +87,7 @@ export const ImageEditSchema = z.object({
   model: z
     .string()
     .optional()
-    .default('gpt-image-1')
+    .default(LATEST_MODEL)
     .describe('Model to use for editing'),
   n: z.number().int().min(1).max(10).optional().default(1),
   size: z

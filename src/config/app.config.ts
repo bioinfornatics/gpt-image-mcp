@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { LATEST_MODEL } from './models';
 
 export interface AppConfig {
   provider: 'openai' | 'azure' | 'together' | 'custom';
@@ -109,7 +110,7 @@ export const configValidationSchema = Joi.object({
   USE_SAMPLING: Joi.boolean().optional().default(true),
 
   // Defaults
-  DEFAULT_MODEL: Joi.string().optional().default('gpt-image-1'),
+  DEFAULT_MODEL: Joi.string().optional().default(LATEST_MODEL),
 
   // Security
   MAX_REQUESTS_PER_MINUTE: Joi.number().integer().min(1).optional().default(60),
@@ -138,7 +139,7 @@ export const appConfig = (): AppConfig => ({
     useSampling: process.env['USE_SAMPLING'] !== 'false',
   },
   defaults: {
-    model: process.env['DEFAULT_MODEL'] || 'gpt-image-1',
+    model: process.env['DEFAULT_MODEL'] || LATEST_MODEL,
   },
   security: {
     maxRequestsPerMinute: parseInt(process.env['MAX_REQUESTS_PER_MINUTE'] || '60', 10),

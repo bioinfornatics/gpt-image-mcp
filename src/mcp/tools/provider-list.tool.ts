@@ -5,6 +5,7 @@ import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider } from '../../providers/provider.interface';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../../config/app.config';
+import { OPENAI_MODELS, AZURE_MODELS } from '../../config/models';
 
 @Injectable()
 export class ProviderListTool {
@@ -42,8 +43,8 @@ Use provider_validate to test connectivity before generating images.`,
     const providerName = this.provider.name;
 
     const modelsByProvider: Record<string, string[]> = {
-      openai: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini', 'dall-e-3', 'dall-e-2'],
-      azure: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2 (limited access)', 'dall-e-3'],
+      openai: [...OPENAI_MODELS],
+      azure: AZURE_MODELS.map(m => m === 'gpt-image-2' ? 'gpt-image-2 (limited access)' : m),
       together: [
         'black-forest-labs/FLUX.1-schnell-Free',
         'black-forest-labs/FLUX.1-schnell',

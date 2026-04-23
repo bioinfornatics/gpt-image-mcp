@@ -1,4 +1,5 @@
 import { configValidationSchema } from '../../../src/config/app.config';
+import { LATEST_MODEL } from '../../../src/config/models';
 
 function validateConfig(env: Record<string, string>) {
   const { error, value } = configValidationSchema.validate(env, { abortEarly: false });
@@ -76,8 +77,8 @@ describe('AppConfig validation', () => {
       expect(validateConfig(openai).PORT).toBe(3000);
     });
 
-    it('should default DEFAULT_MODEL to gpt-image-1', () => {
-      expect(validateConfig(openai).DEFAULT_MODEL).toBe('gpt-image-1');
+    it('should default DEFAULT_MODEL to LATEST_MODEL', () => {
+      expect(validateConfig(openai).DEFAULT_MODEL).toBe(LATEST_MODEL);
     });
 
     it('should default MAX_REQUESTS_PER_MINUTE to 60', () => {

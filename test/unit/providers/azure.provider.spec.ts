@@ -51,10 +51,10 @@ describe('OpenAICompatibleProvider (Azure strategy)', () => {
       expect(call['moderation']).toBeUndefined();
     });
 
-    it('should set response_format: b64_json', async () => {
+    it('should NOT send response_format (Azure ignores it and may reject it)', async () => {
       await makeProvider().generate({ prompt: 'test', model: 'gpt-image-1' });
       const call = mockGenerate.mock.calls[0][0] as Record<string, unknown>;
-      expect(call['response_format']).toBe('b64_json');
+      expect(call['response_format']).toBeUndefined();
     });
 
     it('should throw rate-limit error on 429 response', async () => {
