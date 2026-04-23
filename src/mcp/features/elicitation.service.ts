@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { AppConfig } from '../../config/app.config';
+import { maskSecret } from '../../security/sanitise';
 
 export interface ElicitationField {
   type: 'string' | 'number' | 'boolean';
@@ -87,7 +88,7 @@ export class ElicitationService {
       return null;
     } catch (err) {
       // Client may not support elicitation — gracefully degrade
-      this.logger.debug(`Elicitation not supported or failed: ${String(err)}`);
+      this.logger.debug(`Elicitation not supported or failed: ${maskSecret(String(err))}`);
       return null;
     }
   }

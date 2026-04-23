@@ -132,7 +132,8 @@ describe('Input Sanitisation — Integration', () => {
   describe('Rate limiting', () => {
     it('should return 429 when rate limit exceeded', async () => {
       // Temporarily lower limit
-      const originalEnv = process.env['MAX_REQUESTS_PER_MINUTE'];
+      // Note: MAX_REQUESTS_PER_MINUTE is read at startup — runtime override not supported
+      // const originalEnv = process.env['MAX_REQUESTS_PER_MINUTE'];
       // We'll use supertest to make many rapid requests and expect a 429
       // Make 65 quick requests — one batch will fail (default limit=60)
       const results: number[] = [];

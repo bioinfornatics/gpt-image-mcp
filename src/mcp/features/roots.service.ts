@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { maskSecret } from '../../security/sanitise';
 
 export interface WorkspaceRoot {
   uri: string;
@@ -46,7 +47,7 @@ export class RootsService {
       const result = await (server as any).listRoots();
       return (result?.roots as WorkspaceRoot[]) ?? [];
     } catch (err) {
-      this.logger.debug(`Roots not available: ${String(err)}`);
+      this.logger.debug(`Roots not available: ${maskSecret(String(err))}`);
       return [];
     }
   }

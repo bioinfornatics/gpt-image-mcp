@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { McpServerService } from '../mcp.server';
 import { AuthGuard } from '../../security/auth.guard';
 import { RateLimitGuard } from '../../security/rate-limit.guard';
+import { maskSecret } from '../../security/sanitise';
 
 @Controller('mcp')
 @UseGuards(AuthGuard, RateLimitGuard)
@@ -22,7 +23,7 @@ export class McpHttpController {
 
     res.on('close', () => {
       transport.close().catch((err: unknown) => {
-        this.logger.warn(`Transport close error: ${String(err)}`);
+        this.logger.warn(`Transport close error: ${maskSecret(String(err))}`);
       });
     });
 
@@ -30,7 +31,7 @@ export class McpHttpController {
       await this.mcpService.server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (err) {
-      this.logger.error(`MCP request error: ${String(err)}`);
+      this.logger.error(`MCP request error: ${maskSecret(String(err))}`);
       if (!res.headersSent) {
         res.status(500).json({ error: 'Internal server error' });
       }

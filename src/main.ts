@@ -34,7 +34,7 @@ async function bootstrap() {
         messages: unknown[],
         context?: string,
         logLevel?: import('@nestjs/common').LogLevel,
-        writeStreamType?: 'stdout' | 'stderr',
+        _writeStreamType?: 'stdout' | 'stderr',
       ) {
         // Force all output to stderr — stdout is reserved for MCP JSON-RPC
         super.printMessages(messages, context, logLevel, 'stderr');
@@ -74,7 +74,18 @@ async function bootstrap() {
   }
 }
 
-bootstrap().catch((err) => {
-  console.error('Fatal startup error:', err);
+bootstrap().catch((err: unknown) => {
+  // Use maskSecret to avoid leaking API keys in startup crash messages
+  const msg = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error && err.stack ? err.stack : '';
+  // Import is synchronous at this point — sanitise inline
+  const masked = msg.replace(/sk-[A-Za-z0-9_-]{20,}/g, 'sk-***')
+                    .replace(/Bearer\s+[A-Za-z0-9._-]{16,}/gi, 'Bearer ***')
+                    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '***-guid-***')
+                    .replace(/\b[A-Za-z0-9]{32,}\b/g, '***');
+  console.error('Fatal startup error:', masked);
+  if (stack) {
+    console.error(stack.replace(/\b[A-Za-z0-9]{32,}\b/g, '***'));
+  }
   process.exit(1);
 });

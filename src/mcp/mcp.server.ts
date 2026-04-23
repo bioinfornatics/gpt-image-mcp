@@ -6,7 +6,7 @@ import { ImageEditTool } from './tools/image-edit.tool';
 import { ImageVariationTool } from './tools/image-variation.tool';
 import { ProviderListTool } from './tools/provider-list.tool';
 import { ProviderValidateTool } from './tools/provider-validate.tool';
-import type { AppConfig } from '../config/app.config';
+
 
 @Injectable()
 export class McpServerService implements OnModuleInit {

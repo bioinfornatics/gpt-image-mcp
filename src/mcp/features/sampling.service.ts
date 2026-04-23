@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { AppConfig } from '../../config/app.config';
-import { sanitisePrompt } from '../../security/sanitise';
+import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
 @Injectable()
 export class SamplingService {
@@ -59,7 +59,7 @@ export class SamplingService {
       }
       return originalPrompt;
     } catch (err) {
-      this.logger.debug(`Sampling not available or failed: ${String(err)}`);
+      this.logger.debug(`Sampling not available or failed: ${maskSecret(String(err))}`);
       return originalPrompt;
     }
   }
