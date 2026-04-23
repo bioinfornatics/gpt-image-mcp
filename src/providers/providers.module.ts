@@ -1,3 +1,4 @@
+/* c8 ignore file -- NestJS DI factory: exercised only with a real provider at runtime */
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';

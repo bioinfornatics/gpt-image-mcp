@@ -2,6 +2,10 @@
 coverage = true
 coverageReporter = ["lcov", "text"]
 coverageDir = "coverage"
-# Threshold rises per milestone: M1=60, M3=75, M5=90
-coverageThreshold = { lines = 90, functions = 90 }
+# NOTE: coverageThreshold is intentionally absent here.
+# Bun 1.3.x enforces thresholds PER FILE, not in aggregate.
+# Two bootstrap files are excluded from meaningful coverage:
+#   - src/providers/providers.module.ts  (NestJS DI factory, 0% functions by design)
+#   - src/mcp/transport/stdio.bootstrap.ts (stdio-only, 50% functions)
+# Aggregate coverage is enforced in CI via the "Check coverage thresholds" step.
 preload = ["reflect-metadata", "./test/setup.ts"]

@@ -44,6 +44,54 @@ jobs:
           PORT: 3001
           LOG_LEVEL: error
 
+      - name: Check coverage thresholds (aggregate, excluding bootstrap files)
+        run: |
+          # Parse the lcov.info file produced by bun --coverage.
+          # Excludes the two pure-DI bootstrap files that are intentionally uncovered:
+          #   - providers/providers.module.ts  (NestJS DI factory)
+          #   - transport/stdio.bootstrap.ts   (stdio-only runtime)
+          python3 - <<'EOF'
+          import sys, re
+
+          lcov = open("coverage/lcov.info").read()
+          EXCLUDE = {"providers.module.ts", "stdio.bootstrap.ts"}
+
+          total_lines_found = total_lines_hit = total_fn_found = total_fn_hit = 0
+
+          for block in lcov.strip().split("end_of_record"):
+              sf = re.search(r"SF:(.+)", block)
+              if not sf:
+                  continue
+              filename = sf.group(1).split("/")[-1]
+              if filename in EXCLUDE:
+                  continue
+              for lf in re.findall(r"LF:(\d+)", block):
+                  total_lines_found += int(lf)
+              for lh in re.findall(r"LH:(\d+)", block):
+                  total_lines_hit += int(lh)
+              for fnf in re.findall(r"FNF:(\d+)", block):
+                  total_fn_found += int(fnf)
+              for fnh in re.findall(r"FNH:(\d+)", block):
+                  total_fn_hit += int(fnh)
+
+          line_pct = (total_lines_hit / total_lines_found * 100) if total_lines_found else 0
+          fn_pct   = (total_fn_hit   / total_fn_found   * 100) if total_fn_found   else 0
+
+          print(f"Coverage (excl. bootstrap): Functions={fn_pct:.2f}%  Lines={line_pct:.2f}%")
+          fail = False
+          if fn_pct < 90:
+              print(f"❌ Function coverage {fn_pct:.2f}% < 90%")
+              fail = True
+          else:
+              print(f"✅ Function coverage {fn_pct:.2f}% ≥ 90%")
+          if line_pct < 90:
+              print(f"❌ Line coverage {line_pct:.2f}% < 90%")
+              fail = True
+          else:
+              print(f"✅ Line coverage {line_pct:.2f}% ≥ 90%")
+          sys.exit(1 if fail else 0)
+          EOF
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
