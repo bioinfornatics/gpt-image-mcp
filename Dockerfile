@@ -48,4 +48,4 @@ ENV MCP_TRANSPORT=http
 ENV PORT=3000
 ENV LOG_LEVEL=info
 
-ENTRYPOINT ["node", "dist/main.js"]
+ENTRYPOINT ["bun", "run", "dist/main.js"]
