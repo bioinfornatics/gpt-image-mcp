@@ -132,7 +132,7 @@ export class OpenAICompatibleProvider implements IImageProvider {
   // ─── shared utilities ─────────────────────────────────────────────────────
 
   private mapResponse(
-    response: { data?: Array<{ b64_json?: string | null; revised_prompt?: string | null }>; created?: number },
+    response: { data?: Array<{ b64_json?: string | null; url?: string | null; revised_prompt?: string | null }>; created?: number },
     model: string,
   ): ImageResult[] {
     return (response.data ?? []).map((img) => ({

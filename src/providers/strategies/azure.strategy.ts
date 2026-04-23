@@ -15,12 +15,14 @@ export class AzureStrategy implements ProviderStrategy {
   }
 
   buildGenerateExtras(_params: GenerateParams, _model: string): Record<string, unknown> {
-    // Azure GPT-image models: ensure b64_json response
-    return { response_format: 'b64_json' as const };
+    // Azure GPT-image models do not support response_format parameter — images are
+    // returned as b64_json by default.
+    return {};
   }
 
   buildEditExtras(_params: EditParams): Record<string, unknown> {
-    return { response_format: 'b64_json' as const };
+    // Same as above: no response_format for Azure edit requests.
+    return {};
   }
 
   normalizeError(err: unknown): Error {
