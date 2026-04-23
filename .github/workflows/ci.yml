@@ -87,7 +87,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Audit dependencies
-        run: bun pm audit --audit-level=high
+        run: bun audit --audit-level=high
 
   # ─── Docker Build + Trivy Scan ─────────────────────────────────────────────
   docker:
