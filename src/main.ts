@@ -22,8 +22,31 @@ async function bootstrap() {
 
   const logger = new Logger('Bootstrap');
 
+  // In stdio mode stdout is the MCP JSON-RPC wire — any non-JSON bytes break
+  // the protocol. Override NestJS ConsoleLogger to write to stderr instead.
+  const isStdio = (process.env['MCP_TRANSPORT'] ?? 'http') === 'stdio';
+
+  let nestLogger: any;
+  if (isStdio) {
+    const { ConsoleLogger } = await import('@nestjs/common');
+    class StderrLogger extends ConsoleLogger {
+      protected override printMessages(
+        messages: unknown[],
+        context?: string,
+        logLevel?: import('@nestjs/common').LogLevel,
+        writeStreamType?: 'stdout' | 'stderr',
+      ) {
+        // Force all output to stderr — stdout is reserved for MCP JSON-RPC
+        super.printMessages(messages, context, logLevel, 'stderr');
+      }
+    }
+    nestLogger = new StderrLogger();
+  } else {
+    nestLogger = ['error', 'warn', 'log', 'debug', 'verbose'];
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: nestLogger,
     bufferLogs: false,
   });
 
