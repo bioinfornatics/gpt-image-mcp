@@ -273,7 +273,31 @@ Integration tests use `protocolVersion: '2025-11-05'` — **this is not a real v
 day `05` vs month `06` or `03`). The SDK accepts it via negotiation fallback. Use a real version
 string (`'2025-03-26'`) in new tests to avoid confusion.
 
-### 4.10 Bun test runner uses Jest-compatible API but is not Jest
+### 4.10 `bun run <absolute-path>` crashes with `reflect-metadata` not loaded
+
+When an MCP host (Goose, Claude Desktop) spawns the server from its own working directory:
+```
+bun run /abs/path/gpt-image-mcp/src/main.ts
+```
+Bun searches for `bunfig.toml` in the **current working directory** — which is the host's
+directory, not the project root. `reflect-metadata` is never preloaded. NestJS decorators
+(`@Post()`, `@Injectable()`, etc.) call `Reflect.defineMetadata()` at module-load time,
+crashing with:
+```
+TypeError: undefined is not an object (evaluating 'descriptor.value')
+```
+
+**Fix:** Always use `bin/start.sh` as the entrypoint. It `cd`s to the project root first:
+```bash
+# bin/start.sh
+cd "$(dirname "$0")/.."
+exec bun run src/main.ts "$@"
+```
+
+**Goose config** must use `cmd: /abs/path/bin/start.sh`, not `cmd: bun` with args pointing
+to `src/main.ts` directly. `node dist/main.js` is immune because it doesn't need `bunfig.toml`.
+
+### 4.11 Bun test runner uses Jest-compatible API but is not Jest
 
 `bun test` supports `jest.fn()`, `jest.mock()`, `jest.spyOn()`, but:
 - `jest.mock()` hoisting works differently — declare mocks **before** the `import` of the

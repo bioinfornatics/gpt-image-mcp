@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// reflect-metadata MUST be the absolute first import.
+// NestJS decorators (@Controller, @Post, @Injectable, etc.) call
+// Reflect.defineMetadata() at module-load time. If reflect-metadata hasn't
+// run yet the decorator crashes with "undefined is not an object".
+// This is safe with both `node dist/main.js` and `bun run src/main.ts`
+// because Node/Bun process `import` statements sequentially within a file
+// before any later imports are resolved.
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
