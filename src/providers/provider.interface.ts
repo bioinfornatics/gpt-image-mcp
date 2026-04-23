@@ -44,7 +44,7 @@ export interface ValidationResult {
 }
 
 export interface IImageProvider {
-  readonly name: 'openai' | 'azure';
+  readonly name: 'openai' | 'azure' | 'together' | 'custom';
   generate(params: GenerateParams): Promise<ImageResult[]>;
   edit(params: EditParams): Promise<ImageResult[]>;
   variation(params: VariationParams): Promise<ImageResult[]>;

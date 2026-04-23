@@ -44,6 +44,13 @@ Use provider_validate to test connectivity before generating images.`,
     const modelsByProvider: Record<string, string[]> = {
       openai: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-1-mini', 'dall-e-3', 'dall-e-2'],
       azure: ['gpt-image-1', 'gpt-image-1.5', 'gpt-image-2 (limited access)', 'dall-e-3'],
+      together: [
+        'black-forest-labs/FLUX.1-schnell-Free',
+        'black-forest-labs/FLUX.1-schnell',
+        'black-forest-labs/FLUX.1-dev',
+        'black-forest-labs/FLUX.1.1-pro',
+      ],
+      custom: this.configService.get<AppConfig['custom']>('custom')?.models ?? ['custom'],
     };
 
     const output = {
@@ -72,6 +79,16 @@ Use provider_validate to test connectivity before generating images.`,
         ``,
         `> ⚠️ **gpt-image-2** requires explicit access approval via the Azure portal.`,
         `> A 403 error means your subscription does not have access yet.`,
+      ] : []),
+      ...(providerName === 'together' ? [
+        ``,
+        `> ℹ️ **Together AI**: FLUX models only. No image_edit or image_variation support.`,
+        `> Free tier: FLUX.1-schnell-Free (rate limited). Sign up at together.ai`,
+      ] : []),
+      ...(providerName === 'custom' ? [
+        ``,
+        `> ℹ️ **Custom endpoint**: Pointing at ${this.configService.get<AppConfig['custom']>('custom')?.baseUrl ?? 'unknown'}`,
+        `> Compatibility depends on your endpoint's OpenAI API support.`,
       ] : []),
       ``,
       `Run \`provider_validate\` to test connectivity.`,
