@@ -1,11 +1,11 @@
 /**
- * Integration tests for OpenAIProvider using fetch mocking.
- * Validates that the provider correctly maps HTTP responses to/from the OpenAI REST API.
- *
- * Note: OpenAI SDK v4 uses the global `fetch` API (not Node.js http module),
- * so we mock `fetch` directly rather than using nock http interception.
+ * Integration tests for OpenAICompatibleProvider (OpenAI strategy) using client injection.
+ * Validates that the provider correctly maps responses to/from the OpenAI REST API.
  */
-import { OpenAIProvider } from '../../../src/providers/openai/openai.provider';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { OpenAICompatibleProvider } from '../../../src/providers/openai-compatible.provider';
+import { OpenAIStrategy } from '../../../src/providers/strategies/openai.strategy';
+import type OpenAI from 'openai';
 
 // Simulate OpenAI APIError with status code (matches the real SDK shape)
 class FakeAPIError extends Error {
@@ -17,40 +17,32 @@ class FakeAPIError extends Error {
   }
 }
 
-const mockGenerate = jest.fn();
-const mockEdit = jest.fn();
-const mockModelsList = jest.fn();
+const mockGenerate = mock(() =>
+  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'bm9ja0ltYWdl' }] }),
+);
+const mockEdit = mock(() =>
+  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'ZWRpdA==' }] }),
+);
+const mockModelsList = mock(() => Promise.resolve({ object: 'list', data: [] }));
 
-jest.mock('openai', () => {
-  return {
-    default: jest.fn().mockImplementation(() => ({
-      images: {
-        generate: mockGenerate,
-        edit: mockEdit,
-      },
-      models: {
-        list: mockModelsList,
-      },
-    })),
-    APIError: FakeAPIError,
-  };
-});
+function makeProvider() {
+  const mockClient = {
+    images: { generate: mockGenerate, edit: mockEdit },
+    models: { list: mockModelsList },
+  } as unknown as OpenAI;
+  return new OpenAICompatibleProvider(mockClient, new OpenAIStrategy());
+}
 
-describe('OpenAIProvider — HTTP Integration (nock)', () => {
-  let provider: OpenAIProvider;
-
+describe('OpenAICompatibleProvider (OpenAI) — HTTP Integration', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    provider = new OpenAIProvider({ apiKey: 'sk-test-nock' });
+    mockGenerate.mockClear();
+    mockEdit.mockClear();
+    mockModelsList.mockClear();
   });
 
   describe('generate()', () => {
-    it('should call POST /v1/images/generations and return ImageResult[]', async () => {
-      mockGenerate.mockResolvedValue({
-        created: 1_700_000_000,
-        data: [{ b64_json: 'bm9ja0ltYWdl' }],
-      });
-
+    it('should call images.generate and return ImageResult[]', async () => {
+      const provider = makeProvider();
       const results = await provider.generate({ prompt: 'a cat', model: 'gpt-image-1' });
       expect(results).toHaveLength(1);
       expect(results[0].b64_json).toBe('bm9ja0ltYWdl');
@@ -59,53 +51,46 @@ describe('OpenAIProvider — HTTP Integration (nock)', () => {
     });
 
     it('should return multiple images when n > 1', async () => {
-      mockGenerate.mockResolvedValue({
+      mockGenerate.mockResolvedValueOnce({
         created: 1_700_000_000,
         data: [{ b64_json: 'aW1nMQ==' }, { b64_json: 'aW1nMg==' }],
       });
-
-      const results = await provider.generate({ prompt: 'a cat', model: 'gpt-image-1', n: 2 });
+      const results = await makeProvider().generate({ prompt: 'a cat', model: 'gpt-image-1', n: 2 });
       expect(results).toHaveLength(2);
     });
 
     it('should throw rate-limit error on 429 response', async () => {
-      mockGenerate.mockRejectedValue(new FakeAPIError('Rate limit exceeded', 429));
-
-      await expect(provider.generate({ prompt: 'a cat', model: 'gpt-image-1' }))
+      mockGenerate.mockRejectedValueOnce(new FakeAPIError('Rate limit exceeded', 429));
+      await expect(makeProvider().generate({ prompt: 'a cat', model: 'gpt-image-1' }))
         .rejects.toThrow(/rate limit/i);
     });
 
     it('should throw auth error on 401 response', async () => {
-      mockGenerate.mockRejectedValue(new FakeAPIError('Incorrect API key provided', 401));
-
-      await expect(provider.generate({ prompt: 'a cat', model: 'gpt-image-1' }))
+      mockGenerate.mockRejectedValueOnce(new FakeAPIError('Incorrect API key provided', 401));
+      await expect(makeProvider().generate({ prompt: 'a cat', model: 'gpt-image-1' }))
         .rejects.toThrow(/authentication/i);
     });
 
     it('should include revised_prompt from dall-e-3 response', async () => {
-      mockGenerate.mockResolvedValue({
+      mockGenerate.mockResolvedValueOnce({
         created: 1_700_000_000,
         data: [{ b64_json: 'ZGFsbGUz', revised_prompt: 'A fluffy tabby cat' }],
       });
-
-      const results = await provider.generate({ prompt: 'cat', model: 'dall-e-3' });
+      const results = await makeProvider().generate({ prompt: 'cat', model: 'dall-e-3' });
       expect(results[0].revised_prompt).toBe('A fluffy tabby cat');
     });
   });
 
   describe('validate()', () => {
-    it('should return valid=true when /models responds 200', async () => {
-      mockModelsList.mockResolvedValue({ object: 'list', data: [] });
-
-      const result = await provider.validate();
+    it('should return valid=true when models.list succeeds', async () => {
+      const result = await makeProvider().validate();
       expect(result.valid).toBe(true);
       expect(result.provider).toBe('openai');
     });
 
-    it('should return valid=false on 401 from /models', async () => {
-      mockModelsList.mockRejectedValue(new FakeAPIError('Invalid API key', 401));
-
-      const result = await provider.validate();
+    it('should return valid=false on error from models.list', async () => {
+      mockModelsList.mockRejectedValueOnce(new FakeAPIError('Invalid API key', 401));
+      const result = await makeProvider().validate();
       expect(result.valid).toBe(false);
       expect(result.error).toBeDefined();
     });
