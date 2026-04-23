@@ -6,7 +6,7 @@ import { ElicitationService } from '../features/elicitation.service';
 import { SamplingService } from '../features/sampling.service';
 import { RootsService } from '../features/roots.service';
 import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
-import { sanitisePrompt } from '../../security/sanitise';
+import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
 @Injectable()
 export class ImageGenerateTool {
@@ -150,7 +150,7 @@ Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provi
         content: [{ type: 'text' as const, text }],
       };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_generate failed: ${message}`);
       return {
         isError: true,

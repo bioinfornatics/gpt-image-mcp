@@ -4,7 +4,7 @@ import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { RootsService } from '../features/roots.service';
 import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
-import { sanitisePrompt } from '../../security/sanitise';
+import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
 @Injectable()
 export class ImageEditTool {
@@ -107,7 +107,8 @@ Returns: Base64-encoded edited image(s).`,
 
       return { content: [{ type: 'text' as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = maskSecret(err instanceof Error ? err.message : String(err));
+      this.logger.error(`image_edit failed: ${message}`);
       return {
         isError: true,
         content: [{ type: 'text' as const, text: `Error: ${message}` }],

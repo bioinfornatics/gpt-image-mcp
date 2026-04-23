@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
+import { maskSecret } from '../../security/sanitise';
 import { RootsService } from '../features/roots.service';
 import { ImageVariationSchema, ResponseFormat } from './schemas';
 
@@ -96,7 +97,8 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
 
       return { content: [{ type: 'text' as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = maskSecret(err instanceof Error ? err.message : String(err));
+      this.logger.error(`image_variation failed: ${message}`);
       return {
         isError: true,
         content: [{ type: 'text' as const, text: `Error: ${message}` }],
