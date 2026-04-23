@@ -183,10 +183,72 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ─── GitHub Packages (npm.pkg.github.com) ────────────────────────────────
+  # Triggered only on semver tags (v*.*.*).
+  # Uses the built-in GITHUB_TOKEN — no extra secret required.
+  # Package name must be scoped: @bioinfornatics/gpt-image-mcp (set in package.json).
+  # Install: npm install @bioinfornatics/gpt-image-mcp --registry https://npm.pkg.github.com
+  # ────────────────────────────────────────────────────────────────────────────
+  publish-gpr:
+    name: Publish to GitHub Packages
+    runs-on: ubuntu-latest
+    needs: [quality, docker]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
+      packages: write   # required to push to npm.pkg.github.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.1.38'
+
+      - name: Install dependencies (production only)
+        run: bun install --frozen-lockfile --production
+
+      - name: Build
+        run: bun run build
+
+      - name: Setup Node.js for GitHub Packages publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@bioinfornatics'
+
+      - name: Verify package version matches tag
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "❌ Tag v$TAG does not match package.json version $PKG_VERSION"
+            echo "   Update package.json version before tagging."
+            exit 1
+          fi
+          echo "✅ Tag v$TAG matches package.json version"
+
+      - name: Check package contents (dry run)
+        run: npm pack --dry-run
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Confirm published version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Published: https://github.com/bioinfornatics/gpt-image-mcp/pkgs/npm/gpt-image-mcp"
+          echo "Install: npm install @bioinfornatics/gpt-image-mcp@$VERSION --registry https://npm.pkg.github.com"
+
   # ─── npm Publish ──────────────────────────────────────────────────────────
-  # Triggered only on semver tags (v1.2.3).
+  # Triggered only on semver tags (v*.*.*).
   # Requires secret: NPM_TOKEN (Automation token from npmjs.com → Access Tokens).
-  # The package is published as public under the name in package.json.
   #
   # One-time setup:
   #   1. npm login  (or create account at npmjs.com)
@@ -194,7 +256,7 @@ jobs:
   #   3. GitHub repo → Settings → Secrets → Actions → New secret
   #      Name: NPM_TOKEN  Value: <paste token>
   #
-  # To publish: git tag v0.1.0 && git push origin v0.1.0
+  # To publish: git tag v0.0.1 && git push origin v0.0.1
   # ────────────────────────────────────────────────────────────────────────────
   publish-npm:
     name: Publish to npm
@@ -249,14 +311,14 @@ jobs:
       - name: Confirm published version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "Published: https://www.npmjs.com/package/gpt-image-mcp/v/$VERSION"
-          echo "Users can now run: npx -y gpt-image-mcp@$VERSION"
+          echo "Published: https://www.npmjs.com/package/@bioinfornatics/gpt-image-mcp/v/$VERSION"
+          echo "Users can now run: npx -y @bioinfornatics/gpt-image-mcp@$VERSION"
 
   # ─── GitHub Release Notes ──────────────────────────────────────────────────
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: publish-npm
+    needs: [publish-gpr, publish-npm]
     if: startsWith(github.ref, 'refs/tags/v')
 
     permissions:
@@ -282,13 +344,19 @@ jobs:
               body: [
                 `## Install`,
                 ``,
+                `### GitHub Packages (no extra token needed if your org is public)`,
+                `\`\`\`bash`,
+                `npm install @bioinfornatics/gpt-image-mcp@${version} --registry https://npm.pkg.github.com`,
+                `\`\`\``,
+                ``,
+                `### npm registry`,
                 `\`\`\`bash`,
                 `# Zero-install (Claude Desktop / Goose):`,
-                `npx -y gpt-image-mcp@${version}`,
-                `bun x --bun gpt-image-mcp@${version}`,
+                `npx -y @bioinfornatics/gpt-image-mcp@${version}`,
+                `bun x --bun @bioinfornatics/gpt-image-mcp@${version}`,
                 ``,
                 `# Global install:`,
-                `npm install -g gpt-image-mcp@${version}`,
+                `npm install -g @bioinfornatics/gpt-image-mcp@${version}`,
                 `\`\`\``,
                 ``,
                 `## Docker`,
