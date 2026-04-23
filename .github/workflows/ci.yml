@@ -352,7 +352,8 @@ jobs:
         run: npm pack --dry-run
 
       - name: Publish to npm
-        run: npm publish --access public --provenance
+        # --registry overrides publishConfig in package.json (which points to GitHub Packages)
+        run: npm publish --access public --provenance --registry https://registry.npmjs.org
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
