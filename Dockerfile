@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Build
 # ─────────────────────────────────────────────────────────────────────────────
-FROM oven/bun:1.1-slim AS builder
+FROM oven/bun:1.3-slim AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN bun install --frozen-lockfile --production
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
 # ─────────────────────────────────────────────────────────────────────────────
-FROM oven/bun:1.1-slim AS runtime
+FROM oven/bun:1.3-slim AS runtime
 
 WORKDIR /app
 
