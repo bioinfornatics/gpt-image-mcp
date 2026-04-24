@@ -278,14 +278,14 @@ jobs:
         # bun pm pack --dry-run: lists files without publishing or auth check
         run: bun pm pack --dry-run
 
+      - name: Configure npm auth for GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+
       - name: Publish to GitHub Packages
-        # bun publish reads auth from bunfig.toml or ~/.npmrc for non-default registries.
-        # Write token to ~/.npmrc (user-level) so bun picks it up regardless of cwd.
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${BUN_AUTH_TOKEN}" >> ~/.npmrc
-          bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
-        env:
-          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # --tolerate-republish: idempotent on retries (E409 does not fail the step)
+        # --ignore-scripts: build already done above; skip prepublishOnly
+        # Auth comes from ~/.npmrc written in the previous step
+        run: bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
 
       - name: Confirm published version
         run: |
