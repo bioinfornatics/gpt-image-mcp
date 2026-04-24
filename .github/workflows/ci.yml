@@ -279,17 +279,14 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
-        # bun reads per-registry auth from bunfig.toml [install.scopes] section.
-        # Write a temporary bunfig fragment with the token, then publish.
-        # --tolerate-republish: idempotent on retries
+        # publishConfig in package.json sets registry = https://npm.pkg.github.com
+        # bun publish picks that up automatically — no --registry flag needed.
+        # Auth: write token to ~/.npmrc for the specific registry host.
+        # --tolerate-republish: idempotent — skips if version already published
         # --ignore-scripts: build already done above; skip prepublishOnly
         run: |
-          cat >> bunfig.toml <<EOF
-
-          [install.scopes]
-          "@bioinfornatics" = { registry = "https://npm.pkg.github.com/", token = "${{ secrets.GITHUB_TOKEN }}" }
-          EOF
-          bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          bun publish --access public --tolerate-republish --ignore-scripts
 
       - name: Confirm published version
         run: |
