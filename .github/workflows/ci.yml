@@ -279,10 +279,10 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
-        # bun publish reads auth from .npmrc for non-default registries.
-        # Write the scoped registry entry inline, then publish.
+        # bun publish reads auth from bunfig.toml or ~/.npmrc for non-default registries.
+        # Write token to ~/.npmrc (user-level) so bun picks it up regardless of cwd.
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${BUN_AUTH_TOKEN}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${BUN_AUTH_TOKEN}" >> ~/.npmrc
           bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
         env:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
