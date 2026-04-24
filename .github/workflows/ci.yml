@@ -279,9 +279,11 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
-        # --tolerate-republish: idempotent on retries (E409 does not fail the step)
-        # --ignore-scripts: build already done above; skip prepublishOnly
-        run: bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
+        # bun publish reads auth from .npmrc for non-default registries.
+        # Write the scoped registry entry inline, then publish.
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${BUN_AUTH_TOKEN}" >> .npmrc
+          bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
         env:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
