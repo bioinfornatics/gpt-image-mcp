@@ -274,13 +274,13 @@ jobs:
           fi
           echo "✅ Tag v$TAG matches package.json version"
 
-      - name: Check package contents (dry run)
-        # --ignore-scripts: build already done above; skip prepublishOnly to avoid re-running tests
-        run: bun publish --dry-run --ignore-scripts --registry https://npm.pkg.github.com
+      - name: Show package contents (preview)
+        # bun pm pack --dry-run: lists files without publishing or auth check
+        run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
         # --tolerate-republish: idempotent on retries (E409 does not fail the step)
-        # --ignore-scripts: build already done; skip prepublishOnly
+        # --ignore-scripts: build already done above; skip prepublishOnly
         run: bun publish --access public --tolerate-republish --ignore-scripts --registry https://npm.pkg.github.com
         env:
           BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -339,9 +339,9 @@ jobs:
           fi
           echo "✅ Tag v$TAG matches package.json version"
 
-      - name: Check package contents (dry run)
-        # --ignore-scripts: build already done above; skip prepublishOnly to avoid re-running tests
-        run: bun publish --dry-run --ignore-scripts --registry https://registry.npmjs.org
+      - name: Show package contents (preview)
+        # bun pm pack --dry-run: lists files without publishing or auth check
+        run: bun pm pack --dry-run
 
       - name: Publish to npmjs.com
         # --registry overrides publishConfig (which points to GitHub Packages by default)
