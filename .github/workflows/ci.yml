@@ -279,14 +279,22 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
-        # publishConfig in package.json sets registry = https://npm.pkg.github.com
-        # bun publish picks that up automatically — no --registry flag needed.
+        # publishConfig in package.json sets registry = https://npm.pkg.github.com.
         # Auth: write token to ~/.npmrc for the specific registry host.
-        # --tolerate-republish: idempotent — skips if version already published
-        # --ignore-scripts: build already done above; skip prepublishOnly
+        # Skip publish if version already exists (bun 1.3.x --tolerate-republish
+        # exits 1 despite the flag when the package is already present).
         run: |
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
-          bun publish --access public --tolerate-republish --ignore-scripts
+          VERSION=$(bun -e "console.log(require('./package.json').version)")
+          PKG="@bioinfornatics/gpt-image-mcp"
+          if bun pm ls 2>/dev/null | grep -q "@bioinfornatics" || \
+             curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+               "https://npm.pkg.github.com/@bioinfornatics%2fgpt-image-mcp" \
+               | grep -q "\"$VERSION\""; then
+            echo "✅ Version $VERSION already published to GitHub Packages — skipping"
+          else
+            bun publish --access public --ignore-scripts
+          fi
 
       - name: Confirm published version
         run: |
