@@ -1,6 +1,6 @@
 {
   "name": "@bioinfornatics/gpt-image-mcp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MCP server for AI image generation via OpenAI and Azure OpenAI gpt-image-* models",
   "license": "CECILL-2.1",
   "repository": {
@@ -15,7 +15,9 @@
     "gpt-image-mcp": "./dist/main.js"
   },
   "files": [
-    "dist/**/*",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "bin/start.sh",
     "README.md",
     "LICENSE"
   ],
