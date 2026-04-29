@@ -302,18 +302,18 @@ jobs:
           echo "✅ Published: https://github.com/bioinfornatics/gpt-image-mcp/pkgs/npm/gpt-image-mcp"
           echo "   Install: bun add @bioinfornatics/gpt-image-mcp@$VERSION --registry https://npm.pkg.github.com"
 
-  # ─── npmjs.com Publish ────────────────────────────────────────────────────
+  # ─── npmjs.com Publish (OIDC Trusted Publishing) ─────────────────────────
   # Triggered only on semver tags (v*.*.*).
-  # Requires secret: NPM_TOKEN (Automation token from npmjs.com → Access Tokens).
+  # No token or secret required — uses GitHub OIDC identity via id-token permission.
   #
-  # One-time setup:
-  #   1. Create account / org @bioinfornatics at npmjs.com
-  #   2. npmjs.com → Access Tokens → Generate New Token (Automation)
-  #   3. GitHub repo → Settings → Secrets → Actions → New secret
-  #      Name: NPM_TOKEN  Value: <paste token>
-  #
-  # Auth: bun publish reads BUN_AUTH_TOKEN (not NODE_AUTH_TOKEN).
-  # To publish: git tag v0.0.1 && git push origin main --tags
+  # One-time setup on npmjs.com (done once, never rotates):
+  #   1. npmjs.com → your package → Settings → Publishing → Trusted Publishing
+  #   2. Add a new publisher:
+  #        Provider:      GitHub Actions
+  #        Owner:         bioinfornatics
+  #        Repository:    gpt-image-mcp
+  #        Workflow file: ci.yml
+  #        Environment:   (leave blank)
   # ────────────────────────────────────────────────────────────────────────────
   publish-npm:
     name: Publish to npmjs.com
@@ -323,6 +323,7 @@ jobs:
 
     permissions:
       contents: read
+      id-token: write   # required for OIDC Trusted Publishing
 
     steps:
       - name: Checkout
@@ -351,19 +352,15 @@ jobs:
           echo "✅ Tag v$TAG matches package.json version"
 
       - name: Show package contents (preview)
-        # bun pm pack --dry-run: lists files without publishing or auth check
         run: bun pm pack --dry-run
 
-      - name: Publish to npmjs.com
-        # Uses npm publish (not bun) — bun publish ignores BUN_AUTH_TOKEN when
-        # --registry overrides the default. npm reliably reads ~/.npmrc auth.
-        # Idempotent: 409/EPUBLISHCONFLICT means version already exists — treat as success.
-        # continue-on-error: GitHub Packages is the primary registry; npm is secondary.
-        continue-on-error: true
+      - name: Publish to npmjs.com (Trusted Publishing — no token needed)
+        # npm ≥ 9.5 supports OIDC provenance. The --provenance flag attaches a
+        # signed attestation to the package (visible on the npmjs.com package page).
+        # Idempotent: 409 means version already exists — treat as success.
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          # --registry overrides publishConfig.registry (which points to GitHub Packages)
-          npm publish --access public --ignore-scripts --registry https://registry.npmjs.org \
+          npm publish --access public --ignore-scripts \
+            --provenance --registry https://registry.npmjs.org \
             2>&1 | tee /tmp/npm_out.txt; EC=${PIPESTATUS[0]}
           if [ $EC -eq 0 ]; then
             echo "✅ Published to npmjs.com successfully"
@@ -373,8 +370,6 @@ jobs:
             cat /tmp/npm_out.txt
             exit $EC
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Confirm published version
         run: |
