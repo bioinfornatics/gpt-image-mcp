@@ -302,18 +302,13 @@ jobs:
           echo "✅ Published: https://github.com/bioinfornatics/gpt-image-mcp/pkgs/npm/gpt-image-mcp"
           echo "   Install: bun add @bioinfornatics/gpt-image-mcp@$VERSION --registry https://npm.pkg.github.com"
 
-  # ─── npmjs.com Publish (OIDC Trusted Publishing) ─────────────────────────
+  # ─── npmjs.com Publish ────────────────────────────────────────────────────
   # Triggered only on semver tags (v*.*.*).
-  # No token or secret required — uses GitHub OIDC identity via id-token permission.
+  # Uses NPM_TOKEN secret (granular token, 2FA bypass enabled).
   #
-  # One-time setup on npmjs.com (done once, never rotates):
-  #   1. npmjs.com → your package → Settings → Publishing → Trusted Publishing
-  #   2. Add a new publisher:
-  #        Provider:      GitHub Actions
-  #        Owner:         bioinfornatics
-  #        Repository:    gpt-image-mcp
-  #        Workflow file: ci.yml
-  #        Environment:   (leave blank)
+  # Future: once v0.0.2 exists on npmjs.com, switch to OIDC Trusted Publishing:
+  #   npmjs.com → package Settings → Publishing → Trusted Publishing → Add GitHub Actions
+  #   Then remove NPM_TOKEN secret and add `id-token: write` permission here.
   # ────────────────────────────────────────────────────────────────────────────
   publish-npm:
     name: Publish to npmjs.com
@@ -323,7 +318,6 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write   # required for OIDC Trusted Publishing
 
     steps:
       - name: Checkout
@@ -354,13 +348,12 @@ jobs:
       - name: Show package contents (preview)
         run: bun pm pack --dry-run
 
-      - name: Publish to npmjs.com (Trusted Publishing — no token needed)
-        # npm ≥ 9.5 supports OIDC provenance. The --provenance flag attaches a
-        # signed attestation to the package (visible on the npmjs.com package page).
-        # Idempotent: 409 means version already exists — treat as success.
+      - name: Publish to npmjs.com
+        # npm publish with ~/.npmrc token auth. --registry overrides publishConfig
+        # (which points to GitHub Packages). Idempotent: 409 = already exists.
         run: |
-          npm publish --access public --ignore-scripts \
-            --provenance --registry https://registry.npmjs.org \
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          npm publish --access public --ignore-scripts --registry https://registry.npmjs.org \
             2>&1 | tee /tmp/npm_out.txt; EC=${PIPESTATUS[0]}
           if [ $EC -eq 0 ]; then
             echo "✅ Published to npmjs.com successfully"
@@ -370,6 +363,8 @@ jobs:
             cat /tmp/npm_out.txt
             exit $EC
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Confirm published version
         run: |
