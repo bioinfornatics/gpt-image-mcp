@@ -279,21 +279,15 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to GitHub Packages
-        # publishConfig in package.json sets registry = https://npm.pkg.github.com.
-        # Auth: BUN_AUTH_TOKEN env var (bun publish reads this, not ~/.npmrc).
-        # Idempotent: check registry for existing version before publishing.
-        # --tolerate-republish: suppresses exit 1 on 409 conflict (belt + suspenders).
+        # Uses npm publish (not bun) — npm reliably reads ~/.npmrc for non-default
+        # registry auth. bun publish only uses BUN_AUTH_TOKEN for the default registry.
+        # Idempotent: npm publish exits 0 on EPUBLISHCONFLICT when version already exists.
         run: |
-          VERSION=$(bun -e "console.log(require('./package.json').version)")
-          if curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-               "https://npm.pkg.github.com/@bioinfornatics%2fgpt-image-mcp" \
-               2>/dev/null | grep -q "\"$VERSION\""; then
-            echo "✅ Version $VERSION already published to GitHub Packages — skipping"
-          else
-            bun publish --access public --tolerate-republish --ignore-scripts
-          fi
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "@bioinfornatics:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          npm publish --access public --ignore-scripts
         env:
-          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Confirm published version
         run: |
