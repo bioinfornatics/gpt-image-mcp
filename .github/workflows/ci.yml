@@ -355,14 +355,24 @@ jobs:
         run: bun pm pack --dry-run
 
       - name: Publish to npmjs.com
-        # --registry overrides publishConfig (which points to GitHub Packages by default)
-        # --tolerate-republish: idempotent — does not fail if version already exists
-        # --ignore-scripts: build already done; skip prepublishOnly
-        # continue-on-error: GitHub Packages is the primary registry; npm is secondary
+        # Uses npm publish (not bun) — bun publish ignores BUN_AUTH_TOKEN when
+        # --registry overrides the default. npm reliably reads ~/.npmrc auth.
+        # Idempotent: 409/EPUBLISHCONFLICT means version already exists — treat as success.
+        # continue-on-error: GitHub Packages is the primary registry; npm is secondary.
         continue-on-error: true
-        run: bun publish --access public --tolerate-republish --ignore-scripts --registry https://registry.npmjs.org
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          npm publish --access public --ignore-scripts 2>&1 | tee /tmp/npm_out.txt; EC=${PIPESTATUS[0]}
+          if [ $EC -eq 0 ]; then
+            echo "✅ Published to npmjs.com successfully"
+          elif grep -qE "E409|cannot publish over|already exists" /tmp/npm_out.txt; then
+            echo "✅ Version already published to npmjs.com — skipping"
+          else
+            cat /tmp/npm_out.txt
+            exit $EC
+          fi
         env:
-          BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Confirm published version
         run: |
