@@ -362,7 +362,9 @@ jobs:
         continue-on-error: true
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          npm publish --access public --ignore-scripts 2>&1 | tee /tmp/npm_out.txt; EC=${PIPESTATUS[0]}
+          # --registry overrides publishConfig.registry (which points to GitHub Packages)
+          npm publish --access public --ignore-scripts --registry https://registry.npmjs.org \
+            2>&1 | tee /tmp/npm_out.txt; EC=${PIPESTATUS[0]}
           if [ $EC -eq 0 ]; then
             echo "✅ Published to npmjs.com successfully"
           elif grep -qE "E409|cannot publish over|already exists" /tmp/npm_out.txt; then
