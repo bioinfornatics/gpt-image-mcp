@@ -280,21 +280,20 @@ jobs:
 
       - name: Publish to GitHub Packages
         # publishConfig in package.json sets registry = https://npm.pkg.github.com.
-        # Auth: write token to ~/.npmrc for the specific registry host.
-        # Skip publish if version already exists (bun 1.3.x --tolerate-republish
-        # exits 1 despite the flag when the package is already present).
+        # Auth: BUN_AUTH_TOKEN env var (bun publish reads this, not ~/.npmrc).
+        # Idempotent: check registry for existing version before publishing.
+        # --tolerate-republish: suppresses exit 1 on 409 conflict (belt + suspenders).
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
           VERSION=$(bun -e "console.log(require('./package.json').version)")
-          PKG="@bioinfornatics/gpt-image-mcp"
-          if bun pm ls 2>/dev/null | grep -q "@bioinfornatics" || \
-             curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          if curl -sf -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                "https://npm.pkg.github.com/@bioinfornatics%2fgpt-image-mcp" \
-               | grep -q "\"$VERSION\""; then
+               2>/dev/null | grep -q "\"$VERSION\""; then
             echo "✅ Version $VERSION already published to GitHub Packages — skipping"
           else
-            bun publish --access public --ignore-scripts
+            bun publish --access public --tolerate-republish --ignore-scripts
           fi
+        env:
+          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Confirm published version
         run: |
