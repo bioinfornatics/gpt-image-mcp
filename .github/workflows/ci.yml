@@ -281,11 +281,18 @@ jobs:
       - name: Publish to GitHub Packages
         # Uses npm publish (not bun) — npm reliably reads ~/.npmrc for non-default
         # registry auth. bun publish only uses BUN_AUTH_TOKEN for the default registry.
-        # Idempotent: npm publish exits 0 on EPUBLISHCONFLICT when version already exists.
+        # Idempotent: 409 Conflict means version already exists — treat as success.
         run: |
           echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
           echo "@bioinfornatics:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          npm publish --access public --ignore-scripts
+          npm publish --access public --ignore-scripts 2>&1 | tee /tmp/npm_gpr_out.txt; EC=${PIPESTATUS[0]}
+          if [ $EC -eq 0 ]; then
+            echo "✅ Published successfully"
+          elif grep -qE "E409|Cannot publish over existing|already exists" /tmp/npm_gpr_out.txt; then
+            echo "✅ Version already published to GitHub Packages — skipping"
+          else
+            exit $EC
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
