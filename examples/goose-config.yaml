@@ -2,69 +2,88 @@
 # Merge the relevant extension block into: ~/.config/goose/config.yaml
 #
 # Documentation: https://block.github.io/goose/docs/configuration
+#
+# NOTE: Goose uses a map under `extensions:` (not a list).
+#       env_keys:  variables Goose reads from your host environment and forwards.
+#       envs:      inline key/value overrides (use for non-secret config only).
 
 extensions:
 
-  # ─── Option A: bun x — no clone needed (RECOMMENDED) ────────────────────
-  - name: gpt-image-mcp
+  # ─── Option A: OpenAI — bunx (RECOMMENDED) ───────────────────────────────
+  gptimagemcp:
+    enabled: true
     type: stdio
-    cmd: bun
+    name: GPT Image MCP
+    description: AI image generation — gpt-image-1 via OpenAI
+    cmd: bunx
     args:
-      - x
-      - --bun
-      - gpt-image-mcp          # latest published version
-    env:
+      - '@bioinfornatics/gpt-image-mcp'
+    envs:
       PROVIDER: openai
-      OPENAI_API_KEY: sk-replace-with-your-key
       MCP_TRANSPORT: stdio
       LOG_LEVEL: error
+    env_keys:
+      - OPENAI_API_KEY       # export OPENAI_API_KEY=sk-... in your shell / .zshrc
+    timeout: 300
+    bundled: null
+    available_tools: []
 
-  # ─── Option B: pin a specific version ────────────────────────────────────
-  # - name: gpt-image-mcp
+  # ─── Option B: Azure AI Foundry ───────────────────────────────────────────
+  # gptimagemcp:
+  #   enabled: true
   #   type: stdio
-  #   cmd: bun
-  #   args: [x, --bun, "gpt-image-mcp@0.1.0"]
-  #   env:
-  #     PROVIDER: openai
-  #     OPENAI_API_KEY: sk-replace-with-your-key
-  #     MCP_TRANSPORT: stdio
-
-  # ─── Option C: npx (no Bun required) ─────────────────────────────────────
-  # - name: gpt-image-mcp
-  #   type: stdio
-  #   cmd: npx
-  #   args: [-y, gpt-image-mcp]
-  #   env:
-  #     PROVIDER: openai
-  #     OPENAI_API_KEY: sk-replace-with-your-key
-  #     MCP_TRANSPORT: stdio
-
-  # ─── Option D: Azure OpenAI ───────────────────────────────────────────────
-  # - name: gpt-image-mcp-azure
-  #   type: stdio
-  #   cmd: bun
-  #   args: [x, --bun, gpt-image-mcp]
-  #   env:
+  #   name: GPT Image MCP
+  #   description: AI image generation — gpt-image-2 via Azure AI Foundry
+  #   cmd: bunx
+  #   args:
+  #     - '@bioinfornatics/gpt-image-mcp'
+  #   envs:
   #     PROVIDER: azure
-  #     AZURE_OPENAI_ENDPOINT: https://my-resource.openai.azure.com
-  #     AZURE_OPENAI_API_KEY: replace-with-azure-key
-  #     AZURE_OPENAI_DEPLOYMENT: my-gpt-image-deployment
   #     MCP_TRANSPORT: stdio
+  #     LOG_LEVEL: error
+  #   env_keys:
+  #     - AZURE_OPENAI_ENDPOINT      # https://my-resource.openai.azure.com
+  #     - AZURE_OPENAI_DEPLOYMENT    # your deployment name
+  #     - AZURE_OPENAI_API_KEY
+  #   timeout: 300
+  #   bundled: null
+  #   available_tools: []
 
-  # ─── Option E: local clone (development) ─────────────────────────────────
-  # - name: gpt-image-mcp-dev
+  # ─── Option C: pin a specific version ─────────────────────────────────────
+  # gptimagemcp:
+  #   enabled: true
   #   type: stdio
-  #   cmd: bun
-  #   args: [run, /absolute/path/to/gpt-image-mcp/src/main.ts]
-  #   env:
+  #   name: GPT Image MCP
+  #   cmd: bunx
+  #   args:
+  #     - '@bioinfornatics/gpt-image-mcp@0.0.2'
+  #   envs:
   #     PROVIDER: openai
-  #     OPENAI_API_KEY: sk-replace-with-your-key
   #     MCP_TRANSPORT: stdio
+  #   env_keys:
+  #     - OPENAI_API_KEY
+  #   timeout: 300
 
-  # ─── Option F: HTTP transport (remote server) ─────────────────────────────
-  # - name: gpt-image-mcp-remote
+  # ─── Option D: HTTP transport (remote / Docker server) ────────────────────
+  # gptimagemcp:
+  #   enabled: true
   #   type: streamable_http
+  #   name: GPT Image MCP (HTTP)
   #   uri: http://localhost:3000/mcp
   #   # If MCP_API_KEY is set on the server, add the Authorization header:
   #   # headers:
   #   #   Authorization: "Bearer your-mcp-api-key"
+  #   timeout: 300
+
+  # ─── Option E: local clone (development) ─────────────────────────────────
+  # gptimagemcp:
+  #   enabled: true
+  #   type: stdio
+  #   name: GPT Image MCP (dev)
+  #   cmd: /absolute/path/to/gpt-image-mcp/bin/start.sh
+  #   envs:
+  #     PROVIDER: openai
+  #     MCP_TRANSPORT: stdio
+  #   env_keys:
+  #     - OPENAI_API_KEY
+  #   timeout: 300

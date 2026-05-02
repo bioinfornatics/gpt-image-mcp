@@ -30,29 +30,27 @@
 
 ---
 
-### Option A — Zero-install with `bun x` (recommended)
+### Option A — Zero-install with `bunx` (recommended)
 
 ```bash
 # stdio transport (Claude Desktop, Goose, Cursor)
-PROVIDER=openai OPENAI_API_KEY=sk-... bun x --bun gpt-image-mcp
+PROVIDER=openai OPENAI_API_KEY=sk-... bunx @bioinfornatics/gpt-image-mcp
 
 # HTTP transport on port 3000
-PROVIDER=openai OPENAI_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 bun x --bun gpt-image-mcp
+PROVIDER=openai OPENAI_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 bunx @bioinfornatics/gpt-image-mcp
 
 # Azure OpenAI
 PROVIDER=azure \
   AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com \
   AZURE_OPENAI_API_KEY=... \
   AZURE_OPENAI_DEPLOYMENT=gpt-image-2 \
-  bun x --bun gpt-image-mcp
+  bunx @bioinfornatics/gpt-image-mcp
 ```
-
-> **`--bun` flag** forces Bun runtime instead of Node.js. Both work.
 
 **With `npx` (Node.js users):**
 
 ```bash
-PROVIDER=openai OPENAI_API_KEY=sk-... npx gpt-image-mcp
+PROVIDER=openai OPENAI_API_KEY=sk-... npx @bioinfornatics/gpt-image-mcp
 ```
 
 ---
@@ -60,7 +58,7 @@ PROVIDER=openai OPENAI_API_KEY=sk-... npx gpt-image-mcp
 ### Option B — Install globally
 
 ```bash
-bun add -g gpt-image-mcp
+bun add -g @bioinfornatics/gpt-image-mcp
 PROVIDER=openai OPENAI_API_KEY=sk-... gpt-image-mcp
 ```
 
@@ -125,8 +123,8 @@ docker run -p 3000:3000 \
 {
   "mcpServers": {
     "gpt-image-mcp": {
-      "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp"],
+      "command": "bunx",
+      "args": ["@bioinfornatics/gpt-image-mcp"],
       "env": {
         "PROVIDER": "openai",
         "OPENAI_API_KEY": "sk-...",
@@ -140,17 +138,49 @@ docker run -p 3000:3000 \
 
 ### Goose
 
+Add to `~/.config/goose/config.yaml` under `extensions:`:
+
+**OpenAI:**
 ```yaml
 extensions:
-  - name: gpt-image-mcp
+  gptimagemcp:
+    enabled: true
     type: stdio
-    cmd: bun
-    args: [x, --bun, gpt-image-mcp]
-    env:
+    name: GPT Image MCP
+    description: AI image generation — gpt-image-1 via OpenAI
+    cmd: bunx
+    args:
+      - '@bioinfornatics/gpt-image-mcp'
+    envs:
       PROVIDER: openai
-      OPENAI_API_KEY: sk-...
       MCP_TRANSPORT: stdio
+    env_keys:
+      - OPENAI_API_KEY        # export OPENAI_API_KEY=sk-... in your shell
+    timeout: 300
 ```
+
+**Azure AI Foundry:**
+```yaml
+extensions:
+  gptimagemcp:
+    enabled: true
+    type: stdio
+    name: GPT Image MCP
+    description: AI image generation — gpt-image-2 via Azure AI Foundry
+    cmd: bunx
+    args:
+      - '@bioinfornatics/gpt-image-mcp'
+    envs:
+      PROVIDER: azure
+      MCP_TRANSPORT: stdio
+    env_keys:
+      - AZURE_OPENAI_ENDPOINT
+      - AZURE_OPENAI_DEPLOYMENT
+      - AZURE_OPENAI_API_KEY
+    timeout: 300
+```
+
+> See [`examples/goose-config.yaml`](examples/goose-config.yaml) for all options including HTTP transport and local development.
 
 ### HTTP / Remote Client
 
