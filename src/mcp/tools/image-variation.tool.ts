@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { maskSecret } from '../../security/sanitise';
@@ -40,11 +41,11 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
           openWorldHint: true,
         },
       },
-      async (params: unknown) => this.execute(params, server),
+      async (params: unknown) => this.execute(params, server.server),
     );
   }
 
-  async execute(rawParams: unknown, server?: unknown) {
+  async execute(rawParams: unknown, server?: Server) {
     const parseResult = ImageVariationSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -85,7 +86,7 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
       const savedPaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const saved = await this.roots.saveImageToWorkspace(server as never, img.b64_json, 'png');
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, 'png');
           if (saved) savedPaths.push(saved);
         }
       }

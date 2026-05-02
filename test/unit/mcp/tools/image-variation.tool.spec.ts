@@ -121,7 +121,7 @@ describe('ImageVariationTool', () => {
   describe('register() — server closure', () => {
     beforeEach(() => makeModule('openai'));
 
-    it('should pass the McpServer instance to execute() via closure', async () => {
+    it('should pass the inner Server (mcpServer.server) to execute() via closure', async () => {
       mockProvider.variation.mockResolvedValue([mockResult]);
 
       let capturedServer: unknown;
@@ -130,7 +130,9 @@ describe('ImageVariationTool', () => {
         return { content: [{ type: 'text' as const, text: '' }] };
       });
 
+      const innerServer = { listRoots: jest.fn().mockResolvedValue({ roots: [] }) };
       const mockMcpServer = {
+        server: innerServer,
         registerTool: jest.fn((_name: string, _meta: unknown, handler: (p: unknown) => unknown) => {
           return handler({ image: VALID_B64 });
         }),
@@ -138,7 +140,8 @@ describe('ImageVariationTool', () => {
 
       tool.register(mockMcpServer as any);
 
-      expect(capturedServer).toBe(mockMcpServer);
+      // execute() must receive the inner Server, not the McpServer wrapper
+      expect(capturedServer).toBe(innerServer);
       executeSpy.mockRestore();
     });
   });

@@ -20,9 +20,16 @@ const MOCK_RESULT: ImageResult = {
 
 const mockImageResult = MOCK_RESULT;
 
+/**
+ * Simulates the inner SDK Server instance (Server, not McpServer).
+ * Tools now pass `mcpServer.server` (inner Server) to feature services,
+ * so mocks must expose elicitInput / createMessage / listRoots directly.
+ */
 function makeMockServer(overrides: Record<string, jest.Mock> = {}): any {
   return {
-    request: jest.fn(),
+    elicitInput: jest.fn().mockRejectedValue(new Error('client does not support elicitation')),
+    createMessage: jest.fn().mockRejectedValue(new Error('client does not support sampling')),
+    listRoots: jest.fn().mockResolvedValue({ roots: [] }),
     ...overrides,
   };
 }
@@ -75,33 +82,29 @@ describe('ImageGenerateTool — with M4 features', () => {
   // ── register() closure ───────────────────────────────────────────────────
 
   describe('register() — server closure', () => {
-    it('should pass the McpServer instance to execute() via closure, not via extra.server', async () => {
+    it('should pass the inner Server (mcpServer.server) to execute() via closure', async () => {
       mockProvider.generate.mockResolvedValue([mockImageResult]);
-      mockSampling.enhancePrompt.mockResolvedValue('enhanced prompt');
 
-      let capturedParams: unknown;
       let capturedServer: unknown;
 
-      // Mock the tool's execute method to capture what it receives
       const executeSpy = jest.spyOn(tool, 'execute').mockImplementation(async (p, s) => {
-        capturedParams = p;
         capturedServer = s;
         return { content: [{ type: 'text' as const, text: '' }] };
       });
 
-      // Simulate register() and call the registered handler
+      // Simulate McpServer shape: has registerTool() and a .server inner property
+      const innerServer = makeMockServer();
       const mockMcpServer = {
+        server: innerServer,
         registerTool: jest.fn((_name: string, _meta: unknown, handler: (p: unknown) => unknown) => {
-          // Call handler with NO extra.server (as the real SDK does)
           return handler({ prompt: 'test' });
         }),
       };
 
       tool.register(mockMcpServer as any);
 
-      // The server passed to execute should be mockMcpServer (from closure), not undefined
-      expect(capturedServer).toBe(mockMcpServer);
-      expect(capturedParams).toEqual({ prompt: 'test' });
+      // execute() must receive innerServer (the .server property), not the McpServer wrapper
+      expect(capturedServer).toBe(innerServer);
       executeSpy.mockRestore();
     });
   });

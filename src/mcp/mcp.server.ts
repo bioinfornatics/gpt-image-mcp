@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ConfigService } from '@nestjs/config';
 import { ImageGenerateTool } from './tools/image-generate.tool';
 import { ImageEditTool } from './tools/image-edit.tool';
@@ -38,6 +39,16 @@ export class McpServerService implements OnModuleInit {
     this.imageVariationTool.register(this.server);
     this.providerListTool.register(this.server);
     this.providerValidateTool.register(this.server);
+  }
+
+  /**
+   * The inner SDK Server instance — exposes elicitInput(), createMessage(), listRoots().
+   * McpServer (the outer wrapper) does NOT have these methods; Server (inner) does.
+   * Feature services (ElicitationService, SamplingService, RootsService) must receive
+   * this inner Server, not the McpServer, for M4 features to function.
+   */
+  get innerServer(): Server {
+    return this.server.server;
   }
 
   /**

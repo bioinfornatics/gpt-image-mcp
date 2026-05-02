@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { RootsService } from '../features/roots.service';
@@ -45,11 +46,11 @@ Returns: Base64-encoded edited image(s).`,
           openWorldHint: true,
         },
       },
-      async (params: unknown) => this.execute(params, server),
+      async (params: unknown) => this.execute(params, server.server),
     );
   }
 
-  async execute(rawParams: unknown, server?: unknown) {
+  async execute(rawParams: unknown, server?: Server) {
     const parseResult = ImageEditSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -94,7 +95,7 @@ Returns: Base64-encoded edited image(s).`,
       if (params.save_to_workspace && server) {
         for (const img of results) {
           const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
-          const saved = await this.roots.saveImageToWorkspace(server as never, img.b64_json, format);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, format);
           if (saved) savedPaths.push(saved);
         }
       }

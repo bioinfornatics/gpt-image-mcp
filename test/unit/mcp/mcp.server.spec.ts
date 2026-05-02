@@ -51,6 +51,16 @@ describe('McpServerService', () => {
     expect(service.server).toBeDefined();
   });
 
+  it('innerServer should be the inner SDK Server (has elicitInput / createMessage / listRoots)', () => {
+    const inner = service.innerServer;
+    expect(inner).toBeDefined();
+    expect(typeof inner.elicitInput).toBe('function');
+    expect(typeof inner.createMessage).toBe('function');
+    expect(typeof inner.listRoots).toBe('function');
+    // Must NOT be the McpServer wrapper itself
+    expect(inner).not.toBe(service.server);
+  });
+
   it('should call register() on all 5 tools during init', () => {
     expect(noopTool.register).toHaveBeenCalledTimes(5);
   });

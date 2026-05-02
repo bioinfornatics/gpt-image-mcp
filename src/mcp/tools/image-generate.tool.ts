@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { ElicitationService } from '../features/elicitation.service';
@@ -53,11 +54,13 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
           openWorldHint: true,
         },
       },
-      async (params: unknown) => this.execute(params, server),
+      // Pass the inner Server (not McpServer) so feature services can call
+      // elicitInput() / createMessage() / listRoots() which live on Server, not McpServer.
+      async (params: unknown) => this.execute(params, server.server),
     );
   }
 
-  async execute(rawParams: unknown, server?: unknown) {
+  async execute(rawParams: unknown, server?: Server) {
     const parseResult = ImageGenerateSchema.safeParse(rawParams);
     if (!parseResult.success) {
       return {
@@ -98,12 +101,12 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
 
       // M4: Sampling — enhance prompt via client LLM if server available
       if (server) {
-        prompt = await this.sampling.enhancePrompt(server as never, prompt, params.model);
+        prompt = await this.sampling.enhancePrompt(server, prompt, params.model);
       }
 
       // M4: Elicitation — request missing params from user if client supports it
       if (server) {
-        const elicited = await this.elicitation.requestImageParams(server as never, {
+        const elicited = await this.elicitation.requestImageParams(server, {
           hasQuality: params.quality !== 'auto' && params.quality !== undefined,
           hasSize: params.size !== 'auto' && params.size !== undefined,
           hasStyle: false,
@@ -135,7 +138,7 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
       if (params.save_to_workspace && server) {
         for (const img of results) {
           const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
-          const path = await this.roots.saveImageToWorkspace(server as never, img.b64_json, format);
+          const path = await this.roots.saveImageToWorkspace(server, img.b64_json, format);
           if (path) savedPaths.push(path);
         }
       }
