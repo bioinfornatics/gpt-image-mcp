@@ -27,12 +27,12 @@ export class ImageGenerateTool {
         title: 'Generate Image',
         description: `Generate one or more images from a text prompt using OpenAI or Azure OpenAI gpt-image-* models.
 
-Supported models: gpt-image-1 (default), gpt-image-1.5, gpt-image-1-mini, dall-e-3, dall-e-2.
+Supported models: gpt-image-2 (default/recommended), gpt-image-1.5, gpt-image-1-mini, gpt-image-1. dall-e-2 is available for variations only; dall-e-3 was retired 2026-03-04.
 
 Args:
   - prompt (string, required): Text description, max 32 000 chars for GPT models
-  - model (string, optional): Model identifier, default: gpt-image-1
-  - n (integer 1–10, optional): Number of images, default: 1 (dall-e-3 only supports n=1)
+  - model (string, optional): Model identifier, default: gpt-image-2
+  - n (integer 1–10, optional): Number of images, default: 1
   - size (string, optional): auto|1024x1024|1536x1024|1024x1536|..., default: auto
   - quality (string, optional): auto|high|medium|low|hd|standard, default: auto
   - background (string, optional): auto|transparent|opaque (GPT models only)
@@ -44,7 +44,7 @@ Args:
 
 Returns: Base64-encoded image(s) with metadata. If save_to_workspace=true, also returns file path.
 
-Error cases: invalid model name, prompt too long, n>10, dall-e-3 with n>1, provider auth failure.`,
+Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         inputSchema: ImageGenerateSchema,
         annotations: {
           readOnlyHint: false,

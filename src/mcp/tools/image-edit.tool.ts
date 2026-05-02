@@ -27,7 +27,7 @@ Args:
   - image (string, required): Base64-encoded source image (PNG recommended)
   - mask (string, optional): Base64-encoded mask (white=area to edit, black=keep)
   - prompt (string, required): Description of the desired edit
-  - model (string, optional): Model to use, default: gpt-image-1
+  - model (string, optional): Model to use, default: gpt-image-2
   - n (integer 1–10, optional): Number of edited images to generate, default: 1
   - size (string, optional): Output size, default: auto
   - quality (string, optional): Quality level, default: auto

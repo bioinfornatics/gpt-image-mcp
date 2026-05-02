@@ -156,7 +156,7 @@ export interface GenerateParams {
 
 export interface ImageResult {
   b64_json: string;         // GPT image models always return b64
-  revised_prompt?: string;  // dall-e-3 only
+  revised_prompt?: string;  // reserved — null for all current models (dall-e-3 retired 2026-03-04)
   model: string;
   created: number;
 }

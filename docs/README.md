@@ -30,7 +30,7 @@
 
 `gpt-image-mcp` exposes an **MCP server** that lets any MCP-compatible LLM client (Claude Desktop, Goose, Cursor, …) generate and edit images through a standardised protocol layer. It supports:
 
-- **OpenAI** (`/v1/images/generations` — `gpt-image-1`, `gpt-image-1.5`, `gpt-image-1-mini`, `dall-e-3`, `dall-e-2`)
+- **OpenAI** (`/v1/images/generations` — `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`; `dall-e-2` for variations only; ~~`dall-e-3`~~ retired 2026-03-04)
 - **Azure OpenAI** (Azure AI Foundry endpoint + deployment-based routing)
 - **Streaming** partial image previews (GPT image models)
 - **MCP Elicitation** — interactive parameter refinement via structured forms
@@ -224,8 +224,8 @@ The server requests `roots/list` to discover the client's workspace directories.
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| OpenAI | `gpt-image-1`, `gpt-image-1.5`, `gpt-image-1-mini`, `dall-e-3`, `dall-e-2` | Direct API |
-| Azure OpenAI | `gpt-image-1`, `gpt-image-1.5`, `gpt-image-2`, `dall-e-3` | Via AI Foundry deployment |
+| OpenAI | `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`, `dall-e-2` (variations only) | Direct API |
+| Azure OpenAI | `gpt-image-2` (Public Preview), `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1` (Limited Access) | Via AI Foundry deployment |
 
 ---
 

@@ -32,7 +32,7 @@ LLM clients (Claude Desktop, Goose, Cursor, etc.) lack a standardised, secure, a
 
 ### Goals
 - ✅ Implement a fully spec-compliant MCP server (Streamable HTTP + stdio transports)
-- ✅ Support OpenAI and Azure OpenAI image APIs (`gpt-image-1`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-2`, `dall-e-3`, `dall-e-2`)
+- ✅ Support OpenAI and Azure OpenAI image APIs (`gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`; `dall-e-2` for variations only; ~~`dall-e-3`~~ retired 2026-03-04)
 - ✅ Expose tools: `image_generate`, `image_edit`, `image_variation`, `provider_list`, `provider_validate`
 - ✅ Implement MCP Elicitation for interactive parameter refinement
 - ✅ Implement MCP Sampling for prompt enhancement via client LLM
@@ -82,9 +82,9 @@ Key integration points:
 - **Tool name:** `image_generate`
 - **Description:** Generate one or more images from a text prompt
 - **Inputs:**
-  - `prompt` (string, required, max 32 000 chars for GPT image, 4000 for dall-e-3)
-  - `model` (enum, optional, default: `gpt-image-1`)
-  - `n` (integer 1–10, optional, default: 1; dall-e-3 only supports n=1)
+  - `prompt` (string, required, max 32 000 chars)
+  - `model` (enum, optional, default: `gpt-image-2`)
+  - `n` (integer 1–10, optional, default: 1)
   - `size` (enum: `auto|1024x1024|1536x1024|1024x1536|256x256|512x512|1792x1024|1024x1792`, optional, default: `auto`)
   - `quality` (enum: `auto|high|medium|low|hd|standard`, optional, default: `auto`)
   - `background` (enum: `auto|transparent|opaque`, optional, GPT image models only)

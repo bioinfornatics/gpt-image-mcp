@@ -177,7 +177,7 @@
 - [ ] Unit test: valid prompt → correct API call parameters
 - [ ] Unit test: `n > 10` → Zod validation error
 - [ ] Unit test: prompt > 32000 chars → Zod validation error
-- [ ] Unit test: `dall-e-3` with `n > 1` → API-level error surfaced clearly
+- [ ] Unit test: `n > 10` with any model → validation error surfaced clearly
 - [ ] Integration test: full tool call → mocked OpenAI → base64 image returned
 - [ ] Tool description is comprehensive (see SPECIFICATION.md FR-001)
 

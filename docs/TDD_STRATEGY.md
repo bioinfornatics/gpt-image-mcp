@@ -116,11 +116,11 @@ describe('ImageGenerateTool', () => {
       expect(result.isError).toBe(true);
     });
 
-    it('should surface clear error when dall-e-3 is called with n > 1', async () => {
-      mockProvider.generate.mockRejectedValue(new Error('dall-e-3 only supports n=1'));
-      const result = await tool.execute({ prompt: 'a cat', model: 'dall-e-3', n: 2 });
+    it('should surface clear error when n > 10', async () => {
+      // Zod rejects n > 10 before reaching the provider
+      const result = await tool.execute({ prompt: 'a cat', model: 'gpt-image-2', n: 11 });
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toMatch(/dall-e-3/i);
+      expect(result.content[0].text).toMatch(/n|number|max/i);
     });
   });
 

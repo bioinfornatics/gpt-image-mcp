@@ -119,23 +119,23 @@ When `save_to_workspace` is provided, the generated image is saved to the specif
 
 #### Description
 
-Generates one or more images from a text prompt using a specified model. Supports OpenAI's `gpt-image-1` and `dall-e-3` / `dall-e-2` models with model-specific parameters.
+Generates one or more images from a text prompt using OpenAI or Azure OpenAI `gpt-image-*` models. `gpt-image-2` is the recommended default.
 
 **When to use:**
 - Creating new images from scratch based on a text description.
-- Generating multiple variations of a concept in a single call (`n` > 1, DALL-E 2 only).
-- Producing images in specific formats or sizes for downstream use.
+- Generating multiple images in a single call (`n` up to 10).
+- Producing images in specific formats, sizes, or with transparent backgrounds.
 
 #### Input Schema
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `prompt` | string | ✅ Yes | — | Text description of the image to generate. Max 32 000 chars. |
-| `model` | string | No | `gpt-image-1` | Model to use. One of: `gpt-image-1`, `dall-e-3`, `dall-e-2` |
-| `n` | integer | No | `1` | Number of images to generate. `1` for `gpt-image-1`/`dall-e-3`; `1–10` for `dall-e-2` |
-| `size` | string | No | `1024x1024` | Image dimensions. See model-specific size table below. |
-| `quality` | string | No | `auto` | Quality setting. `auto`\|`high`\|`medium`\|`low` (gpt-image-1); `hd`\|`standard` (DALL-E 3); not supported on DALL-E 2 |
-| `background` | string | No | `auto` | Background transparency. `transparent`\|`opaque`\|`auto`. Only supported on `gpt-image-1` with `png` or `webp` output. |
+| `model` | string | No | `gpt-image-2` | Model to use. OpenAI: `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`. Azure: same list. `dall-e-2` for variations only; `dall-e-3` retired 2026-03-04. |
+| `n` | integer | No | `1` | Number of images to generate (1–10). All `gpt-image-*` models support up to 10. |
+| `size` | string | No | `auto` | Image dimensions. See model-specific size table below. |
+| `quality` | string | No | `auto` | Quality setting. `auto`\|`high`\|`medium`\|`low` (gpt-image-* models). |
+| `background` | string | No | `auto` | Background transparency. `transparent`\|`opaque`\|`auto`. Supported on `gpt-image-*` with `png` or `webp` output. |
 | `output_format` | string | No | `png` | Output image format. `png`\|`jpeg`\|`webp` |
 | `output_compression` | integer | No | `100` | Compression level 0–100 for `jpeg` and `webp` output formats |
 | `moderation` | string | No | `auto` | Content moderation level. `auto`\|`low`. Only `gpt-image-1`. |
@@ -146,9 +146,12 @@ Generates one or more images from a text prompt using a specified model. Support
 
 | Model | Supported Sizes |
 |-------|----------------|
+| `gpt-image-2` | `1024x1024`, `1536x1024`, `1024x1536`, up to `4096x4096`, `auto` |
+| `gpt-image-1.5` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
+| `gpt-image-1-mini` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `gpt-image-1` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
-| `dall-e-3` | `1024x1024`, `1792x1024`, `1024x1792` |
-| `dall-e-2` | `256x256`, `512x512`, `1024x1024` |
+| `dall-e-2` | `256x256`, `512x512`, `1024x1024` — variations only |
+| ~~`dall-e-3`~~ | ⛔ Retired 2026-03-04 |
 
 #### Output Schema
 
@@ -204,7 +207,7 @@ Generates one or more images from a text prompt using a specified model. Support
 }
 ```
 
-> **Note:** `revisedPrompt` is populated for `dall-e-3` (which auto-revises prompts) and `null` for other models. `usage` is only available for `gpt-image-1`.
+> **Note:** `revisedPrompt` is always `null` — `dall-e-3` (the only model that auto-revised prompts) was retired 2026-03-04. `usage` token counts are available for all `gpt-image-*` models.
 
 #### Error Cases
 
@@ -212,7 +215,7 @@ Generates one or more images from a text prompt using a specified model. Support
 |------------|-----------|-----------|
 | `MISSING_REQUIRED_PARAM` | 400 | `prompt` not provided |
 | `INVALID_PARAM` | 400 | `size` not valid for the selected model |
-| `INVALID_PARAM` | 400 | `n` > 1 with `gpt-image-1` or `dall-e-3` |
+| `INVALID_PARAM` | 400 | `n` > 10 |
 | `INVALID_PARAM` | 400 | `background: transparent` with `jpeg` output |
 | `INVALID_PARAM` | 400 | `output_compression` out of range 0–100 |
 | `PATH_TRAVERSAL` | 400 | `save_to_workspace` attempts to escape workspace root |
@@ -274,7 +277,7 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 - Adding, removing, or replacing elements in an image.
 - Changing the style or content of selected areas using a transparency mask.
 
-**Model support:** `gpt-image-1` (full support), `dall-e-2` (limited — mask required, PNG only, square images only).
+**Model support:** All `gpt-image-*` models (full support). `dall-e-2` (limited — mask required, PNG only, square images only). `dall-e-3` was retired 2026-03-04.
 
 #### Input Schema
 
@@ -283,8 +286,8 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 | `image` | string | ✅ Yes | — | Base64-encoded image data or HTTPS URL of the image to edit. PNG, JPEG, or WebP. Max 20 MB. |
 | `mask` | string | No | — | Base64-encoded mask image or HTTPS URL. Transparent areas indicate regions to edit. Must be same dimensions as `image`. PNG only. |
 | `prompt` | string | ✅ Yes | — | Description of the desired edit. Max 32 000 chars. |
-| `model` | string | No | `gpt-image-1` | Model to use. `gpt-image-1`\|`dall-e-2` |
-| `n` | integer | No | `1` | Number of edited images to generate. `1` for `gpt-image-1`; `1–10` for `dall-e-2` |
+| `model` | string | No | `gpt-image-2` | Model to use. Any `gpt-image-*` model or `dall-e-2` (limited). |
+| `n` | integer | No | `1` | Number of edited images to generate (1–10). |
 | `size` | string | No | `1024x1024` | Output image dimensions. See model size table in §3.1. |
 | `quality` | string | No | `auto` | Quality setting. See model quality options in §3.1. |
 | `output_format` | string | No | `png` | Output format. `png`\|`jpeg`\|`webp` |
@@ -389,7 +392,7 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 
 Generates one or more variations of an existing image without a text prompt. Useful for exploring creative alternatives to a reference image.
 
-**⚠️ DALL-E 2 only.** This endpoint is not supported by `gpt-image-1` or `dall-e-3`. Calls to this tool always use `dall-e-2`.
+**⚠️ `dall-e-2` only.** This endpoint is not supported by any `gpt-image-*` model. Calls to this tool always use `dall-e-2`. `dall-e-3` was retired 2026-03-04.
 
 **When to use:**
 - Generating creative alternatives to an existing image.
@@ -530,7 +533,7 @@ This tool accepts **no parameters**.
 
 ### ✅ openai
 - **Status:** configured
-- **Models:** gpt-image-1, dall-e-3, dall-e-2
+- **Models:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)
 - **API Key:** Configured (sk-pro…REDACTED)
 
 ---
@@ -554,13 +557,23 @@ This tool accepts **no parameters**.
           "default": true
         },
         {
-          "id": "dall-e-3",
-          "capabilities": ["generate"],
+          "id": "gpt-image-1.5",
+          "capabilities": ["generate", "edit"],
+          "default": false
+        },
+        {
+          "id": "gpt-image-1-mini",
+          "capabilities": ["generate", "edit"],
+          "default": false
+        },
+        {
+          "id": "gpt-image-1",
+          "capabilities": ["generate", "edit"],
           "default": false
         },
         {
           "id": "dall-e-2",
-          "capabilities": ["generate", "edit", "variation"],
+          "capabilities": ["variation"],
           "default": false
         }
       ],
@@ -601,7 +614,7 @@ This tool accepts **no parameters**.
     "content": [
       {
         "type": "text",
-        "text": "## Available Image Providers\n\n### ✅ openai\n- **Status:** configured\n- **Models:** gpt-image-1, dall-e-3, dall-e-2\n"
+        "text": "## Available Image Providers\n\n### ✅ openai\n- **Status:** configured\n- **Models:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)\n"
       }
     ],
     "isError": false
@@ -639,7 +652,7 @@ Validates that a specific provider is correctly configured and reachable. Perfor
 
 - **API Key:** Configured (sk-pro…REDACTED)
 - **Connectivity:** OK
-- **Models available:** gpt-image-1, dall-e-3, dall-e-2
+- **Models available:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)
 ```
 
 **On failure:**
@@ -663,7 +676,7 @@ Validates that a specific provider is correctly configured and reachable. Perfor
   "details": {
     "connectivity": "ok",
     "apiKeyPrefix": "sk-pro…REDACTED",
-    "modelsAccessible": ["gpt-image-1", "dall-e-3", "dall-e-2"]
+    "modelsAccessible": ["gpt-image-2", "gpt-image-1.5", "gpt-image-1-mini", "gpt-image-1", "dall-e-2"]
   }
 }
 ```
@@ -951,30 +964,33 @@ These errors are returned at the JSON-RPC level (not inside tool results) and in
 | Text prompt | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Image input | ❌ | ✅ | ✅ | ❌ | ❌ |
 | Mask input | ❌ | ✅ | ❌ | ❌ | ❌ |
-| Multiple outputs (`n`) | ✅ (DALL-E 2) | ✅ (DALL-E 2) | ✅ | ❌ | ❌ |
+| Multiple outputs (`n`) | ✅ (1–10) | ✅ (1–10) | ✅ (1–10) | ❌ | ❌ |
 | Quality control | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Background transparency | ✅ | ❌ | ❌ | ❌ | ❌ |
 | Output format selection | ✅ | ✅ | ❌ (PNG only) | ❌ | ❌ |
 | Workspace save | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Usage tokens returned | ✅ (gpt-image-1) | ✅ (gpt-image-1) | ❌ | ❌ | ❌ |
-| Revised prompt returned | ✅ (DALL-E 3) | ❌ | ❌ | ❌ | ❌ |
+| Usage tokens returned | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Revised prompt returned | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
 ## Appendix B: Model Feature Support
 
-| Feature | `gpt-image-1` | `dall-e-3` | `dall-e-2` |
-|---------|:-:|:-:|:-:|
-| `image_generate` | ✅ | ✅ | ✅ |
-| `image_edit` | ✅ | ❌ | ✅ (PNG, square) |
-| `image_variation` | ❌ | ❌ | ✅ |
-| Transparent background | ✅ | ❌ | ❌ |
-| `quality: high/medium/low` | ✅ | ❌ | ❌ |
-| `quality: hd/standard` | ❌ | ✅ | ❌ |
-| Moderation control | ✅ | ❌ | ❌ |
-| Usage token reporting | ✅ | ❌ | ❌ |
-| Auto prompt revision | ❌ | ✅ | ❌ |
-| `n` > 1 | ❌ | ❌ | ✅ (up to 10) |
+| Feature | `gpt-image-2` | `gpt-image-1.5` | `gpt-image-1-mini` | `gpt-image-1` | `dall-e-2` |
+|---------|:-:|:-:|:-:|:-:|:-:|
+| `image_generate` | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `image_edit` | ✅ | ✅ | ✅ | ✅ | ✅ (PNG, square) |
+| `image_variation` | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Transparent background | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `quality: high/medium/low` | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `quality: hd/standard` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Moderation control | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Usage token reporting | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Auto prompt revision | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `n` up to 10 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Azure availability | ✅ Public Preview | ⚠️ Limited Access | ⚠️ Limited Access | ⚠️ Limited Access | ❌ |
+
+> ~~`dall-e-3`~~ was **retired 2026-03-04** and is no longer available on any provider.
 
 ---
 

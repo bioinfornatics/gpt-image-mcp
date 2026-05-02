@@ -7,8 +7,7 @@ export enum ResponseFormat {
 }
 
 export const PROMPT_MAX_LENGTH_GPT = 32_000;
-export const PROMPT_MAX_LENGTH_DALLE3 = 4_000;
-export const PROMPT_MAX_LENGTH_DALLE2 = 1_000;
+export const PROMPT_MAX_LENGTH_DALLE2 = 1_000; // dall-e-2: variations endpoint only
 
 export const ImageGenerateSchema = z.object({
   prompt: z
@@ -21,8 +20,9 @@ export const ImageGenerateSchema = z.object({
     .optional()
     .default(LATEST_MODEL)
     .describe(
-      `Model to use. OpenAI: ${OPENAI_MODELS.join(', ')}. Azure: ${AZURE_MODELS.join(', ')}. ` +
-      `Note: dall-e-3 was retired 2026-03-04. gpt-image-2 is the recommended default.`,
+      `Model to use. Default: ${LATEST_MODEL}. ` +
+      `OpenAI: ${OPENAI_MODELS.filter(m => !m.startsWith('dall-e')).join(', ')} (+ dall-e-2 for variations only). ` +
+      `Azure: ${AZURE_MODELS.join(', ')}.`,
     ),
   n: z
     .number()
@@ -31,7 +31,7 @@ export const ImageGenerateSchema = z.object({
     .max(10)
     .optional()
     .default(1)
-    .describe('Number of images to generate (1–10; dall-e-3 supports only n=1)'),
+    .describe('Number of images to generate (1–10; gpt-image-* models support up to 10)'),
   size: z
     .enum(['auto', '1024x1024', '1536x1024', '1024x1536', '256x256', '512x512', '1792x1024', '1024x1792'])
     .optional()
