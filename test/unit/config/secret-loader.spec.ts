@@ -355,7 +355,12 @@ describe('resolveImageEnvAliases()', () => {
     try {
       resolveImageEnvAliases();
       expect(process.env['IMAGE_PROVIDER']).toBe('azure');
+      // Must include: DEPRECATED tag, removal version, rename arrow, changelog URL
       expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('DEPRECATED'));
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('removed in v0.3.0'));
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('PROVIDER'));
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('IMAGE_PROVIDER'));
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('CHANGELOG.md'));
     } finally {
       stderrSpy.mockRestore();
     }

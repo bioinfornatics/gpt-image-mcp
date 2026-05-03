@@ -214,6 +214,9 @@ export async function deleteKeytarSecret(varName: FileSourceableVar): Promise<bo
 /**
  * Migrate deprecated provider-specific env vars to the unified IMAGE_* namespace.
  *
+ * Deprecated in : v0.1.0
+ * Removed in    : v0.3.0 (planned)
+ *
  * Old names (still accepted for backward compat):
  *   PROVIDER               → IMAGE_PROVIDER
  *   OPENAI_API_KEY         → IMAGE_API_KEY
@@ -231,11 +234,18 @@ export async function deleteKeytarSecret(varName: FileSourceableVar): Promise<bo
  * Called after resolveFileSecrets() / resolveKeytarSecrets() so that
  * _FILE-sourced values are included in the migration.
  */
+
+/** Deprecated in v0.1.0 — will be removed in v0.3.0. */
+const REMOVAL_VERSION = 'v0.3.0';
+
 export function resolveImageEnvAliases(): void {
   function copyAlias(from: string, to: string): void {
     if (!process.env[to] && process.env[from]) {
       process.stderr.write(
-        `[gpt-image-mcp] DEPRECATED: ${from} is renamed to ${to}. Please update your config.\n`,
+        `[gpt-image-mcp] DEPRECATED (removed in ${REMOVAL_VERSION}): ` +
+        `"${from}" has been renamed to "${to}".\n` +
+        `  → Replace ${from}=<value>  with  ${to}=<value>  in your config.\n` +
+        `  → See: https://github.com/bioinfornatics/gpt-image-mcp/blob/main/CHANGELOG.md\n`,
       );
       process.env[to] = process.env[from];
     }

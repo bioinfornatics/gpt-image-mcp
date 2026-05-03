@@ -8,6 +8,27 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Deprecated
+
+The following environment variable names were renamed in **v0.1.0** and will be **removed in v0.3.0**.
+The server still accepts them and emits a `DEPRECATED` warning to stderr on startup.
+Migrate before upgrading to v0.3.0.
+
+| Old name (deprecated) | New name | Notes |
+|---|---|---|
+| `PROVIDER` | `IMAGE_PROVIDER` | |
+| `OPENAI_API_KEY` | `IMAGE_API_KEY` | All providers share one key var |
+| `AZURE_OPENAI_API_KEY` | `IMAGE_API_KEY` | ↑ |
+| `TOGETHER_API_KEY` | `IMAGE_API_KEY` | ↑ |
+| `CUSTOM_OPENAI_API_KEY` | `IMAGE_API_KEY` | ↑ |
+| `OPENAI_BASE_URL` | `IMAGE_BASE_URL` | All providers share one URL var |
+| `AZURE_OPENAI_ENDPOINT` | `IMAGE_BASE_URL` | ↑ |
+| `CUSTOM_OPENAI_BASE_URL` | `IMAGE_BASE_URL` | ↑ |
+| `AZURE_OPENAI_DEPLOYMENT` | `IMAGE_DEPLOYMENT` | |
+| `AZURE_OPENAI_API_VERSION` | `IMAGE_API_VERSION` | |
+| `CUSTOM_OPENAI_MODELS` | `IMAGE_MODELS` | |
+| `DEFAULT_MODEL` | `IMAGE_DEFAULT_MODEL` | |
+
 ---
 
 ## [0.1.0] — 2026-05-03
