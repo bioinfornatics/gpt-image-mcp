@@ -28,14 +28,14 @@ bun run format              # Prettier
 bun run build               # tsc -p tsconfig.build.json + chmod +x dist/main.js
 
 # Keychain (keytar — optional backend)
-bun run secret:store OPENAI_API_KEY     # store in OS keychain
+bun run secret:store IMAGE_API_KEY      # store in OS keychain
 bun run secret:store MCP_API_KEY
 
 # Docker
 docker build -t gpt-image-mcp .
 docker run -p 3000:3000 \
-  -e PROVIDER=openai \
-  -e OPENAI_API_KEY=sk-... \
+  -e IMAGE_PROVIDER=openai \
+  -e IMAGE_API_KEY=sk-... \
   gpt-image-mcp
 ```
 
@@ -112,7 +112,7 @@ test/
 ```
 main.ts → resolveSecrets() → (keytar | *_FILE | plain env) → Joi validation → NestJS bootstrap
 ```
-- `MCP_SECRET_BACKEND=file` (default) — reads `OPENAI_API_KEY_FILE` etc.
+- `MCP_SECRET_BACKEND=file` (default) — reads `IMAGE_API_KEY_FILE` etc.
 - `MCP_SECRET_BACKEND=keytar` — OS keychain first, then `_FILE` fallback
 - `MCP_SECRET_BACKEND=env` — plain env vars only (dev opt-out)
 - **Never** set `SECRET_BACKEND` — that is a reserved `libsecret` variable on Linux
@@ -153,7 +153,7 @@ interface IImageProvider {
   validate(): Promise<ValidationResult>
 }
 ```
-Injected as `PROVIDER_TOKEN`. Switch provider with `PROVIDER=openai|azure` env var.
+Injected as `PROVIDER_TOKEN`. Switch provider with `IMAGE_PROVIDER=openai|azure|together|custom` env var.
 
 ### Error handling
 - All tool `execute()` methods catch and return
@@ -342,19 +342,19 @@ feat(scope): short description
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PROVIDER` | ✅ | — | `openai` or `azure` |
-| `OPENAI_API_KEY` | ✅ if openai | — | API key (or use `OPENAI_API_KEY_FILE`) |
-| `OPENAI_API_KEY_FILE` | — | — | Path to file containing the key |
-| `AZURE_OPENAI_ENDPOINT` | ✅ if azure | — | `https://resource.openai.azure.com` |
-| `AZURE_OPENAI_API_KEY` | ✅ if azure | — | Azure key (or use `_FILE` variant) |
-| `AZURE_OPENAI_DEPLOYMENT` | ✅ if azure | — | Deployment name |
-| `AZURE_OPENAI_API_VERSION` | — | `2025-04-01-preview` | API version |
+| `IMAGE_PROVIDER` | ✅ | — | `openai`, `azure`, `together`, or `custom` |
+| `IMAGE_API_KEY` | ✅ | — | API key for the configured provider (or use `IMAGE_API_KEY_FILE`) |
+| `IMAGE_API_KEY_FILE` | — | — | Path to file containing the key |
+| `IMAGE_BASE_URL` | ✅ if azure/custom | — | Provider endpoint (e.g. `https://resource.openai.azure.com` for azure) |
+| `IMAGE_DEPLOYMENT` | ✅ if azure | — | Azure deployment name |
+| `IMAGE_API_VERSION` | — | `2025-04-01-preview` | Azure API version |
+| `IMAGE_MODELS` | — | `custom` | Comma-separated model list (custom provider) |
 | `MCP_TRANSPORT` | — | `http` | `http` or `stdio` |
 | `PORT` | — | `3000` | HTTP listen port |
 | `MCP_API_KEY` | — | — | Bearer token for `/mcp` endpoint (or use `_FILE`) |
 | `MCP_API_KEY_FILE` | — | — | Path to file containing the MCP bearer token |
 | `MCP_SECRET_BACKEND` | — | `file` | `file`, `keytar`, or `env` |
-| `DEFAULT_MODEL` | — | `gpt-image-1` | Default image model |
+| `IMAGE_DEFAULT_MODEL` | — | `gpt-image-1` | Default image model |
 | `USE_ELICITATION` | — | `true` | Enable MCP Elicitation |
 | `USE_SAMPLING` | — | `true` | Enable MCP Sampling |
 | `MAX_REQUESTS_PER_MINUTE` | — | `60` | Rate limit per client |
@@ -362,7 +362,7 @@ feat(scope): short description
 
 **Test environment** (set by `test/setup.ts` before any spec runs):
 ```
-PROVIDER=openai · OPENAI_API_KEY=sk-test-fake-key-for-tests
+IMAGE_PROVIDER=openai · IMAGE_API_KEY=sk-test-fake-key-for-tests
 MCP_TRANSPORT=http · PORT=3001 · LOG_LEVEL=error
 ```
 
