@@ -38,8 +38,8 @@ jobs:
       - name: Unit & Integration Tests
         run: bun test --coverage
         env:
-          PROVIDER: openai
-          OPENAI_API_KEY: sk-test-fake-key-for-ci
+          IMAGE_PROVIDER: openai
+          IMAGE_API_KEY: sk-test-fake-key-for-ci
           MCP_TRANSPORT: http
           PORT: 3001
           LOG_LEVEL: error
@@ -188,8 +188,8 @@ jobs:
       - name: Test container health
         run: |
           docker run -d --name mcp-test \
-            -e PROVIDER=openai \
-            -e OPENAI_API_KEY=sk-fake-ci-key \
+            -e IMAGE_PROVIDER=openai \
+            -e IMAGE_API_KEY=sk-fake-ci-key \
             -p 3002:3000 \
             gpt-image-mcp:ci
           for i in $(seq 1 12); do

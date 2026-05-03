@@ -7,8 +7,8 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - PROVIDER=openai
-      - OPENAI_API_KEY=sk-test-fake-key-for-ci
+      - IMAGE_PROVIDER=openai
+      - IMAGE_API_KEY=sk-test-fake-key-for-ci
       - MCP_TRANSPORT=http
       - PORT=3000
       - LOG_LEVEL=error

@@ -34,23 +34,23 @@
 
 ```bash
 # stdio transport (Claude Desktop, Goose, Cursor)
-PROVIDER=openai OPENAI_API_KEY=sk-... bunx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... bunx @bioinfornatics/gpt-image-mcp
 
 # HTTP transport on port 3000
-PROVIDER=openai OPENAI_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 bunx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 bunx @bioinfornatics/gpt-image-mcp
 
-# Azure OpenAI
-PROVIDER=azure \
-  AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com \
-  AZURE_OPENAI_API_KEY=... \
-  AZURE_OPENAI_DEPLOYMENT=gpt-image-2 \
+# Azure AI Foundry
+IMAGE_PROVIDER=azure \
+  IMAGE_BASE_URL=https://my-resource.openai.azure.com \
+  IMAGE_API_KEY=... \
+  IMAGE_DEPLOYMENT=gpt-image-2 \
   bunx @bioinfornatics/gpt-image-mcp
 ```
 
 **With `npx` (Node.js users):**
 
 ```bash
-PROVIDER=openai OPENAI_API_KEY=sk-... npx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... npx @bioinfornatics/gpt-image-mcp
 ```
 
 ---
@@ -59,7 +59,7 @@ PROVIDER=openai OPENAI_API_KEY=sk-... npx @bioinfornatics/gpt-image-mcp
 
 ```bash
 bun add -g @bioinfornatics/gpt-image-mcp
-PROVIDER=openai OPENAI_API_KEY=sk-... gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... gpt-image-mcp
 ```
 
 ---
@@ -84,8 +84,8 @@ bun run start:stdio    # stdio
 docker build -t gpt-image-mcp .
 
 docker run -p 3000:3000 \
-  -e PROVIDER=openai \
-  -e OPENAI_API_KEY=sk-... \
+  -e IMAGE_PROVIDER=openai \
+  -e IMAGE_API_KEY=sk-... \
   gpt-image-mcp
 ```
 
@@ -95,17 +95,16 @@ docker run -p 3000:3000 \
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PROVIDER` | ✅ | — | `openai`, `azure`, `together`, or `custom` |
-| `OPENAI_API_KEY` | ✅ if `openai` | — | OpenAI API key (`sk-...`) |
-| `OPENAI_BASE_URL` | ❌ | `https://api.openai.com/v1` | Override for proxy |
-| `AZURE_OPENAI_ENDPOINT` | ✅ if `azure` | — | `https://myresource.openai.azure.com` |
-| `AZURE_OPENAI_API_KEY` | ✅ if `azure` | — | Azure API key |
-| `AZURE_OPENAI_DEPLOYMENT` | ✅ if `azure` | — | Deployment name |
-| `AZURE_OPENAI_API_VERSION` | ❌ | `2025-04-01-preview` | API version |
+| `IMAGE_PROVIDER` | ✅ | — | `openai`, `azure`, `together`, or `custom` |
+| `IMAGE_API_KEY` | ✅ | — | API key for the configured provider |
+| `IMAGE_BASE_URL` | ✅ if `azure`/`custom` | `https://api.openai.com/v1` | Provider endpoint (Azure resource URL or custom OpenAI-compatible URL) |
+| `IMAGE_DEPLOYMENT` | ✅ if `azure` | — | Azure deployment name |
+| `IMAGE_API_VERSION` | ❌ | `2025-04-01-preview` | Azure API version |
+| `IMAGE_MODELS` | ❌ | `custom` | Comma-separated model list (custom provider only) |
+| `IMAGE_DEFAULT_MODEL` | ❌ | `gpt-image-2` | Default model (override per-request via tool param) |
 | `MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
 | `PORT` | ❌ | `3000` | HTTP port |
 | `MCP_API_KEY` | ❌ | — | Bearer token to protect `/mcp` |
-| `DEFAULT_MODEL` | ❌ | `gpt-image-2` | Default image model (override per-request via tool param) |
 | `USE_ELICITATION` | ❌ | `true` | Enable MCP Elicitation |
 | `USE_SAMPLING` | ❌ | `true` | Enable MCP Sampling |
 | `MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
@@ -126,8 +125,8 @@ docker run -p 3000:3000 \
       "command": "bunx",
       "args": ["@bioinfornatics/gpt-image-mcp"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-...",
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-...",
         "MCP_TRANSPORT": "stdio",
         "LOG_LEVEL": "error"
       }
@@ -152,10 +151,10 @@ extensions:
     args:
       - '@bioinfornatics/gpt-image-mcp'
     envs:
-      PROVIDER: openai
+      IMAGE_PROVIDER: openai
       MCP_TRANSPORT: stdio
     env_keys:
-      - OPENAI_API_KEY        # export OPENAI_API_KEY=sk-... in your shell
+      - IMAGE_API_KEY        # export IMAGE_API_KEY=sk-... in your shell
     timeout: 300
 ```
 
@@ -171,12 +170,12 @@ extensions:
     args:
       - '@bioinfornatics/gpt-image-mcp'
     envs:
-      PROVIDER: azure
+      IMAGE_PROVIDER: azure
+      IMAGE_BASE_URL: https://my-resource.openai.azure.com
+      IMAGE_DEPLOYMENT: my-gpt-image-deployment
       MCP_TRANSPORT: stdio
     env_keys:
-      - AZURE_OPENAI_ENDPOINT
-      - AZURE_OPENAI_DEPLOYMENT
-      - AZURE_OPENAI_API_KEY
+      - IMAGE_API_KEY
     timeout: 300
 ```
 
@@ -199,7 +198,7 @@ Authorization: Bearer <MCP_API_KEY>   # only if MCP_API_KEY is set
 
 > **As of April 23, 2026** — model landscape has changed significantly. dall-e-3 was retired.
 
-### OpenAI (`PROVIDER=openai`)
+### OpenAI (`IMAGE_PROVIDER=openai`)
 
 | Model | Status | Sizes | Best for |
 |-------|--------|-------|----------|
@@ -210,7 +209,7 @@ Authorization: Bearer <MCP_API_KEY>   # only if MCP_API_KEY is set
 | `dall-e-2` | ⚠️ Variations only | `256×256`, `512×512`, `1024×1024` | Image variations endpoint only |
 | ~~`dall-e-3`~~ | ⛔ **Retired 2026-03-04** | — | No longer available |
 
-### Azure OpenAI (`PROVIDER=azure`)
+### Azure AI Foundry (`IMAGE_PROVIDER=azure`)
 
 | Model | Status | Notes |
 |-------|--------|-------|

@@ -3,20 +3,18 @@ version: '3.9'
 # ─────────────────────────────────────────────────────────────────────────────
 # RECOMMENDED: use Docker secrets instead of plain env vars for API keys.
 #
-#   echo "sk-your-real-key" | docker secret create openai_api_key -
+#   echo "sk-your-real-key" | docker secret create image_api_key -
 #   echo "your-mcp-key"     | docker secret create mcp_api_key -
 #
 # Then deploy with:
 #   docker stack deploy -c docker-compose.yml gpt-image-mcp
 #
-# Plain OPENAI_API_KEY / AZURE_OPENAI_API_KEY env vars still work for dev.
+# Plain IMAGE_API_KEY env var still works for dev (no _FILE needed).
 # ─────────────────────────────────────────────────────────────────────────────
 
 secrets:
-  openai_api_key:
-    external: true          # created with: docker secret create openai_api_key -
-  azure_openai_api_key:
-    external: true
+  image_api_key:
+    external: true          # created with: docker secret create image_api_key -
   mcp_api_key:
     external: true
 
@@ -26,26 +24,26 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - PROVIDER=${PROVIDER:-openai}
+      - IMAGE_PROVIDER=${IMAGE_PROVIDER:-openai}
       - MCP_SECRET_BACKEND=file          # read *_FILE vars from /run/secrets/
       # Point to Docker secret mounts — server reads file contents at startup
-      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key
-      - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
+      - IMAGE_API_KEY_FILE=/run/secrets/image_api_key
       - MCP_API_KEY_FILE=/run/secrets/mcp_api_key
-      # Non-secret config
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
-      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-}
-      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2025-04-01-preview}
+      # Non-secret provider config (only needed for azure / custom)
+      - IMAGE_BASE_URL=${IMAGE_BASE_URL:-}
+      - IMAGE_DEPLOYMENT=${IMAGE_DEPLOYMENT:-}
+      - IMAGE_API_VERSION=${IMAGE_API_VERSION:-2025-04-01-preview}
+      - IMAGE_MODELS=${IMAGE_MODELS:-custom}
+      # General config
       - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
       - PORT=3000
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-image-2}
+      - IMAGE_DEFAULT_MODEL=${IMAGE_DEFAULT_MODEL:-gpt-image-2}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
       - USE_ELICITATION=${USE_ELICITATION:-true}
       - USE_SAMPLING=${USE_SAMPLING:-true}
     secrets:
-      - openai_api_key
-      - azure_openai_api_key
+      - image_api_key
       - mcp_api_key
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
