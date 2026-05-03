@@ -12,6 +12,7 @@ import {
   readSecretFile,
   resolveFileSecrets,
   resolveSecrets,
+  resolveImageEnvAliases,
 } from '../../../src/config/secret-loader';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -134,7 +135,22 @@ describe('resolveFileSecrets()', () => {
     }
   });
 
-  it('should inject AZURE_OPENAI_API_KEY from AZURE_OPENAI_API_KEY_FILE', () => {
+  it('should inject IMAGE_API_KEY from IMAGE_API_KEY_FILE', () => {
+    const file = writeTmpSecret('image-api-key-from-file');
+    try {
+      process.env['IMAGE_API_KEY_FILE'] = file;
+      delete process.env['IMAGE_API_KEY'];
+
+      resolveFileSecrets();
+
+      expect(process.env['IMAGE_API_KEY']).toBe('image-api-key-from-file');
+      expect(process.env['IMAGE_API_KEY_FILE']).toBeUndefined();
+    } finally {
+      cleanup(file);
+    }
+  });
+
+  it('should inject AZURE_OPENAI_API_KEY from AZURE_OPENAI_API_KEY_FILE (legacy)', () => {
     const file = writeTmpSecret('azure-key-from-file');
     try {
       process.env['AZURE_OPENAI_API_KEY_FILE'] = file;
@@ -311,6 +327,109 @@ describe('resolveSecrets()', () => {
       expect(process.env['OPENAI_API_KEY']).toBe('sk-keytar-fallback');
     } finally {
       cleanup(file);
+      stderrSpy.mockRestore();
+    }
+  });
+});
+
+// ─── resolveImageEnvAliases ───────────────────────────────────────────────────
+
+describe('resolveImageEnvAliases()', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    originalEnv = { ...process.env };
+  });
+
+  afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in originalEnv)) delete process.env[key];
+    }
+    Object.assign(process.env, originalEnv);
+  });
+
+  it('should copy PROVIDER to IMAGE_PROVIDER with deprecation warning', () => {
+    delete process.env['IMAGE_PROVIDER'];
+    process.env['PROVIDER'] = 'azure';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_PROVIDER']).toBe('azure');
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('DEPRECATED'));
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should copy OPENAI_API_KEY to IMAGE_API_KEY', () => {
+    delete process.env['IMAGE_API_KEY'];
+    process.env['OPENAI_API_KEY'] = 'sk-legacy';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_API_KEY']).toBe('sk-legacy');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should copy AZURE_OPENAI_API_KEY to IMAGE_API_KEY', () => {
+    delete process.env['IMAGE_API_KEY'];
+    delete process.env['OPENAI_API_KEY'];
+    process.env['AZURE_OPENAI_API_KEY'] = 'az-legacy-key';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_API_KEY']).toBe('az-legacy-key');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should copy AZURE_OPENAI_ENDPOINT to IMAGE_BASE_URL', () => {
+    delete process.env['IMAGE_BASE_URL'];
+    process.env['AZURE_OPENAI_ENDPOINT'] = 'https://my.openai.azure.com';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_BASE_URL']).toBe('https://my.openai.azure.com');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should NOT overwrite IMAGE_API_KEY if already set', () => {
+    process.env['IMAGE_API_KEY'] = 'already-set';
+    process.env['OPENAI_API_KEY'] = 'legacy-key';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_API_KEY']).toBe('already-set');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should copy AZURE_OPENAI_DEPLOYMENT to IMAGE_DEPLOYMENT', () => {
+    delete process.env['IMAGE_DEPLOYMENT'];
+    process.env['AZURE_OPENAI_DEPLOYMENT'] = 'my-deployment';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_DEPLOYMENT']).toBe('my-deployment');
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it('should copy DEFAULT_MODEL to IMAGE_DEFAULT_MODEL', () => {
+    delete process.env['IMAGE_DEFAULT_MODEL'];
+    process.env['DEFAULT_MODEL'] = 'gpt-image-1';
+    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    try {
+      resolveImageEnvAliases();
+      expect(process.env['IMAGE_DEFAULT_MODEL']).toBe('gpt-image-1');
+    } finally {
       stderrSpy.mockRestore();
     }
   });

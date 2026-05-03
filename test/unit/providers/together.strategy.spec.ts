@@ -72,13 +72,13 @@ describe('TogetherStrategy', () => {
     it('should return auth error for 401 status in message', () => {
       const err = new Error('401 Unauthorized');
       const result = strategy.normalizeError(err);
-      expect(result.message).toBe('Authentication failed: check your TOGETHER_API_KEY.');
+      expect(result.message).toBe('Authentication failed: check your IMAGE_API_KEY.');
     });
 
     it('should return auth error for "unauthorized" keyword', () => {
       const err = new Error('unauthorized access');
       const result = strategy.normalizeError(err);
-      expect(result.message).toBe('Authentication failed: check your TOGETHER_API_KEY.');
+      expect(result.message).toBe('Authentication failed: check your IMAGE_API_KEY.');
     });
 
     it('should return rate limit error for 429', () => {

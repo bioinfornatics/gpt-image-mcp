@@ -63,10 +63,10 @@
 
 **Acceptance Criteria:**
 - [ ] `ConfigModule` validates all required env vars using class-validator/Joi
-- [ ] Missing `PROVIDER` → app refuses to start with message: "PROVIDER is required (openai|azure)"
+- [ ] Missing `IMAGE_PROVIDER` → app refuses to start with message: "IMAGE_PROVIDER is required (openai|azure|together|custom)"
 - [ ] Missing provider credentials → app refuses to start with provider-specific message
 - [ ] All config values accessible via injected `ConfigService`
-- [ ] Unit test: missing `PROVIDER` triggers validation error
+- [ ] Unit test: missing `IMAGE_PROVIDER` triggers validation error
 - [ ] Unit test: all required fields present → no error
 
 **TDD Note:** Write failing tests for each missing-config scenario before implementing `ConfigModule`.
@@ -129,7 +129,7 @@
 
 **Acceptance Criteria:**
 - [ ] `OpenAIProvider` implements `IImageProvider` interface
-- [ ] Uses `OPENAI_API_KEY` and optional `OPENAI_BASE_URL` from config
+- [ ] Uses `IMAGE_API_KEY` and optional `IMAGE_BASE_URL` from config
 - [ ] `generate()` calls `client.images.generate()` with mapped parameters
 - [ ] `edit()` calls `client.images.edit()` with mapped parameters
 - [ ] `validate()` calls a lightweight API check (models list or images/generations with minimal params)
@@ -149,12 +149,12 @@
 
 **Acceptance Criteria:**
 - [ ] `AzureOpenAIProvider` implements `IImageProvider` interface
-- [ ] Uses `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`
+- [ ] Uses `IMAGE_BASE_URL`, `IMAGE_API_KEY`, `IMAGE_DEPLOYMENT`, `IMAGE_API_VERSION`
 - [ ] Uses `AzureOpenAI` client from `openai` npm package
 - [ ] Deployment name is used as the model identifier in API calls
 - [ ] API version defaults to `2025-04-01-preview`
 - [ ] Unit tests mirror US-007 tests with Azure-specific config
-- [ ] Unit test: missing `AZURE_OPENAI_ENDPOINT` → validation error at startup
+- [ ] Unit test: missing `IMAGE_BASE_URL` → validation error at startup (IMAGE_PROVIDER=azure)
 
 ---
 

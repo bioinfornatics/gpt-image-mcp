@@ -15,41 +15,39 @@ import type { AppConfig } from '../config/app.config';
     {
       provide: PROVIDER_TOKEN,
       useFactory: (configService: ConfigService): OpenAICompatibleProvider => {
-        const providerName = configService.get<AppConfig['provider']>('provider');
+        const ip = configService.get<AppConfig['imageProvider']>('imageProvider')!;
 
-        if (providerName === 'azure') {
-          const azure = configService.get<AppConfig['azure']>('azure')!;
-          const baseURL = azure.endpoint!.replace(/\/$/, '') + '/openai/v1';
-          const client = new OpenAI({ baseURL, apiKey: azure.apiKey! });
-          const strategy = new AzureStrategy(azure.deployment!);
+        if (ip.name === 'azure') {
+          // Azure endpoint: https://my-resource.openai.azure.com → append /openai/v1
+          const baseURL = ip.baseUrl.replace(/\/$/, '') + '/openai/v1';
+          const client = new OpenAI({ baseURL, apiKey: ip.apiKey! });
+          const strategy = new AzureStrategy(ip.deployment!);
           return new OpenAICompatibleProvider(client, strategy);
         }
 
-        if (providerName === 'together') {
-          const together = configService.get<AppConfig['together']>('together')!;
+        if (ip.name === 'together') {
+          // Together AI base URL is always hardcoded — IMAGE_BASE_URL is not used
           const client = new OpenAI({
             baseURL: 'https://api.together.xyz/v1',
-            apiKey: together.apiKey!,
+            apiKey: ip.apiKey!,
           });
           const strategy = new TogetherStrategy();
           return new OpenAICompatibleProvider(client, strategy);
         }
 
-        if (providerName === 'custom') {
-          const custom = configService.get<AppConfig['custom']>('custom')!;
+        if (ip.name === 'custom') {
           const client = new OpenAI({
-            baseURL: custom.baseUrl!,
-            apiKey: custom.apiKey || 'none',
+            baseURL: ip.baseUrl,
+            apiKey: ip.apiKey || 'none',
           });
           const strategy = new CustomStrategy();
           return new OpenAICompatibleProvider(client, strategy);
         }
 
         // Default: OpenAI (direct or via compatible endpoint)
-        const openai = configService.get<AppConfig['openai']>('openai')!;
         const client = new OpenAI({
-          apiKey: openai.apiKey!,
-          ...(openai.baseUrl ? { baseURL: openai.baseUrl } : {}),
+          apiKey: ip.apiKey!,
+          baseURL: ip.baseUrl,
         });
         const strategy = new OpenAIStrategy();
         return new OpenAICompatibleProvider(client, strategy);

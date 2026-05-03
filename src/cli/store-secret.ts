@@ -3,8 +3,7 @@
  * CLI helper — store an API key in the OS keychain via keytar.
  *
  * Usage:
- *   bun run src/cli/store-secret.ts OPENAI_API_KEY
- *   bun run src/cli/store-secret.ts AZURE_OPENAI_API_KEY
+ *   bun run src/cli/store-secret.ts IMAGE_API_KEY
  *   bun run src/cli/store-secret.ts MCP_API_KEY
  *
  * Then in your .env / config set: MCP_SECRET_BACKEND=keytar
@@ -17,7 +16,7 @@ import * as readline from 'readline';
 import { storeKeytarSecret, deleteKeytarSecret } from '../config/secret-loader';
 import type { FileSourceableVar } from '../config/secret-loader';
 
-const SUPPORTED: FileSourceableVar[] = ['OPENAI_API_KEY', 'AZURE_OPENAI_API_KEY', 'MCP_API_KEY'];
+const SUPPORTED: FileSourceableVar[] = ['IMAGE_API_KEY', 'MCP_API_KEY'];
 
 const varName = process.argv[2] as FileSourceableVar | undefined;
 const action  = process.argv[3] ?? 'store'; // 'store' | 'delete'

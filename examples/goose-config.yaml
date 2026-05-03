@@ -19,11 +19,11 @@ extensions:
     args:
       - '@bioinfornatics/gpt-image-mcp'
     envs:
-      PROVIDER: openai
+      IMAGE_PROVIDER: openai
       MCP_TRANSPORT: stdio
       LOG_LEVEL: error
     env_keys:
-      - OPENAI_API_KEY       # export OPENAI_API_KEY=sk-... in your shell / .zshrc
+      - IMAGE_API_KEY       # export IMAGE_API_KEY=sk-... in your shell / .zshrc
     timeout: 300
     bundled: null
     available_tools: []
@@ -38,18 +38,54 @@ extensions:
   #   args:
   #     - '@bioinfornatics/gpt-image-mcp'
   #   envs:
-  #     PROVIDER: azure
+  #     IMAGE_PROVIDER: azure
+  #     IMAGE_BASE_URL: https://my-resource.openai.azure.com
+  #     IMAGE_DEPLOYMENT: my-gpt-image-deployment
   #     MCP_TRANSPORT: stdio
   #     LOG_LEVEL: error
   #   env_keys:
-  #     - AZURE_OPENAI_ENDPOINT      # https://my-resource.openai.azure.com
-  #     - AZURE_OPENAI_DEPLOYMENT    # your deployment name
-  #     - AZURE_OPENAI_API_KEY
+  #     - IMAGE_API_KEY
   #   timeout: 300
   #   bundled: null
   #   available_tools: []
 
-  # ─── Option C: pin a specific version ─────────────────────────────────────
+  # ─── Option C: Together AI ────────────────────────────────────────────────
+  # gptimagemcp:
+  #   enabled: true
+  #   type: stdio
+  #   name: GPT Image MCP (Together)
+  #   description: AI image generation — FLUX models via Together AI
+  #   cmd: bunx
+  #   args:
+  #     - '@bioinfornatics/gpt-image-mcp'
+  #   envs:
+  #     IMAGE_PROVIDER: together
+  #     MCP_TRANSPORT: stdio
+  #     LOG_LEVEL: error
+  #   env_keys:
+  #     - IMAGE_API_KEY
+  #   timeout: 300
+
+  # ─── Option D: Custom / OpenRouter ───────────────────────────────────────
+  # gptimagemcp:
+  #   enabled: true
+  #   type: stdio
+  #   name: GPT Image MCP (Custom)
+  #   description: AI image generation via any OpenAI-compatible endpoint
+  #   cmd: bunx
+  #   args:
+  #     - '@bioinfornatics/gpt-image-mcp'
+  #   envs:
+  #     IMAGE_PROVIDER: custom
+  #     IMAGE_BASE_URL: https://openrouter.ai/api/v1
+  #     IMAGE_MODELS: openai/dall-e-3
+  #     MCP_TRANSPORT: stdio
+  #     LOG_LEVEL: error
+  #   env_keys:
+  #     - IMAGE_API_KEY
+  #   timeout: 300
+
+  # ─── Option E: pin a specific version ─────────────────────────────────────
   # gptimagemcp:
   #   enabled: true
   #   type: stdio
@@ -58,13 +94,13 @@ extensions:
   #   args:
   #     - '@bioinfornatics/gpt-image-mcp@0.0.2'
   #   envs:
-  #     PROVIDER: openai
+  #     IMAGE_PROVIDER: openai
   #     MCP_TRANSPORT: stdio
   #   env_keys:
-  #     - OPENAI_API_KEY
+  #     - IMAGE_API_KEY
   #   timeout: 300
 
-  # ─── Option D: HTTP transport (remote / Docker server) ────────────────────
+  # ─── Option F: HTTP transport (remote / Docker server) ────────────────────
   # gptimagemcp:
   #   enabled: true
   #   type: streamable_http
@@ -75,15 +111,15 @@ extensions:
   #   #   Authorization: "Bearer your-mcp-api-key"
   #   timeout: 300
 
-  # ─── Option E: local clone (development) ─────────────────────────────────
+  # ─── Option G: local clone (development) ──────────────────────────────────
   # gptimagemcp:
   #   enabled: true
   #   type: stdio
   #   name: GPT Image MCP (dev)
   #   cmd: /absolute/path/to/gpt-image-mcp/bin/start.sh
   #   envs:
-  #     PROVIDER: openai
+  #     IMAGE_PROVIDER: openai
   #     MCP_TRANSPORT: stdio
   #   env_keys:
-  #     - OPENAI_API_KEY
+  #     - IMAGE_API_KEY
   #   timeout: 300

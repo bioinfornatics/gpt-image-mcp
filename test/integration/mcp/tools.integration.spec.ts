@@ -61,8 +61,8 @@ function toolsCall(id: number, name: string, args: Record<string, unknown> = {})
 
 async function buildApp(): Promise<INestApplication> {
   Object.assign(process.env, {
-    PROVIDER: 'openai',
-    OPENAI_API_KEY: 'sk-test-tools-integration',
+    IMAGE_PROVIDER: 'openai',
+    IMAGE_API_KEY: 'sk-test-tools-integration',
     MCP_TRANSPORT: 'http',
     PORT: '3003',
     LOG_LEVEL: 'error',

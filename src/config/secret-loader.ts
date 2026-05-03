@@ -26,9 +26,15 @@ export type SecretBackend = 'file' | 'keytar' | 'env';
 
 /** Names of the env vars that can be sourced from a file. */
 const FILE_SOURCEABLE_VARS = [
+  // New unified names
+  'IMAGE_API_KEY',
+  'MCP_API_KEY',
+  // Deprecated — kept so IMAGE_API_KEY_FILE is NOT the only _FILE mechanism;
+  // old OPENAI_API_KEY_FILE / AZURE_OPENAI_API_KEY_FILE configs still work:
+  // resolveFileSecrets() sets OPENAI_API_KEY, then resolveImageEnvAliases()
+  // copies it to IMAGE_API_KEY.
   'OPENAI_API_KEY',
   'AZURE_OPENAI_API_KEY',
-  'MCP_API_KEY',
 ] as const;
 
 export type FileSourceableVar = (typeof FILE_SOURCEABLE_VARS)[number];
@@ -123,9 +129,11 @@ const KEYTAR_SERVICE = 'gpt-image-mcp';
  * Allows different keys per account on the same machine.
  */
 const KEYTAR_ACCOUNT_MAP: Record<FileSourceableVar, string> = {
+  IMAGE_API_KEY: 'image-api-key',
+  MCP_API_KEY: 'mcp-api-key',
+  // Deprecated aliases — map to old keychain accounts for backward compat
   OPENAI_API_KEY: 'openai-api-key',
   AZURE_OPENAI_API_KEY: 'azure-openai-api-key',
-  MCP_API_KEY: 'mcp-api-key',
 };
 
 /**
@@ -177,7 +185,7 @@ export async function resolveKeytarSecrets(): Promise<void> {
 
 /**
  * Store a secret in the OS keychain.
- * Usage: STORE_SECRET=OPENAI_API_KEY SECRET_VALUE=sk-... bun run src/cli/store-secret.ts
+ * Usage: STORE_SECRET=IMAGE_API_KEY SECRET_VALUE=sk-... bun run src/cli/store-secret.ts
  *
  * Called from the CLI helper, not from the server startup path.
  */
@@ -201,6 +209,70 @@ export async function deleteKeytarSecret(varName: FileSourceableVar): Promise<bo
   return keytar.deletePassword(KEYTAR_SERVICE, account) as Promise<boolean>;
 }
 
+// ─── IMAGE_* env alias migration ─────────────────────────────────────────────
+
+/**
+ * Migrate deprecated provider-specific env vars to the unified IMAGE_* namespace.
+ *
+ * Old names (still accepted for backward compat):
+ *   PROVIDER               → IMAGE_PROVIDER
+ *   OPENAI_API_KEY         → IMAGE_API_KEY
+ *   AZURE_OPENAI_API_KEY   → IMAGE_API_KEY
+ *   TOGETHER_API_KEY       → IMAGE_API_KEY
+ *   CUSTOM_OPENAI_API_KEY  → IMAGE_API_KEY
+ *   OPENAI_BASE_URL        → IMAGE_BASE_URL
+ *   AZURE_OPENAI_ENDPOINT  → IMAGE_BASE_URL
+ *   CUSTOM_OPENAI_BASE_URL → IMAGE_BASE_URL
+ *   AZURE_OPENAI_DEPLOYMENT→ IMAGE_DEPLOYMENT
+ *   AZURE_OPENAI_API_VERSION→IMAGE_API_VERSION
+ *   CUSTOM_OPENAI_MODELS   → IMAGE_MODELS
+ *   DEFAULT_MODEL          → IMAGE_DEFAULT_MODEL
+ *
+ * Called after resolveFileSecrets() / resolveKeytarSecrets() so that
+ * _FILE-sourced values are included in the migration.
+ */
+export function resolveImageEnvAliases(): void {
+  function copyAlias(from: string, to: string): void {
+    if (!process.env[to] && process.env[from]) {
+      process.stderr.write(
+        `[gpt-image-mcp] DEPRECATED: ${from} is renamed to ${to}. Please update your config.\n`,
+      );
+      process.env[to] = process.env[from];
+    }
+  }
+
+  // Provider name
+  copyAlias('PROVIDER', 'IMAGE_PROVIDER');
+
+  // API key — check all legacy per-provider names, first match wins
+  const apiKeyAliases = [
+    'OPENAI_API_KEY',
+    'AZURE_OPENAI_API_KEY',
+    'TOGETHER_API_KEY',
+    'CUSTOM_OPENAI_API_KEY',
+  ];
+  for (const alias of apiKeyAliases) {
+    if (!process.env['IMAGE_API_KEY'] && process.env[alias]) {
+      copyAlias(alias, 'IMAGE_API_KEY');
+      break;
+    }
+  }
+
+  // Base URL / endpoint — azure endpoint takes priority over generic base URL
+  const baseUrlAliases = ['AZURE_OPENAI_ENDPOINT', 'CUSTOM_OPENAI_BASE_URL', 'OPENAI_BASE_URL'];
+  for (const alias of baseUrlAliases) {
+    if (!process.env['IMAGE_BASE_URL'] && process.env[alias]) {
+      copyAlias(alias, 'IMAGE_BASE_URL');
+      break;
+    }
+  }
+
+  copyAlias('AZURE_OPENAI_DEPLOYMENT', 'IMAGE_DEPLOYMENT');
+  copyAlias('AZURE_OPENAI_API_VERSION', 'IMAGE_API_VERSION');
+  copyAlias('CUSTOM_OPENAI_MODELS', 'IMAGE_MODELS');
+  copyAlias('DEFAULT_MODEL', 'IMAGE_DEFAULT_MODEL');
+}
+
 // ─── Main entrypoint ─────────────────────────────────────────────────────────
 
 /**
@@ -212,7 +284,8 @@ export async function resolveSecrets(): Promise<void> {
     (process.env['MCP_SECRET_BACKEND'] as SecretBackend | undefined) ?? 'file';
 
   if (backend === 'env') {
-    // Explicit opt-out — plain env vars only, no file or keychain resolution
+    // Explicit opt-out of file/keychain resolution — still apply alias migration
+    resolveImageEnvAliases();
     return;
   }
 
@@ -220,9 +293,11 @@ export async function resolveSecrets(): Promise<void> {
     // keytar first, then _FILE as fallback
     await resolveKeytarSecrets();
     resolveFileSecrets(); // fills in anything keytar didn't provide
+    resolveImageEnvAliases();
     return;
   }
 
   // Default: 'file' — resolve _FILE vars, plain env vars as fallback
   resolveFileSecrets();
+  resolveImageEnvAliases();
 }

@@ -11,8 +11,8 @@
       "command": "bun",
       "args": ["x", "--bun", "gpt-image-mcp"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-replace-with-your-key",
         "MCP_TRANSPORT": "stdio",
         "LOG_LEVEL": "error"
       }
@@ -23,8 +23,8 @@
       "command": "bun",
       "args": ["x", "--bun", "gpt-image-mcp@0.1.0"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-replace-with-your-key",
         "MCP_TRANSPORT": "stdio",
         "LOG_LEVEL": "error"
       }
@@ -35,22 +35,48 @@
       "command": "npx",
       "args": ["-y", "gpt-image-mcp"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-replace-with-your-key",
         "MCP_TRANSPORT": "stdio"
       }
     },
 
     "gpt-image-mcp-azure": {
-      "_comment": "Azure OpenAI provider via bun x.",
+      "_comment": "Azure AI Foundry provider via bun x.",
       "command": "bun",
       "args": ["x", "--bun", "gpt-image-mcp"],
       "env": {
-        "PROVIDER": "azure",
-        "AZURE_OPENAI_ENDPOINT": "https://my-resource.openai.azure.com",
-        "AZURE_OPENAI_API_KEY": "replace-with-azure-key",
-        "AZURE_OPENAI_DEPLOYMENT": "my-gpt-image-deployment",
-        "AZURE_OPENAI_API_VERSION": "2025-04-01-preview",
+        "IMAGE_PROVIDER": "azure",
+        "IMAGE_BASE_URL": "https://my-resource.openai.azure.com",
+        "IMAGE_API_KEY": "replace-with-azure-key",
+        "IMAGE_DEPLOYMENT": "my-gpt-image-deployment",
+        "IMAGE_API_VERSION": "2025-04-01-preview",
+        "MCP_TRANSPORT": "stdio",
+        "LOG_LEVEL": "error"
+      }
+    },
+
+    "gpt-image-mcp-together": {
+      "_comment": "Together AI provider — FLUX models.",
+      "command": "bun",
+      "args": ["x", "--bun", "gpt-image-mcp"],
+      "env": {
+        "IMAGE_PROVIDER": "together",
+        "IMAGE_API_KEY": "replace-with-together-key",
+        "MCP_TRANSPORT": "stdio",
+        "LOG_LEVEL": "error"
+      }
+    },
+
+    "gpt-image-mcp-custom": {
+      "_comment": "Custom / OpenRouter — any OpenAI-compatible endpoint.",
+      "command": "bun",
+      "args": ["x", "--bun", "gpt-image-mcp"],
+      "env": {
+        "IMAGE_PROVIDER": "custom",
+        "IMAGE_BASE_URL": "https://openrouter.ai/api/v1",
+        "IMAGE_API_KEY": "replace-with-your-key",
+        "IMAGE_MODELS": "openai/dall-e-3,stability/stable-diffusion-3",
         "MCP_TRANSPORT": "stdio",
         "LOG_LEVEL": "error"
       }
@@ -61,8 +87,8 @@
       "command": "bun",
       "args": ["run", "/absolute/path/to/gpt-image-mcp/src/main.ts"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-replace-with-your-key",
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-replace-with-your-key",
         "MCP_TRANSPORT": "stdio"
       }
     },

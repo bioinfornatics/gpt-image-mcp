@@ -116,13 +116,13 @@ describe('CustomStrategy', () => {
     it('should return auth error for 401 in message', () => {
       const err = new Error('401 Unauthorized');
       const result = strategy.normalizeError(err);
-      expect(result.message).toBe('Authentication failed (Custom): check CUSTOM_OPENAI_API_KEY.');
+      expect(result.message).toBe('Authentication failed (Custom): check IMAGE_API_KEY.');
     });
 
     it('should return auth error for "unauthorized" keyword', () => {
       const err = new Error('unauthorized request');
       const result = strategy.normalizeError(err);
-      expect(result.message).toBe('Authentication failed (Custom): check CUSTOM_OPENAI_API_KEY.');
+      expect(result.message).toBe('Authentication failed (Custom): check IMAGE_API_KEY.');
     });
 
     it('should return rate limit error for 429', () => {

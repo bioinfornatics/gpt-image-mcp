@@ -43,7 +43,7 @@ export class AzureStrategy implements ProviderStrategy {
         );
       }
       if (msg.includes('404')) {
-        return new Error(`Model not found: ${this.deployment}. Check AZURE_OPENAI_DEPLOYMENT.`);
+        return new Error(`Model not found: ${this.deployment}. Check IMAGE_DEPLOYMENT.`);
       }
       return new Error(`Azure AI Foundry error: ${msg}`);
     }

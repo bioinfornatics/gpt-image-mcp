@@ -10,69 +10,70 @@ function validateConfig(env: Record<string, string>) {
 // Base valid OpenAI config that explicitly opts out of MCP auth requirement
 // (no MCP_API_KEY in these unit tests)
 const openaiBase = {
-  PROVIDER: 'openai',
-  OPENAI_API_KEY: 'sk-test',
+  IMAGE_PROVIDER: 'openai',
+  IMAGE_API_KEY: 'sk-test',
   REQUIRE_MCP_AUTH: 'false',
 };
 
 describe('AppConfig validation', () => {
-  describe('PROVIDER', () => {
-    it('should throw when PROVIDER is missing', () => {
-      expect(() => validateConfig({})).toThrow(/PROVIDER is required/);
+  describe('IMAGE_PROVIDER', () => {
+    it('should throw when IMAGE_PROVIDER is missing', () => {
+      expect(() => validateConfig({ REQUIRE_MCP_AUTH: 'false' })).toThrow(/IMAGE_PROVIDER is required/);
     });
 
-    it('should throw when PROVIDER is invalid', () => {
-      expect(() => validateConfig({ PROVIDER: 'anthropic' })).toThrow(/must be/i);
+    it('should throw when IMAGE_PROVIDER is invalid', () => {
+      expect(() => validateConfig({ IMAGE_PROVIDER: 'anthropic', REQUIRE_MCP_AUTH: 'false' })).toThrow(/must be/i);
     });
   });
 
   describe('OpenAI provider', () => {
-    it('should throw when OPENAI_API_KEY is missing for provider=openai', () => {
-      expect(() => validateConfig({ PROVIDER: 'openai', REQUIRE_MCP_AUTH: 'false' })).toThrow(/OPENAI_API_KEY is required/);
+    it('should throw when IMAGE_API_KEY is missing for provider=openai', () => {
+      expect(() => validateConfig({ IMAGE_PROVIDER: 'openai', REQUIRE_MCP_AUTH: 'false' })).toThrow(/IMAGE_API_KEY is required/);
     });
 
     it('should pass with valid OpenAI config', () => {
       const result = validateConfig(openaiBase);
-      expect(result.PROVIDER).toBe('openai');
-      expect(result.OPENAI_API_KEY).toBe('sk-test');
+      expect(result.IMAGE_PROVIDER).toBe('openai');
+      expect(result.IMAGE_API_KEY).toBe('sk-test');
     });
 
-    it('should apply default OPENAI_BASE_URL', () => {
+    it('should apply default IMAGE_BASE_URL as openai.com', () => {
       const result = validateConfig(openaiBase);
-      expect(result.OPENAI_BASE_URL).toBe('https://api.openai.com/v1');
+      // IMAGE_BASE_URL is optional for openai — not defaulted by Joi (factory defaults it)
+      expect(result.IMAGE_PROVIDER).toBe('openai');
     });
   });
 
   describe('Azure provider', () => {
     const baseAzure = {
-      PROVIDER: 'azure',
-      AZURE_OPENAI_API_KEY: 'test-key',
-      AZURE_OPENAI_DEPLOYMENT: 'my-deployment',
+      IMAGE_PROVIDER: 'azure',
+      IMAGE_API_KEY: 'test-key',
+      IMAGE_DEPLOYMENT: 'my-deployment',
       REQUIRE_MCP_AUTH: 'false',
     };
 
-    it('should throw when AZURE_OPENAI_ENDPOINT is missing', () => {
-      expect(() => validateConfig(baseAzure)).toThrow(/AZURE_OPENAI_ENDPOINT is required/);
+    it('should throw when IMAGE_BASE_URL is missing for azure', () => {
+      expect(() => validateConfig(baseAzure)).toThrow(/IMAGE_BASE_URL is required when IMAGE_PROVIDER=azure/);
     });
 
-    it('should throw when AZURE_OPENAI_API_KEY is missing', () => {
+    it('should throw when IMAGE_API_KEY is missing for azure', () => {
       expect(() =>
         validateConfig({
-          PROVIDER: 'azure',
-          AZURE_OPENAI_ENDPOINT: 'https://x.openai.azure.com',
-          AZURE_OPENAI_DEPLOYMENT: 'dep',
+          IMAGE_PROVIDER: 'azure',
+          IMAGE_BASE_URL: 'https://x.openai.azure.com',
+          IMAGE_DEPLOYMENT: 'dep',
           REQUIRE_MCP_AUTH: 'false',
         }),
-      ).toThrow(/AZURE_OPENAI_API_KEY is required/);
+      ).toThrow(/IMAGE_API_KEY is required/);
     });
 
     it('should pass with complete Azure config', () => {
       const result = validateConfig({
         ...baseAzure,
-        AZURE_OPENAI_ENDPOINT: 'https://test.openai.azure.com',
+        IMAGE_BASE_URL: 'https://test.openai.azure.com',
       });
-      expect(result.PROVIDER).toBe('azure');
-      expect(result.AZURE_OPENAI_API_VERSION).toBe('2025-04-01-preview');
+      expect(result.IMAGE_PROVIDER).toBe('azure');
+      expect(result.IMAGE_API_VERSION).toBe('2025-04-01-preview');
     });
   });
 
@@ -85,8 +86,8 @@ describe('AppConfig validation', () => {
       expect(validateConfig(openaiBase).PORT).toBe(3000);
     });
 
-    it('should default DEFAULT_MODEL to LATEST_MODEL', () => {
-      expect(validateConfig(openaiBase).DEFAULT_MODEL).toBe(LATEST_MODEL);
+    it('should default IMAGE_DEFAULT_MODEL to LATEST_MODEL', () => {
+      expect(validateConfig(openaiBase).IMAGE_DEFAULT_MODEL).toBe(LATEST_MODEL);
     });
 
     it('should default MAX_REQUESTS_PER_MINUTE to 60', () => {
@@ -96,18 +97,16 @@ describe('AppConfig validation', () => {
 
   describe('REQUIRE_MCP_AUTH / MCP_API_KEY', () => {
     it('should default REQUIRE_MCP_AUTH to true', () => {
-      // When not specified, Joi defaults REQUIRE_MCP_AUTH=true
-      // and then requires MCP_API_KEY — so omitting both should throw
       expect(() =>
-        validateConfig({ PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test' }),
+        validateConfig({ IMAGE_PROVIDER: 'openai', IMAGE_API_KEY: 'sk-test' }),
       ).toThrow(/MCP_API_KEY is required when REQUIRE_MCP_AUTH=true/);
     });
 
     it('should require MCP_API_KEY of at least 16 chars when REQUIRE_MCP_AUTH=true', () => {
       expect(() =>
         validateConfig({
-          PROVIDER: 'openai',
-          OPENAI_API_KEY: 'sk-test',
+          IMAGE_PROVIDER: 'openai',
+          IMAGE_API_KEY: 'sk-test',
           REQUIRE_MCP_AUTH: 'true',
           MCP_API_KEY: 'tooshort',
         }),
@@ -116,8 +115,8 @@ describe('AppConfig validation', () => {
 
     it('should pass when REQUIRE_MCP_AUTH=true and MCP_API_KEY has 16+ chars', () => {
       const result = validateConfig({
-        PROVIDER: 'openai',
-        OPENAI_API_KEY: 'sk-test',
+        IMAGE_PROVIDER: 'openai',
+        IMAGE_API_KEY: 'sk-test',
         REQUIRE_MCP_AUTH: 'true',
         MCP_API_KEY: 'a-valid-key-16ch',
       });
@@ -127,8 +126,8 @@ describe('AppConfig validation', () => {
 
     it('should pass when REQUIRE_MCP_AUTH=false with no MCP_API_KEY', () => {
       const result = validateConfig({
-        PROVIDER: 'openai',
-        OPENAI_API_KEY: 'sk-test',
+        IMAGE_PROVIDER: 'openai',
+        IMAGE_API_KEY: 'sk-test',
         REQUIRE_MCP_AUTH: 'false',
       });
       expect(result.REQUIRE_MCP_AUTH).toBe(false);
@@ -137,8 +136,8 @@ describe('AppConfig validation', () => {
 
     it('should allow optional MCP_API_KEY when REQUIRE_MCP_AUTH=false', () => {
       const result = validateConfig({
-        PROVIDER: 'openai',
-        OPENAI_API_KEY: 'sk-test',
+        IMAGE_PROVIDER: 'openai',
+        IMAGE_API_KEY: 'sk-test',
         REQUIRE_MCP_AUTH: 'false',
         MCP_API_KEY: 'optional-key',
       });
@@ -173,6 +172,25 @@ describe('AppConfig validation', () => {
       process.env['REQUIRE_MCP_AUTH'] = 'true';
       const config = appConfig();
       expect(config.mcp.requireMcpAuth).toBe(true);
+    });
+
+    it('should read IMAGE_PROVIDER into imageProvider.name', () => {
+      process.env['IMAGE_PROVIDER'] = 'together';
+      process.env['IMAGE_API_KEY'] = 'sk-together';
+      const config = appConfig();
+      expect(config.imageProvider.name).toBe('together');
+    });
+
+    it('should default imageProvider.baseUrl to openai when IMAGE_BASE_URL unset', () => {
+      delete process.env['IMAGE_BASE_URL'];
+      const config = appConfig();
+      expect(config.imageProvider.baseUrl).toBe('https://api.openai.com/v1');
+    });
+
+    it('should split IMAGE_MODELS by comma into an array', () => {
+      process.env['IMAGE_MODELS'] = 'model-a, model-b, model-c';
+      const config = appConfig();
+      expect(config.imageProvider.models).toEqual(['model-a', 'model-b', 'model-c']);
     });
   });
 });

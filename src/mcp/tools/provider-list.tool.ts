@@ -57,7 +57,7 @@ Use provider_validate to test connectivity before generating images.`,
         'black-forest-labs/FLUX.1-dev',
         'black-forest-labs/FLUX.1.1-pro',
       ],
-      custom: this.configService.get<AppConfig['custom']>('custom')?.models ?? ['custom'],
+      custom: this.configService.get<AppConfig['imageProvider']>('imageProvider')?.models ?? ['custom'],
     };
 
     const output = {
@@ -96,7 +96,7 @@ Use provider_validate to test connectivity before generating images.`,
       ] : []),
       ...(providerName === 'custom' ? [
         ``,
-        `> ℹ️ **Custom endpoint**: Pointing at ${this.configService.get<AppConfig['custom']>('custom')?.baseUrl ?? 'unknown'}`,
+        `> ℹ️ **Custom endpoint**: Pointing at ${this.configService.get<AppConfig['imageProvider']>('imageProvider')?.baseUrl ?? 'unknown'}`,
         `> Compatibility depends on your endpoint's OpenAI API support.`,
       ] : []),
       ``,

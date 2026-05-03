@@ -179,22 +179,22 @@ describe('Secret Masking', () => {
 // test/unit/config/config.schema.spec.ts
 
 describe('ConfigSchema validation', () => {
-  it('should throw when PROVIDER is missing', () => {
-    expect(() => validateConfig({})).toThrow('PROVIDER is required');
+  it('should throw when IMAGE_PROVIDER is missing', () => {
+    expect(() => validateConfig({})).toThrow('IMAGE_PROVIDER is required');
   });
 
-  it('should throw when OPENAI_API_KEY is missing for provider=openai', () => {
-    expect(() => validateConfig({ PROVIDER: 'openai' })).toThrow('OPENAI_API_KEY is required');
+  it('should throw when IMAGE_API_KEY is missing for IMAGE_PROVIDER=openai', () => {
+    expect(() => validateConfig({ IMAGE_PROVIDER: 'openai' })).toThrow('IMAGE_API_KEY is required');
   });
 
-  it('should throw when AZURE_OPENAI_ENDPOINT is missing for provider=azure', () => {
+  it('should throw when IMAGE_BASE_URL is missing for IMAGE_PROVIDER=azure', () => {
     expect(() =>
-      validateConfig({ PROVIDER: 'azure', AZURE_OPENAI_API_KEY: 'x', AZURE_OPENAI_DEPLOYMENT: 'd' }),
-    ).toThrow('AZURE_OPENAI_ENDPOINT is required');
+      validateConfig({ IMAGE_PROVIDER: 'azure', IMAGE_API_KEY: 'x', IMAGE_DEPLOYMENT: 'd' }),
+    ).toThrow('IMAGE_BASE_URL is required');
   });
 
   it('should pass with valid OpenAI config', () => {
-    const config = validateConfig({ PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test' });
+    const config = validateConfig({ IMAGE_PROVIDER: 'openai', IMAGE_API_KEY: 'sk-test' });
     expect(config.provider).toBe('openai');
   });
 });
@@ -290,7 +290,7 @@ E2E tests run against a real started server process (real NestJS, real HTTP) wit
 
 ```bash
 # Manual: inspect via MCP Inspector
-PROVIDER=openai OPENAI_API_KEY=sk-fake bun run start:http &
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-fake bun run start:http &
 npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 ```
 

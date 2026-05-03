@@ -32,8 +32,8 @@ describe('Input Sanitisation — Integration', () => {
 
   beforeAll(async () => {
     Object.assign(process.env, {
-      PROVIDER: 'openai',
-      OPENAI_API_KEY: 'sk-test-sanitise-integration',
+      IMAGE_PROVIDER: 'openai',
+      IMAGE_API_KEY: 'sk-test-sanitise-integration',
       MCP_TRANSPORT: 'http',
       PORT: '3004',
       LOG_LEVEL: 'error',

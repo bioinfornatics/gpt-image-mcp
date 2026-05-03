@@ -154,7 +154,7 @@ Key integration points:
 
 ### FR-009: Multi-Provider Support
 - The server supports OpenAI (direct) and Azure OpenAI (via AI Foundry endpoint)
-- Provider is selected via `PROVIDER` environment variable
+- Provider is selected via `IMAGE_PROVIDER` environment variable
 - Credentials are provider-specific (see Configuration)
 - The server validates provider configuration at startup and fails fast with a clear error if configuration is missing
 

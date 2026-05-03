@@ -61,8 +61,8 @@ describe('MCP HTTP Transport — Integration', () => {
 
   beforeAll(async () => {
     app = await buildApp({
-      PROVIDER: 'openai',
-      OPENAI_API_KEY: 'sk-test-integration-key',
+      IMAGE_PROVIDER: 'openai',
+      IMAGE_API_KEY: 'sk-test-integration-key',
       MCP_TRANSPORT: 'http',
       PORT: '3001',
       LOG_LEVEL: 'error',

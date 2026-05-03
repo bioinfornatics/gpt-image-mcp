@@ -34,7 +34,7 @@ export class CustomStrategy implements ProviderStrategy {
     if (err instanceof Error) {
       const msg = maskSecret(err.message);
       if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
-        return new Error(`Authentication failed (Custom): check CUSTOM_OPENAI_API_KEY.`);
+        return new Error(`Authentication failed (Custom): check IMAGE_API_KEY.`);
       }
       if (msg.includes('429') || msg.toLowerCase().includes('rate limit')) {
         return new Error(`Rate limit exceeded (Custom): ${msg}`);

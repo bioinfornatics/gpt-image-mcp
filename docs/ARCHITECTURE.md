@@ -272,9 +272,9 @@ Client                             Server
 ProvidersModule
      │
      ├── ProviderFactory
-     │     ├── reads PROVIDER env var
-     │     ├── creates OpenAIProvider  (PROVIDER=openai)
-     │     └── creates AzureOpenAIProvider  (PROVIDER=azure)
+     │     ├── reads IMAGE_PROVIDER env var
+     │     ├── creates OpenAIProvider  (IMAGE_PROVIDER=openai)
+     │     └── creates AzureOpenAIProvider  (IMAGE_PROVIDER=azure)
      │
      ├── OpenAIProvider
      │     └── new OpenAI({ apiKey, baseURL })  [openai npm SDK]

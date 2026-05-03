@@ -145,8 +145,8 @@ bun run start:http
 
 ```bash
 docker run -p 3000:3000 \
-  -e PROVIDER=openai \
-  -e OPENAI_API_KEY=sk-... \
+  -e IMAGE_PROVIDER=openai \
+  -e IMAGE_API_KEY=sk-... \
   ghcr.io/your-org/gpt-image-mcp:latest
 ```
 
@@ -161,8 +161,8 @@ Add to `claude_desktop_config.json`:
       "command": "bun",
       "args": ["run", "/path/to/gpt-image-mcp/src/main.ts", "--transport=stdio"],
       "env": {
-        "PROVIDER": "openai",
-        "OPENAI_API_KEY": "sk-..."
+        "IMAGE_PROVIDER": "openai",
+        "IMAGE_API_KEY": "sk-..."
       }
     }
   }
@@ -177,14 +177,13 @@ All configuration is via **environment variables** (never hardcoded).
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PROVIDER` | ✅ | — | `openai` or `azure` |
-| `OPENAI_API_KEY` | if openai | — | OpenAI secret key |
-| `OPENAI_BASE_URL` | ❌ | `https://api.openai.com/v1` | Override base URL |
-| `AZURE_OPENAI_ENDPOINT` | if azure | — | e.g. `https://my-res.openai.azure.com` |
-| `AZURE_OPENAI_API_KEY` | if azure | — | Azure resource key |
-| `AZURE_OPENAI_DEPLOYMENT` | if azure | — | Deployment name |
-| `AZURE_OPENAI_API_VERSION` | if azure | `2025-04-01-preview` | API version |
-| `DEFAULT_MODEL` | ❌ | `gpt-image-1` | Default image model |
+| `IMAGE_PROVIDER` | ✅ | — | `openai`, `azure`, `together`, or `custom` |
+| `IMAGE_API_KEY` | ✅ | — | API key for the configured provider |
+| `IMAGE_BASE_URL` | if azure/custom | — | Provider endpoint (e.g. `https://my-res.openai.azure.com` for azure, or your custom OpenAI-compatible URL) |
+| `IMAGE_DEPLOYMENT` | if azure | — | Azure deployment name |
+| `IMAGE_API_VERSION` | ❌ | `2025-04-01-preview` | Azure API version |
+| `IMAGE_MODELS` | if custom | `custom` | Comma-separated model list for custom provider |
+| `IMAGE_DEFAULT_MODEL` | ❌ | `gpt-image-1` | Default model for generation requests |
 | `MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
 | `PORT` | ❌ | `3000` | HTTP server port |
 | `MCP_API_KEY` | ❌ | — | Protect the MCP endpoint |

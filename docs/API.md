@@ -220,7 +220,7 @@ Generates one or more images from a text prompt using OpenAI or Azure OpenAI `gp
 | `INVALID_PARAM` | 400 | `output_compression` out of range 0–100 |
 | `PATH_TRAVERSAL` | 400 | `save_to_workspace` attempts to escape workspace root |
 | `OPENAI_ERROR` | 502 | OpenAI API returned an error (content policy, quota, etc.) |
-| `PROVIDER_NOT_CONFIGURED` | 503 | `OPENAI_API_KEY` is not set |
+| `PROVIDER_NOT_CONFIGURED` | 503 | `IMAGE_API_KEY` is not set |
 | `RATE_LIMIT_EXCEEDED` | 429 | Client has exceeded per-minute rate limit |
 
 #### Example MCP Call
@@ -358,7 +358,7 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 | `INVALID_PARAM` | `n` > 1 with `gpt-image-1` |
 | `PATH_TRAVERSAL` | `save_to_workspace` path escapes workspace root |
 | `OPENAI_ERROR` | OpenAI API error (content policy, format error, etc.) |
-| `PROVIDER_NOT_CONFIGURED` | `OPENAI_API_KEY` not set |
+| `PROVIDER_NOT_CONFIGURED` | `IMAGE_API_KEY` not set |
 
 #### Example MCP Call
 
@@ -485,7 +485,7 @@ Generates one or more variations of an existing image without a text prompt. Use
 | `INVALID_PARAM` | `size` not one of `256x256`, `512x512`, `1024x1024` |
 | `PATH_TRAVERSAL` | `save_to_workspace` path escapes workspace root |
 | `OPENAI_ERROR` | OpenAI API error |
-| `PROVIDER_NOT_CONFIGURED` | `OPENAI_API_KEY` not set |
+| `PROVIDER_NOT_CONFIGURED` | `IMAGE_API_KEY` not set |
 
 #### Example MCP Call
 
@@ -663,7 +663,7 @@ Validates that a specific provider is correctly configured and reachable. Perfor
 ❌ **Invalid** — Provider validation failed.
 
 - **Error:** `invalid_api_key` — Incorrect API key provided.
-- **Resolution:** Check that OPENAI_API_KEY is set correctly in your environment.
+- **Resolution:** Check that IMAGE_API_KEY is set correctly in your environment.
 ```
 
 **`response_format: json`:**
@@ -921,7 +921,7 @@ The following error codes appear in tool result `content[0].text` when `isError:
 | `IMAGE_TOO_LARGE` | Image payload exceeds 20 MB limit | Large base64 input |
 | `UNSUPPORTED_IMAGE_FORMAT` | Image format not supported by the selected operation | Non-PNG mask, non-square image for DALL-E 2 variation |
 | `UNKNOWN_PROVIDER` | Named provider does not exist | Typo in `provider` field |
-| `PROVIDER_NOT_CONFIGURED` | Provider API key is not set | `OPENAI_API_KEY` missing from environment |
+| `PROVIDER_NOT_CONFIGURED` | Provider API key is not set | `IMAGE_API_KEY` missing from environment |
 | `OPENAI_ERROR` | OpenAI API returned an error | Content policy violation, quota exceeded, invalid key, server error |
 | `NETWORK_ERROR` | Network request to provider API failed | DNS failure, timeout, TLS error |
 | `NO_WORKSPACE_ROOTS` | `save_to_workspace` requested but no roots granted | MCP host did not grant any workspace roots |

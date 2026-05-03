@@ -38,7 +38,7 @@
 
 | Asset | Sensitivity | Impact if Compromised |
 |-------|-------------|----------------------|
-| `OPENAI_API_KEY` | Critical | Financial loss, quota abuse, generation of abusive content |
+| `IMAGE_API_KEY` | Critical | Financial loss, quota abuse, generation of abusive content |
 | `MCP_API_KEY` | High | Unauthorized tool invocation, prompt injection surface |
 | User-supplied image files | Medium | Path traversal leading to file exfiltration |
 | Generated image files written to workspace | Low–Medium | Overwrites or reads of unintended paths |
@@ -97,7 +97,7 @@
 
 | Variable | Purpose | Example Value |
 |----------|---------|---------------|
-| `OPENAI_API_KEY` | Authenticates requests to OpenAI | `sk-proj-…` |
+| `IMAGE_API_KEY` | Authenticates requests to OpenAI | `sk-proj-…` |
 | `MCP_API_KEY` | Guards the HTTP MCP server endpoint | Any high-entropy random string |
 
 **Generating a strong `MCP_API_KEY`:**
@@ -114,7 +114,7 @@ The server **must not** write any secret value to any output stream. The followi
 
 1. **On startup validation** — log only the key prefix (first 6 chars) + `…REDACTED`:
    ```
-   ✓ OPENAI_API_KEY loaded: sk-pro…REDACTED
+   ✓ IMAGE_API_KEY loaded: sk-pro…REDACTED
    ```
 
 2. **On error responses from OpenAI** — strip `Authorization` header values before logging the error object.
@@ -319,7 +319,7 @@ When the server listens locally (e.g., `127.0.0.1:3000`), a malicious web page c
 In `stdio` mode, there is no network attack surface for remote callers. Security focus shifts to:
 
 - **Process isolation:** The MCP host must launch the server as a least-privilege process.
-- **No credential forwarding:** Do not pass `OPENAI_API_KEY` as a command-line argument (visible in `ps`); use environment variable injection.
+- **No credential forwarding:** Do not pass `IMAGE_API_KEY` as a command-line argument (visible in `ps`); use environment variable injection.
 - **Log files:** Ensure stdout/stderr are not redirected to world-readable files.
 
 ---
@@ -614,7 +614,7 @@ curl -H "Authorization: Bearer $NEW_KEY" https://mcp.example.com/health
 
 **Step 6: Revoke old key** — after all clients are updated and verified.
 
-### 8.2 Rotating `OPENAI_API_KEY`
+### 8.2 Rotating `IMAGE_API_KEY`
 
 1. Create a new key in the [OpenAI platform console](https://platform.openai.com/api-keys).
 2. Deploy it via the same env var replacement process.
@@ -627,13 +627,13 @@ curl -H "Authorization: Bearer $NEW_KEY" https://mcp.example.com/health
 | Secret | Recommended Rotation Frequency | Mandatory on Compromise |
 |--------|--------------------------------|------------------------|
 | `MCP_API_KEY` | Every 90 days | Immediately |
-| `OPENAI_API_KEY` | Every 180 days | Immediately |
+| `IMAGE_API_KEY` | Every 180 days | Immediately |
 
 ---
 
 ## 9. Incident Response
 
-### 9.1 If `OPENAI_API_KEY` Is Leaked
+### 9.1 If `IMAGE_API_KEY` Is Leaked
 
 **Immediate actions (within 1 hour):**
 
