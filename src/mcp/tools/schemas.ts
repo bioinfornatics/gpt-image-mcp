@@ -66,6 +66,14 @@ export const ImageGenerateSchema = z.object({
     .optional()
     .default(false)
     .describe('Save generated image(s) to MCP workspace root directory'),
+  skip_elicitation: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      'Set to true to suppress the interactive quality/size form and use defaults immediately. ' +
+      'Useful for automated pipelines or when passing quality="auto" is intentional.',
+    ),
   response_format: z
     .nativeEnum(ResponseFormat)
     .optional()

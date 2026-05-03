@@ -157,10 +157,37 @@ describe('ImageGenerateTool — with M4 features', () => {
       );
     });
 
+    it('should pass model to requestImageParams for model-aware size options', async () => {
+      const mockServer = makeMockServer();
+
+      await tool.execute({ prompt: 'a cat', model: 'gpt-image-2' }, mockServer);
+
+      expect(mockElicitation.requestImageParams).toHaveBeenCalledWith(
+        mockServer,
+        expect.objectContaining({ model: 'gpt-image-2' }),
+      );
+    });
+
     it('should skip elicitation when no server provided', async () => {
       await tool.execute({ prompt: 'a cat' });
 
       expect(mockElicitation.requestImageParams).not.toHaveBeenCalled();
+    });
+
+    it('should skip elicitation when skip_elicitation=true', async () => {
+      const mockServer = makeMockServer();
+
+      await tool.execute({ prompt: 'a cat', skip_elicitation: true }, mockServer);
+
+      expect(mockElicitation.requestImageParams).not.toHaveBeenCalled();
+    });
+
+    it('should run elicitation when skip_elicitation=false (default)', async () => {
+      const mockServer = makeMockServer();
+
+      await tool.execute({ prompt: 'a cat', skip_elicitation: false }, mockServer);
+
+      expect(mockElicitation.requestImageParams).toHaveBeenCalled();
     });
 
     it('should use elicited quality value when elicitation returns quality', async () => {
@@ -189,15 +216,49 @@ describe('ImageGenerateTool — with M4 features', () => {
     });
 
     it('should not override quality when it was already explicitly provided by caller', async () => {
-      // Elicitation should NOT be called when quality !== 'auto'
       mockElicitation.requestImageParams.mockResolvedValueOnce({ quality: 'low' });
 
       await tool.execute({ prompt: 'a cat', quality: 'high' }, makeMockServer());
 
-      // requestImageParams is called with hasQuality: true when quality != 'auto'
+      // requestImageParams is called with hasQuality: true — elicitation knows not to show quality field
       expect(mockElicitation.requestImageParams).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ hasQuality: true }),
+      );
+    });
+  });
+
+  // ── Ordering: elicitation before sampling (Issue E fix) ──────────────────
+
+  describe('Feature ordering', () => {
+    it('should run elicitation BEFORE sampling', async () => {
+      const callOrder: string[] = [];
+      mockElicitation.requestImageParams.mockImplementation(async () => {
+        callOrder.push('elicitation');
+        return null;
+      });
+      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt) => {
+        callOrder.push('sampling');
+        return prompt;
+      });
+
+      await tool.execute({ prompt: 'a cat' }, makeMockServer());
+
+      expect(callOrder).toEqual(['elicitation', 'sampling']);
+    });
+
+    it('should pass elicited quality/size context to provider AFTER both features run', async () => {
+      mockElicitation.requestImageParams.mockResolvedValueOnce({ quality: 'high', size: '2048x2048' });
+      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt) => `enhanced: ${prompt}`);
+
+      await tool.execute({ prompt: 'a cat' }, makeMockServer());
+
+      expect(mockProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prompt: 'enhanced: a cat',
+          quality: 'high',
+          size: '2048x2048',
+        }),
       );
     });
   });

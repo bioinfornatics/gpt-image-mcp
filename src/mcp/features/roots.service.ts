@@ -42,9 +42,9 @@ export class RootsService {
    */
   async getRoots(server: Server): Promise<WorkspaceRoot[]> {
     try {
-      // SDK v1.29: server.listRoots() — includes client capability pre-check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (server as any).listRoots();
+      // SDK v1.29: server.listRoots() is a typed method on Server (not McpServer).
+      // No cast needed — server is correctly typed as Server from @mcp/sdk/server/index.js.
+      const result = await server.listRoots();
       return (result?.roots as WorkspaceRoot[]) ?? [];
     } catch (err) {
       this.logger.debug(`Roots not available: ${maskSecret(String(err))}`);

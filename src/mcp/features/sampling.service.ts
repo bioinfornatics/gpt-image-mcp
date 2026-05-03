@@ -24,8 +24,9 @@ export class SamplingService {
     }
 
     try {
-      // SDK v1.29: server.createMessage() — includes client capability pre-check
-      const result = await (server as any).createMessage({
+      // SDK v1.29: server.createMessage() is a typed method on Server (not McpServer).
+      // No cast needed — server is correctly typed as Server from @mcp/sdk/server/index.js.
+      const result = await server.createMessage({
         messages: [
           {
             role: 'user',

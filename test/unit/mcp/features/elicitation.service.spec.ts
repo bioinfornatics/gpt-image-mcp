@@ -21,6 +21,11 @@ function makeService(useElicitation: boolean) {
     .then((m) => m.get(ElicitationService));
 }
 
+/** Minimal params with sensible defaults for brevity */
+function p(overrides: Partial<{ hasQuality: boolean; hasSize: boolean; model: string }> = {}) {
+  return { hasQuality: false, hasSize: false, model: 'gpt-image-2', ...overrides };
+}
+
 describe('ElicitationService', () => {
   describe('isEnabled', () => {
     it('should be true when USE_ELICITATION=true', async () => {
@@ -35,35 +40,51 @@ describe('ElicitationService', () => {
   });
 
   describe('requestImageParams()', () => {
+    // ── disabled ────────────────────────────────────────────────────────────
+
     it('should return null when disabled', async () => {
       const svc = await makeService(false);
-      const result = await svc.requestImageParams(
-        {} as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      expect(result).toBeNull();
+      expect(await svc.requestImageParams({} as any, p())).toBeNull();
     });
 
-    it('should return null when all params already provided', async () => {
+    // ── nothing to elicit ────────────────────────────────────────────────────
+
+    it('should return null when both quality and size are already set', async () => {
       const svc = await makeService(true);
-      const result = await svc.requestImageParams(
-        {} as any,
-        { hasQuality: true, hasSize: true, hasStyle: true },
-      );
-      expect(result).toBeNull();
+      expect(await svc.requestImageParams({} as any, p({ hasQuality: true, hasSize: true }))).toBeNull();
     });
+
+    it('should still elicit size when only quality is set', async () => {
+      const svc = await makeService(true);
+      const mockServer = {
+        elicitInput: jest.fn().mockResolvedValue({ action: 'decline' }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ hasQuality: true, hasSize: false }));
+      const props = mockServer.elicitInput.mock.calls[0][0].requestedSchema.properties;
+      expect(props).not.toHaveProperty('quality');
+      expect(props).toHaveProperty('size');
+    });
+
+    it('should still elicit quality when only size is set', async () => {
+      const svc = await makeService(true);
+      const mockServer = {
+        elicitInput: jest.fn().mockResolvedValue({ action: 'decline' }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ hasQuality: false, hasSize: true }));
+      const props = mockServer.elicitInput.mock.calls[0][0].requestedSchema.properties;
+      expect(props).toHaveProperty('quality');
+      expect(props).not.toHaveProperty('size');
+    });
+
+    // ── client responses ─────────────────────────────────────────────────────
 
     it('should return null when server.elicitInput throws (client has no elicitation cap)', async () => {
       const svc = await makeService(true);
       const mockServer = { elicitInput: jest.fn().mockRejectedValue(new Error('not supported')) };
-      const result = await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      expect(result).toBeNull();
+      expect(await svc.requestImageParams(mockServer as any, p())).toBeNull();
     });
 
-    it('should return content when client accepts elicitation', async () => {
+    it('should return content when client accepts', async () => {
       const svc = await makeService(true);
       const mockServer = {
         elicitInput: jest.fn().mockResolvedValue({
@@ -71,65 +92,110 @@ describe('ElicitationService', () => {
           content: { quality: 'high', size: '1024x1024' },
         }),
       };
-      const result = await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      expect(result).toEqual({ quality: 'high', size: '1024x1024' });
+      expect(await svc.requestImageParams(mockServer as any, p()))
+        .toEqual({ quality: 'high', size: '1024x1024' });
     });
 
     it('should return null when client declines', async () => {
       const svc = await makeService(true);
-      const mockServer = {
-        elicitInput: jest.fn().mockResolvedValue({ action: 'decline' }),
-      };
-      const result = await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      expect(result).toBeNull();
+      const mockServer = { elicitInput: jest.fn().mockResolvedValue({ action: 'decline' }) };
+      expect(await svc.requestImageParams(mockServer as any, p())).toBeNull();
     });
 
     it('should return null when client cancels', async () => {
       const svc = await makeService(true);
-      const mockServer = {
-        elicitInput: jest.fn().mockResolvedValue({ action: 'cancel' }),
-      };
-      const result = await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      expect(result).toBeNull();
+      const mockServer = { elicitInput: jest.fn().mockResolvedValue({ action: 'cancel' }) };
+      expect(await svc.requestImageParams(mockServer as any, p())).toBeNull();
     });
 
-    it('should NEVER include password/secret fields in elicitation schema', async () => {
+    // ── model-aware size enum (Issue D fix) ──────────────────────────────────
+
+    it('should include 2048x2048 and 4096x4096 in size options for gpt-image-2', async () => {
       const svc = await makeService(true);
-      let capturedParams: any = null;
+      let captured: any;
       const mockServer = {
         elicitInput: jest.fn().mockImplementation((params: any) => {
-          capturedParams = params;
+          captured = params;
           return Promise.resolve({ action: 'decline' });
         }),
       };
-      await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
-      const props = capturedParams?.requestedSchema?.properties ?? {};
-      const fieldNames = Object.keys(props).join(' ').toLowerCase();
+      await svc.requestImageParams(mockServer as any, p({ model: 'gpt-image-2' }));
+      const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
+      expect(sizeEnum).toContain('2048x2048');
+      expect(sizeEnum).toContain('4096x4096');
+    });
+
+    it('should NOT include 4K sizes for gpt-image-1.x models', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ model: 'gpt-image-1' }));
+      const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
+      expect(sizeEnum).not.toContain('4096x4096');
+      expect(sizeEnum).not.toContain('2048x2048');
+      expect(sizeEnum).toContain('1024x1024');
+    });
+
+    it('should NOT include 4K sizes for gpt-image-1.5', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ model: 'gpt-image-1.5' }));
+      const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
+      expect(sizeEnum).not.toContain('4096x4096');
+    });
+
+    // ── hasStyle removed (Issue A fix) ───────────────────────────────────────
+
+    it('should NOT have a style field in the elicitation schema (style not supported by gpt-image-*)', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      const props = captured.requestedSchema.properties;
+      expect(props).not.toHaveProperty('style');
+    });
+
+    // ── security ─────────────────────────────────────────────────────────────
+
+    it('should NEVER include password/secret fields in elicitation schema', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      const fieldNames = Object.keys(captured?.requestedSchema?.properties ?? {}).join(' ').toLowerCase();
       expect(fieldNames).not.toMatch(/password|secret|key|token|credential/);
     });
 
-    it('should call server.elicitInput (not server.request)', async () => {
+    // ── SDK method used (Issue C fix) ────────────────────────────────────────
+
+    it('should call server.elicitInput directly (no server.request fallback)', async () => {
       const svc = await makeService(true);
       const mockServer = {
         elicitInput: jest.fn().mockResolvedValue({ action: 'accept', content: {} }),
         request: jest.fn(),
       };
-      await svc.requestImageParams(
-        mockServer as any,
-        { hasQuality: false, hasSize: false, hasStyle: false },
-      );
+      await svc.requestImageParams(mockServer as any, p());
       expect(mockServer.elicitInput).toHaveBeenCalledTimes(1);
       expect(mockServer.request).not.toHaveBeenCalled();
     });

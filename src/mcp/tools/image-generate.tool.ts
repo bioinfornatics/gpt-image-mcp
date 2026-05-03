@@ -41,6 +41,7 @@ Args:
   - output_compression (integer 0–100, optional): for webp/jpeg
   - moderation (string, optional): auto|low (GPT models only)
   - save_to_workspace (boolean, optional): save to MCP workspace root, default: false
+  - skip_elicitation (boolean, optional): suppress interactive quality/size form, default: false
   - response_format (string, optional): markdown|json, default: markdown
 
 Returns: Base64-encoded image(s) with metadata. If save_to_workspace=true, also returns file path.
@@ -99,17 +100,15 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
 
       this.logger.log(`image_generate: model=${params.model} n=${params.n}`);
 
-      // M4: Sampling — enhance prompt via client LLM if server available
-      if (server) {
-        prompt = await this.sampling.enhancePrompt(server, prompt, params.model);
-      }
-
-      // M4: Elicitation — request missing params from user if client supports it
-      if (server) {
+      // M4: Elicitation — request missing params from user BEFORE sampling.
+      // Ordering rationale: elicitation determines quality/size intent first so that
+      // the sampling step can incorporate those choices into the enhanced prompt.
+      // skip_elicitation=true lets automated callers bypass the interactive form.
+      if (server && !params.skip_elicitation) {
         const elicited = await this.elicitation.requestImageParams(server, {
           hasQuality: params.quality !== 'auto' && params.quality !== undefined,
           hasSize: params.size !== 'auto' && params.size !== undefined,
-          hasStyle: false,
+          model: params.model,
         });
         if (elicited) {
           if (typeof elicited['quality'] === 'string') {
@@ -119,6 +118,13 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
             params.size = elicited['size'] as typeof params.size;
           }
         }
+      }
+
+      // M4: Sampling — enhance prompt via client LLM AFTER elicitation.
+      // Quality/size context is now resolved, so the LLM can produce a
+      // prompt optimised for the actual output dimensions and fidelity.
+      if (server) {
+        prompt = await this.sampling.enhancePrompt(server, prompt, params.model);
       }
 
       const results = await this.provider.generate({
