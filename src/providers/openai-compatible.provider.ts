@@ -65,16 +65,27 @@ export class OpenAICompatibleProvider implements IImageProvider {
 
   async edit(params: EditParams): Promise<ImageResult[]> {
     const model = this.strategy.resolveModel(params);
-    this.logger.log(`${this.strategy.logPrefix} edit model=${model}`);
+    this.logger.log(`${this.strategy.logPrefix} edit model=${model} images=${params.images?.length ?? 1}`);
     try {
-      const imageFile = await this.base64ToFile(params.image, 'image.png', 'image/png');
+      let imageInput: File | File[];
+      if (params.images && params.images.length > 0) {
+        // Multi-image compositing
+        imageInput = await Promise.all(
+          params.images.map((b64, i) => this.base64ToFile(b64, `image${i}.png`, 'image/png')),
+        );
+      } else if (params.image) {
+        imageInput = await this.base64ToFile(params.image, 'image.png', 'image/png');
+      } else {
+        throw new Error('Either image or images must be provided to edit()');
+      }
+
       const maskFile = params.mask
         ? await this.base64ToFile(params.mask, 'mask.png', 'image/png')
         : undefined;
       const extras = this.strategy.buildEditExtras(params);
 
       const response = await this.client.images.edit({
-        image: imageFile,
+        image: imageInput,
         ...(maskFile ? { mask: maskFile } : {}),
         prompt: params.prompt,
         model,

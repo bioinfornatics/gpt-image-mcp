@@ -28,11 +28,14 @@ export class OpenAIStrategy implements ProviderStrategy {
   }
 
   buildEditExtras(params: EditParams): Record<string, unknown> {
+    const isGptImage2 = params.model === 'gpt-image-2';
     return {
       response_format: 'b64_json' as const,
       ...(params.quality && params.quality !== 'auto' ? { quality: params.quality } : {}),
       ...(params.output_format ? { output_format: params.output_format } : {}),
       ...(params.output_compression !== undefined ? { output_compression: params.output_compression } : {}),
+      // input_fidelity: supported by gpt-image-1.x only — must NOT be sent for gpt-image-2
+      ...(!isGptImage2 && params.input_fidelity ? { input_fidelity: params.input_fidelity } : {}),
     };
   }
 

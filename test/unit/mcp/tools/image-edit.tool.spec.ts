@@ -158,6 +158,51 @@ describe('ImageEditTool', () => {
     });
   });
 
+  describe('ImageEditTool — multi-image + input_fidelity', () => {
+    beforeEach(() => mockProvider.edit.mockResolvedValue([mockResult]));
+
+    it('should pass images[] to provider.edit when provided', async () => {
+      const result = await tool.execute({ images: [VALID_B64, VALID_B64], prompt: 'compose' });
+      expect(result.isError).toBeUndefined();
+      expect(mockProvider.edit).toHaveBeenCalledWith(
+        expect.objectContaining({ images: [VALID_B64, VALID_B64] }),
+      );
+    });
+
+    it('should return isError when aggregate images[] payload exceeds 10MB', async () => {
+      // Build a b64 string that decodes to ~6MB so two of them exceed 10MB
+      // base64 of N bytes is ceil(N/3)*4 chars; 6MB raw = ~8MB b64 chars
+      const sixMbRaw = 6 * 1024 * 1024;
+      const bigB64 = 'A'.repeat(Math.ceil(sixMbRaw / 0.75)); // approx b64 length for 6MB decoded
+      const result = await tool.execute({ images: [bigB64, bigB64], prompt: 'compose' });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/exceeds 10MB aggregate limit/i);
+    });
+
+    it('should pass input_fidelity to provider.edit when provided', async () => {
+      await tool.execute({ image: VALID_B64, prompt: 'preserve face', input_fidelity: 'high' });
+      expect(mockProvider.edit).toHaveBeenCalledWith(
+        expect.objectContaining({ input_fidelity: 'high' }),
+      );
+    });
+
+    it('should return isError when both image and images[] provided', async () => {
+      const result = await tool.execute({
+        image: VALID_B64,
+        images: [VALID_B64],
+        prompt: 'edit',
+      });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/validation error/i);
+    });
+
+    it('should return isError when neither image nor images[] provided', async () => {
+      const result = await tool.execute({ prompt: 'edit' });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/validation error/i);
+    });
+  });
+
   describe('register() — server closure', () => {
     it('should pass the inner Server (mcpServer.server) to execute() via closure', async () => {
       mockProvider.edit.mockResolvedValue([mockResult]);

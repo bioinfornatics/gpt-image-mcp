@@ -76,6 +76,68 @@ describe('OpenAICompatibleProvider — edit()', () => {
   });
 });
 
+describe('OpenAICompatibleProvider — edit() — multi-image', () => {
+  beforeEach(() => { mockEdit.mockClear(); });
+
+  it('should pass File[] to images.edit when images[] provided', async () => {
+    await makeProvider().edit({ images: [VALID_B64, VALID_B64], prompt: 'compose', model: 'gpt-image-1' });
+    expect(mockEdit).toHaveBeenCalledTimes(1);
+    const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+    // image should be an array of File objects
+    expect(Array.isArray(call['image'])).toBe(true);
+    const imageArr = call['image'] as File[];
+    expect(imageArr).toHaveLength(2);
+    expect(imageArr[0]).toBeInstanceOf(File);
+    expect(imageArr[1]).toBeInstanceOf(File);
+  });
+
+  it('should pass single File when only image provided (backward compat)', async () => {
+    await makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'gpt-image-1' });
+    const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+    expect(Array.isArray(call['image'])).toBe(false);
+    expect(call['image']).toBeInstanceOf(File);
+  });
+
+  it('should throw when neither image nor images provided', async () => {
+    await expect(
+      makeProvider().edit({ prompt: 'edit', model: 'gpt-image-1' }),
+    ).rejects.toThrow('Either image or images must be provided to edit()');
+  });
+
+  it('should NOT include input_fidelity when model is gpt-image-2', async () => {
+    await makeProvider().edit({
+      image: VALID_B64,
+      prompt: 'edit',
+      model: 'gpt-image-2',
+      input_fidelity: 'high',
+    });
+    const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+    expect(call['input_fidelity']).toBeUndefined();
+  });
+
+  it('should include input_fidelity: "low" when model is gpt-image-1 and input_fidelity provided', async () => {
+    await makeProvider().edit({
+      image: VALID_B64,
+      prompt: 'edit',
+      model: 'gpt-image-1',
+      input_fidelity: 'low',
+    });
+    const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+    expect(call['input_fidelity']).toBe('low');
+  });
+
+  it('should include input_fidelity: "high" when model is gpt-image-1.5 and input_fidelity provided', async () => {
+    await makeProvider().edit({
+      image: VALID_B64,
+      prompt: 'edit',
+      model: 'gpt-image-1.5',
+      input_fidelity: 'high',
+    });
+    const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+    expect(call['input_fidelity']).toBe('high');
+  });
+});
+
 describe('OpenAICompatibleProvider — variation()', () => {
   beforeEach(() => { mockCreateVariation.mockClear(); });
 

@@ -25,7 +25,8 @@ export class ImageEditTool {
         description: `Edit an existing image using an inpainting mask and a text prompt.
 
 Args:
-  - image (string, required): Base64-encoded source image (PNG recommended)
+  - image (string, optional): Base64-encoded source image (PNG recommended). Use images[] for multi-image compositing.
+  - images (string[], optional): Array of base64 images for multi-image compositing (max 5). Use instead of image.
   - mask (string, optional): Base64-encoded mask (white=area to edit, black=keep)
   - prompt (string, required): Description of the desired edit
   - model (string, optional): Model to use, default: gpt-image-2
@@ -34,6 +35,7 @@ Args:
   - quality (string, optional): Quality level, default: auto
   - output_format (string, optional): png|jpeg|webp
   - output_compression (integer 0–100, optional): For webp/jpeg
+  - input_fidelity (string, optional): Identity preservation for gpt-image-1.x — "low"|"high". Not supported by gpt-image-2.
   - save_to_workspace (boolean, optional): Save output to workspace root
   - response_format (string, optional): markdown|json, default: markdown
 
@@ -67,6 +69,26 @@ Returns: Base64-encoded edited image(s).`,
     const params = parseResult.data;
 
     try {
+      // Aggregate payload size guard (10MB = 10 * 1024 * 1024 bytes of raw b64-decoded data)
+      const MAX_AGGREGATE_BYTES = 10 * 1024 * 1024;
+      if (params.images && params.images.length > 0) {
+        const totalBytes = params.images.reduce((sum, b64) => {
+          const raw = b64.replace(/^data:[^;]+;base64,/, '');
+          return sum + Math.ceil(raw.length * 0.75); // base64 → bytes approximation
+        }, 0);
+        if (totalBytes > MAX_AGGREGATE_BYTES) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text' as const,
+                text: `Error: Total image payload (${Math.round(totalBytes / 1024 / 1024)}MB) exceeds 10MB aggregate limit.`,
+              },
+            ],
+          };
+        }
+      }
+
       let sanitisedPrompt: string;
       try {
         sanitisedPrompt = sanitisePrompt(params.prompt, PROMPT_MAX_LENGTH_GPT);
@@ -80,6 +102,7 @@ Returns: Base64-encoded edited image(s).`,
       this.logger.log(`image_edit: model=${params.model}`);
       const results = await this.provider.edit({
         image: params.image,
+        images: params.images,
         mask: params.mask,
         prompt: sanitisedPrompt,
         model: params.model,
@@ -88,6 +111,7 @@ Returns: Base64-encoded edited image(s).`,
         quality: params.quality,
         output_format: params.output_format,
         output_compression: params.output_compression,
+        input_fidelity: params.input_fidelity,
       });
 
       // M4: Roots — save to workspace if requested and server available

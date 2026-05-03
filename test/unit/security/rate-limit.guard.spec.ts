@@ -3,10 +3,10 @@ import { ExecutionContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RateLimitGuard } from '../../../src/security/rate-limit.guard';
 
-function makeContext(ip = '127.0.0.1'): ExecutionContext {
+function makeContext(ip = '127.0.0.1', headers: Record<string, string> = {}, body?: unknown): ExecutionContext {
   return {
     switchToHttp: () => ({
-      getRequest: () => ({ ip }),
+      getRequest: () => ({ ip, headers, body }),
     }),
   } as unknown as ExecutionContext;
 }
@@ -103,5 +103,112 @@ describe('RateLimitGuard', () => {
 
     // Same IP — new window opens
     expect(guard.canActivate(ctx)).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Byte-aware rate limiting
+  // ---------------------------------------------------------------------------
+  describe('byte-aware rate limiting', () => {
+    const FIFTY_MB = 50 * 1024 * 1024;
+
+    it('should allow request within byte budget', () => {
+      const guard = makeGuard(100);
+      // 1 KB payload — well within 50 MB
+      const ctx = makeContext('10.1.0.1', { 'content-length': '1024' });
+      expect(guard.canActivate(ctx)).toBe(true);
+    });
+
+    it('should reject request that would exceed byte budget (via Content-Length header)', () => {
+      const guard = makeGuard(100);
+      // Override maxBytesPerWindow to a tiny value so we can test without sending 50 MB
+      (guard as any).maxBytesPerWindow = 1000;
+
+      const ctx1 = makeContext('10.1.1.1', { 'content-length': '600' });
+      expect(guard.canActivate(ctx1)).toBe(true); // 600 bytes — OK
+
+      // Second request would push to 1200 > 1000 — should be rejected
+      const ctx2 = makeContext('10.1.1.1', { 'content-length': '600' });
+      expect(() => guard.canActivate(ctx2)).toThrow(HttpException);
+
+      // Confirm error message mentions data rate limit
+      try {
+        const ctx3 = makeContext('10.1.1.1', { 'content-length': '600' });
+        guard.canActivate(ctx3);
+      } catch (e) {
+        expect(e).toBeInstanceOf(HttpException);
+        const response = (e as HttpException).getResponse() as any;
+        expect(response.error.message).toMatch(/data rate limit/i);
+      }
+    });
+
+    it('should reject request that would exceed byte budget (via body size estimation)', () => {
+      const guard = makeGuard(100);
+      (guard as any).maxBytesPerWindow = 200;
+
+      // No content-length header — guard falls back to body size estimation
+      const smallBody = { prompt: 'hello' }; // ~16 bytes as JSON
+      const ctx1 = makeContext('10.1.2.1', {}, smallBody);
+      expect(guard.canActivate(ctx1)).toBe(true);
+
+      // Large body that would push over 200 bytes
+      const largeBody = { prompt: 'x'.repeat(300) };
+      const ctx2 = makeContext('10.1.2.1', {}, largeBody);
+      expect(() => guard.canActivate(ctx2)).toThrow(HttpException);
+    });
+
+    it('should count bytes cumulatively across requests in window', () => {
+      const guard = makeGuard(100);
+      (guard as any).maxBytesPerWindow = 500;
+
+      // Send 3 × 150-byte requests — first two pass (300 bytes), third passes (450 bytes),
+      // fourth would exceed 500 bytes
+      const ctx = (n: number) => makeContext('10.1.3.1', { 'content-length': String(n) });
+
+      expect(guard.canActivate(ctx(150))).toBe(true); // 150
+      expect(guard.canActivate(ctx(150))).toBe(true); // 300
+      expect(guard.canActivate(ctx(150))).toBe(true); // 450
+      expect(() => guard.canActivate(ctx(150))).toThrow(HttpException); // 600 > 500
+    });
+
+    it('should reset byte count when window expires', () => {
+      const guard = makeGuard(100);
+      (guard as any).maxBytesPerWindow = 500;
+
+      const store = (guard as any).store as Map<string, any>;
+      const ip = '10.1.4.1';
+
+      // Use up 450 bytes
+      guard.canActivate(makeContext(ip, { 'content-length': '450' }));
+
+      // Expire the window
+      store.get(ip)!.windowStart = Date.now() - 61_000;
+
+      // New window — byte counter resets, so a 450-byte request should pass
+      expect(guard.canActivate(makeContext(ip, { 'content-length': '450' }))).toBe(true);
+
+      // Verify the new entry has the fresh byte count
+      expect(store.get(ip)!.bytesIn).toBe(450);
+    });
+
+    it('should still enforce request count limit independently of byte limit', () => {
+      const guard = makeGuard(2); // only 2 requests allowed
+      (guard as any).maxBytesPerWindow = FIFTY_MB; // very generous byte limit
+
+      const ctx = makeContext('10.1.5.1', { 'content-length': '1' }); // tiny payload
+      expect(guard.canActivate(ctx)).toBe(true);  // req 1
+      expect(guard.canActivate(ctx)).toBe(true);  // req 2
+      // 3rd request should be blocked by count limit, not byte limit
+      expect(() => guard.canActivate(ctx)).toThrow(HttpException);
+
+      try {
+        guard.canActivate(ctx);
+      } catch (e) {
+        expect(e).toBeInstanceOf(HttpException);
+        const response = (e as HttpException).getResponse() as any;
+        expect(response.error.message).toMatch(/rate limit exceeded/i);
+        // Should NOT be the data-rate-limit message
+        expect(response.error.message).not.toMatch(/data rate limit/i);
+      }
+    });
   });
 });

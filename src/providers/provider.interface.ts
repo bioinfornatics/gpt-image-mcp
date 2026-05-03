@@ -11,8 +11,9 @@ export interface GenerateParams {
 }
 
 export interface EditParams {
-  image: string; // base64
-  mask?: string; // base64
+  image?: string;       // Changed: now optional (use images[] for compositing)
+  images?: string[];    // NEW: array of base64 images for multi-image compositing
+  mask?: string;        // base64
   prompt: string;
   model: string;
   n?: number;
@@ -20,7 +21,7 @@ export interface EditParams {
   quality?: string;
   output_format?: 'png' | 'jpeg' | 'webp';
   output_compression?: number;
-  input_fidelity?: 'low' | 'high';  // NEW — gpt-image-1.x identity preservation; MUST NOT be sent for gpt-image-2
+  input_fidelity?: 'low' | 'high';  // gpt-image-1.x identity preservation; MUST NOT be sent for gpt-image-2
 }
 
 export interface VariationParams {
