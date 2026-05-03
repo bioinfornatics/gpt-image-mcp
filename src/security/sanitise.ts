@@ -54,6 +54,25 @@ export function sanitisePrompt(prompt: string, maxLength: number): string {
 }
 
 /**
+ * Heuristic detection of prompts that may intend to fabricate
+ * official-looking documents, screenshots, or impersonate organisations.
+ * Returns true if the prompt matches a forgery-intent pattern.
+ * Caller decides whether to block or log.
+ *
+ * Patterns: screenshot + auth page, explicit forgery language,
+ * real domain names embedded in UI mock prompts.
+ */
+const FORGERY_PATTERNS: RegExp[] = [
+  /\b(screenshot|screengrab|mockup)\b.{0,80}\b(login|password|captcha|verify|account|sign.?in)\b/i,
+  /\b(fake|fabricate|forged?|spoof|impersonat)\b/i,
+  /https?:\/\/[a-z0-9.-]*(google|apple|microsoft|amazon|paypal|facebook|instagram|twitter|bank)[a-z0-9.-]*\.[a-z]{2,}/i,
+];
+
+export function detectForgeryIntent(prompt: string): boolean {
+  return FORGERY_PATTERNS.some(p => p.test(prompt));
+}
+
+/**
  * Validates a file path is within an allowed root and has no traversal.
  */
 export function validateFilePath(filePath: string, allowedRoot: string): string {

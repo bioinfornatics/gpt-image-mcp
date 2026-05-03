@@ -58,7 +58,7 @@ describe('ImageGenerateTool — with M4 features', () => {
     mockSampling = {
       isEnabled: true,
       // default: pass through unchanged
-      enhancePrompt: jest.fn().mockImplementation((_server, prompt: string) => Promise.resolve(prompt)),
+      enhancePrompt: jest.fn().mockImplementation((_server, prompt: string, _ctx) => Promise.resolve(prompt)),
     } as unknown as jest.Mocked<SamplingService>;
 
     mockRoots = {
@@ -121,7 +121,7 @@ describe('ImageGenerateTool — with M4 features', () => {
       expect(mockSampling.enhancePrompt).toHaveBeenCalledWith(
         mockServer,
         'a cat',
-        expect.any(String),
+        expect.objectContaining({ model: expect.any(String) }),
       );
     });
 
@@ -139,6 +139,36 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(mockProvider.generate).toHaveBeenCalledWith(
         expect.objectContaining({ prompt: enhanced }),
+      );
+    });
+  });
+
+  // ── Sampling context ─────────────────────────────────────────────────────
+
+  describe('sampling context', () => {
+    it('should pass quality, size, output_format, background, n to sampling.enhancePrompt as context', async () => {
+      const mockServer = makeMockServer();
+      await tool.execute(
+        {
+          prompt: 'a cat',
+          model: 'gpt-image-1',
+          quality: 'high',
+          size: '1024x1024',
+          output_format: 'webp',
+          background: 'transparent',
+          n: 2,
+        },
+        mockServer,
+      );
+
+      expect(mockSampling.enhancePrompt).toHaveBeenCalledWith(
+        mockServer,
+        expect.any(String),
+        expect.objectContaining({
+          model: expect.any(String),
+          quality: expect.any(String),
+          size: expect.any(String),
+        }),
       );
     });
   });
@@ -237,7 +267,7 @@ describe('ImageGenerateTool — with M4 features', () => {
         callOrder.push('elicitation');
         return null;
       });
-      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt) => {
+      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt, _ctx) => {
         callOrder.push('sampling');
         return prompt;
       });
@@ -249,7 +279,7 @@ describe('ImageGenerateTool — with M4 features', () => {
 
     it('should pass elicited quality/size context to provider AFTER both features run', async () => {
       mockElicitation.requestImageParams.mockResolvedValueOnce({ quality: 'high', size: '2048x2048' });
-      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt) => `enhanced: ${prompt}`);
+      mockSampling.enhancePrompt.mockImplementation(async (_s, prompt, _ctx) => `enhanced: ${prompt}`);
 
       await tool.execute({ prompt: 'a cat' }, makeMockServer());
 

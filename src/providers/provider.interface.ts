@@ -20,6 +20,7 @@ export interface EditParams {
   quality?: string;
   output_format?: 'png' | 'jpeg' | 'webp';
   output_compression?: number;
+  input_fidelity?: 'low' | 'high';  // NEW — gpt-image-1.x identity preservation; MUST NOT be sent for gpt-image-2
 }
 
 export interface VariationParams {

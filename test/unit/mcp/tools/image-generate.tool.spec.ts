@@ -31,7 +31,7 @@ describe('ImageGenerateTool', () => {
         ImageGenerateTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
         { provide: ElicitationService, useValue: { isEnabled: false, requestImageParams: jest.fn().mockResolvedValue(null) } },
-        { provide: SamplingService, useValue: { isEnabled: false, enhancePrompt: jest.fn().mockImplementation((_s, p) => Promise.resolve(p)) } },
+        { provide: SamplingService, useValue: { isEnabled: false, enhancePrompt: jest.fn().mockImplementation((_s, p, _ctx) => Promise.resolve(p)) } },
         { provide: RootsService, useValue: { getRoots: jest.fn().mockResolvedValue([]), saveImageToWorkspace: jest.fn().mockResolvedValue(null) } },
       ],
     }).compile();
@@ -91,7 +91,7 @@ describe('ImageGenerateTool', () => {
       expect(parsed.images[0].b64_json).toBe(mockImageResult.b64_json);
     });
 
-    it('should pass all parameters through to the provider', async () => {
+    it('should pass all parameters through to the provider (moderation gated to auto without ALLOW_LOW_MODERATION)', async () => {
       await tool.execute({
         prompt: 'a cat',
         model: 'dall-e-3',
@@ -103,6 +103,8 @@ describe('ImageGenerateTool', () => {
         output_compression: 80,
         moderation: 'low',
       });
+      // moderation='low' is silently gated to 'auto' by resolveModeration()
+      // unless ALLOW_LOW_MODERATION=true is set in the environment
       expect(mockProvider.generate).toHaveBeenCalledWith(
         expect.objectContaining({
           model: 'dall-e-3',
@@ -111,7 +113,7 @@ describe('ImageGenerateTool', () => {
           background: 'transparent',
           output_format: 'webp',
           output_compression: 80,
-          moderation: 'low',
+          moderation: 'auto',
         }),
       );
     });
@@ -122,6 +124,38 @@ describe('ImageGenerateTool', () => {
       ]);
       const result = await tool.execute({ prompt: 'a cat' });
       expect(result.content[0].text).toContain('Revised prompt');
+    });
+  });
+
+  describe('moderation parameter', () => {
+    beforeEach(() => {
+      mockProvider.generate.mockResolvedValue([mockImageResult]);
+    });
+
+    it('should call provider.generate with moderation:auto when moderation is not set', async () => {
+      await tool.execute({ prompt: 'a cat' });
+      expect(mockProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ moderation: 'auto' }),
+      );
+    });
+
+    it('should call provider.generate with moderation:auto when moderation=low and ALLOW_LOW_MODERATION is unset', async () => {
+      const original = process.env['ALLOW_LOW_MODERATION'];
+      delete process.env['ALLOW_LOW_MODERATION'];
+      await tool.execute({ prompt: 'a cat', moderation: 'low' });
+      expect(mockProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ moderation: 'auto' }),
+      );
+      if (original !== undefined) process.env['ALLOW_LOW_MODERATION'] = original;
+    });
+
+    it('should call provider.generate with moderation:low when moderation=low and ALLOW_LOW_MODERATION=true', async () => {
+      process.env['ALLOW_LOW_MODERATION'] = 'true';
+      await tool.execute({ prompt: 'a cat', moderation: 'low' });
+      expect(mockProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ moderation: 'low' }),
+      );
+      delete process.env['ALLOW_LOW_MODERATION'];
     });
   });
 

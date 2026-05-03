@@ -33,12 +33,12 @@ export const ImageGenerateSchema = z.object({
     .default(1)
     .describe('Number of images to generate (1–10; gpt-image-* models support up to 10)'),
   size: z
-    .enum(['auto', '1024x1024', '1536x1024', '1024x1536', '256x256', '512x512', '1792x1024', '1024x1792'])
+    .enum(['auto', '1024x1024', '1536x1024', '1024x1536'])
     .optional()
     .default('auto')
     .describe('Image dimensions'),
   quality: z
-    .enum(['auto', 'high', 'medium', 'low', 'hd', 'standard'])
+    .enum(['auto', 'high', 'medium', 'low'])
     .optional()
     .default('auto')
     .describe('Image quality level'),
@@ -102,10 +102,10 @@ export const ImageEditSchema = z.object({
     .describe('Model to use for editing'),
   n: z.number().int().min(1).max(10).optional().default(1),
   size: z
-    .enum(['auto', '1024x1024', '1536x1024', '1024x1536', '256x256', '512x512'])
+    .enum(['auto', '1024x1024', '1536x1024', '1024x1536'])
     .optional()
     .default('auto'),
-  quality: z.enum(['auto', 'high', 'medium', 'low', 'standard']).optional().default('auto'),
+  quality: z.enum(['auto', 'high', 'medium', 'low']).optional().default('auto'),
   output_format: z.enum(['png', 'jpeg', 'webp']).optional(),
   output_compression: z.number().int().min(0).max(100).optional(),
   save_to_workspace: z.boolean().optional().default(false),
@@ -126,6 +126,19 @@ export const ImageVariationSchema = z.object({
 export const ProviderValidateSchema = z.object({
   provider: z.enum(['openai', 'azure']).describe('The provider to validate'),
 });
+
+/**
+ * Resolves the moderation level, enforcing 'auto' unless ALLOW_LOW_MODERATION=true.
+ * Moderation='low' bypasses OpenAI safety filters and requires explicit opt-in.
+ */
+export function resolveModeration(
+  requested: 'auto' | 'low' | undefined,
+): 'auto' | 'low' {
+  if (requested === 'low' && process.env['ALLOW_LOW_MODERATION'] !== 'true') {
+    return 'auto'; // silently downgrade — moderation=low requires explicit opt-in
+  }
+  return requested ?? 'auto';
+}
 
 export type ImageGenerateInput = z.infer<typeof ImageGenerateSchema>;
 export type ImageEditInput = z.infer<typeof ImageEditSchema>;

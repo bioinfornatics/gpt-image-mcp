@@ -6,7 +6,7 @@ import type { IImageProvider, ImageResult } from '../../providers/provider.inter
 import { ElicitationService } from '../features/elicitation.service';
 import { SamplingService } from '../features/sampling.service';
 import { RootsService } from '../features/roots.service';
-import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
+import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT, resolveModeration } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
 @Injectable()
@@ -124,7 +124,14 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
       // Quality/size context is now resolved, so the LLM can produce a
       // prompt optimised for the actual output dimensions and fidelity.
       if (server) {
-        prompt = await this.sampling.enhancePrompt(server, prompt, params.model);
+        prompt = await this.sampling.enhancePrompt(server, prompt, {
+          model:          params.model,
+          quality:        params.quality,
+          size:           params.size,
+          output_format:  params.output_format,
+          background:     params.background,
+          n:              params.n,
+        });
       }
 
       const results = await this.provider.generate({
@@ -136,7 +143,7 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         background: params.background,
         output_format: params.output_format,
         output_compression: params.output_compression,
-        moderation: params.moderation,
+        moderation: resolveModeration(params.moderation),
       });
 
       // M4: Roots — save to workspace if requested and server available

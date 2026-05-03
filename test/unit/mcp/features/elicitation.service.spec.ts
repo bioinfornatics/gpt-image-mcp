@@ -108,9 +108,9 @@ describe('ElicitationService', () => {
       expect(await svc.requestImageParams(mockServer as any, p())).toBeNull();
     });
 
-    // ── model-aware size enum (Issue D fix) ──────────────────────────────────
+    // ── size enum matches schema exactly (BUG-01 fix) ────────────────────────
 
-    it('should include 2048x2048 and 4096x4096 in size options for gpt-image-2', async () => {
+    it('should include only schema-valid sizes for gpt-image-2 (no 4K oversize)', async () => {
       const svc = await makeService(true);
       let captured: any;
       const mockServer = {
@@ -121,11 +121,17 @@ describe('ElicitationService', () => {
       };
       await svc.requestImageParams(mockServer as any, p({ model: 'gpt-image-2' }));
       const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
-      expect(sizeEnum).toContain('2048x2048');
-      expect(sizeEnum).toContain('4096x4096');
+      // 4K sizes are NOT in ImageGenerateSchema.size — must not appear
+      expect(sizeEnum).not.toContain('2048x2048');
+      expect(sizeEnum).not.toContain('4096x4096');
+      // Standard valid sizes must be present
+      expect(sizeEnum).toContain('auto');
+      expect(sizeEnum).toContain('1024x1024');
+      expect(sizeEnum).toContain('1536x1024');
+      expect(sizeEnum).toContain('1024x1536');
     });
 
-    it('should NOT include 4K sizes for gpt-image-1.x models', async () => {
+    it('should use the same size enum for gpt-image-1 as for gpt-image-2', async () => {
       const svc = await makeService(true);
       let captured: any;
       const mockServer = {
@@ -141,7 +147,7 @@ describe('ElicitationService', () => {
       expect(sizeEnum).toContain('1024x1024');
     });
 
-    it('should NOT include 4K sizes for gpt-image-1.5', async () => {
+    it('should use the same size enum for gpt-image-1.5', async () => {
       const svc = await makeService(true);
       let captured: any;
       const mockServer = {
@@ -153,6 +159,68 @@ describe('ElicitationService', () => {
       await svc.requestImageParams(mockServer as any, p({ model: 'gpt-image-1.5' }));
       const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
       expect(sizeEnum).not.toContain('4096x4096');
+    });
+
+    // ── field ordering: size first (UX improvement) ───────────────────────
+
+    it('should list size before quality in the schema properties', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      const keys = Object.keys(captured.requestedSchema.properties);
+      expect(keys.indexOf('size')).toBeLessThan(keys.indexOf('quality'));
+    });
+
+    // ── message and description text (UX improvement) ─────────────────────
+
+    it('should use the updated message text', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      expect(captured.message).toContain('smart defaults');
+    });
+
+    it('should have human-readable quality description mentioning use cases', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      const desc = captured.requestedSchema.properties.quality?.description as string;
+      expect(desc).toContain('fast drafts');
+      expect(desc).toContain('final output');
+    });
+
+    it('should have human-readable size description mentioning shapes', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p());
+      const desc = captured.requestedSchema.properties.size?.description as string;
+      expect(desc).toContain('Square');
+      expect(desc).toContain('Landscape');
+      expect(desc).toContain('Portrait');
     });
 
     // ── hasStyle removed (Issue A fix) ───────────────────────────────────────

@@ -18,30 +18,22 @@ export interface ElicitationResponse {
 }
 
 /**
- * Size options surfaced in the elicitation form, keyed by model family.
- *
- * gpt-image-2  : arbitrary resolution up to 4K — show the most useful fixed options.
- * gpt-image-1.x: fixed resolutions only — same set, no 4K options.
- * dall-e-2     : only valid for variations, never reaches elicitation.
+ * Size options for the elicitation form.
+ * Must exactly match the values accepted by ImageGenerateSchema.size.
+ * When arbitrary-resolution support lands (gpt-image-2 WxH validator),
+ * this will be extended with a free-text "custom" option.
  */
-const SIZE_OPTIONS_GPT_IMAGE_2 = [
+const ELICITATION_SIZE_OPTIONS = [
   'auto',
-  '1024x1024',
-  '1536x1024',
-  '1024x1536',
-  '2048x2048',
-  '4096x4096',
+  '1024x1024',   // Square · 1:1 — social, avatar, album art
+  '1536x1024',   // Landscape · 3:2 — scenes, banners, desktop
+  '1024x1536',   // Portrait · 2:3 — phone screens, posters, stories
 ] as const;
 
-const SIZE_OPTIONS_GPT_IMAGE_1X = [
-  'auto',
-  '1024x1024',
-  '1536x1024',
-  '1024x1536',
-] as const;
-
-function sizeOptionsForModel(model: string): readonly string[] {
-  return model === 'gpt-image-2' ? SIZE_OPTIONS_GPT_IMAGE_2 : SIZE_OPTIONS_GPT_IMAGE_1X;
+function sizeOptionsForModel(_model: string): readonly string[] {
+  // All current gpt-image-* models share the same fixed sizes.
+  // When gpt-image-2 arbitrary resolution lands, add model-branching here.
+  return ELICITATION_SIZE_OPTIONS;
 }
 
 @Injectable()
@@ -83,22 +75,24 @@ export class ElicitationService {
 
     const properties: Record<string, ElicitationField> = {};
 
-    if (!params.hasQuality) {
-      properties['quality'] = {
-        type: 'string',
-        title: 'Image Quality',
-        description: 'The quality level for the generated image',
-        enum: ['auto', 'high', 'medium', 'low'],
-        default: 'auto',
-      };
-    }
-
     if (!params.hasSize) {
       properties['size'] = {
         type: 'string',
         title: 'Image Size',
-        description: 'The dimensions of the generated image',
+        description:
+          'Choose the shape for your image. Square for social/avatars, Landscape for scenes/banners, Portrait for phone screens/posters.',
         enum: [...sizeOptionsForModel(params.model)],
+        default: 'auto',
+      };
+    }
+
+    if (!params.hasQuality) {
+      properties['quality'] = {
+        type: 'string',
+        title: 'Image Quality',
+        description:
+          'Higher quality takes longer and costs more. Use "low" for fast drafts and ideation; use "high" for final output, dense text, or close-up faces.',
+        enum: ['auto', 'high', 'medium', 'low'],
         default: 'auto',
       };
     }
@@ -111,7 +105,8 @@ export class ElicitationService {
       // SDK v1.29: server.elicitInput() is a typed method on Server (not McpServer).
       // No cast needed — server is correctly typed as Server from @mcp/sdk/server/index.js.
       const result = await server.elicitInput({
-        message: 'Please refine your image generation preferences:',
+        message:
+          'A few quick settings for your image — all have smart defaults, just change what matters to you.',
         requestedSchema: { type: 'object' as const, properties },
       });
 

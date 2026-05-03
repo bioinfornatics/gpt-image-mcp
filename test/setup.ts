@@ -16,3 +16,6 @@ process.env['DEFAULT_MODEL'] = process.env['DEFAULT_MODEL'] ?? 'gpt-image-1';
 process.env['MAX_REQUESTS_PER_MINUTE'] = process.env['MAX_REQUESTS_PER_MINUTE'] ?? '60';
 process.env['USE_ELICITATION'] = process.env['USE_ELICITATION'] ?? 'true';
 process.env['USE_SAMPLING'] = process.env['USE_SAMPLING'] ?? 'true';
+// Disable mandatory MCP auth in tests — no MCP_API_KEY is set in the test environment.
+// Production deployments should set REQUIRE_MCP_AUTH=true (the default) and provide MCP_API_KEY.
+process.env['REQUIRE_MCP_AUTH'] = process.env['REQUIRE_MCP_AUTH'] ?? 'false';

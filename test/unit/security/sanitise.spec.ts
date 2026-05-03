@@ -1,4 +1,4 @@
-import { maskSecret, sanitisePrompt, validateFilePath } from '../../../src/security/sanitise';
+import { maskSecret, sanitisePrompt, validateFilePath, detectForgeryIntent } from '../../../src/security/sanitise';
 
 describe('maskSecret', () => {
   it('should mask OpenAI API keys (sk-...)', () => {
@@ -107,5 +107,48 @@ describe('validateFilePath', () => {
     const result = validateFilePath('/workspace/generated/img.png', '/workspace');
     expect(result).toContain('/workspace');
     expect(result).toContain('img.png');
+  });
+});
+
+describe('detectForgeryIntent', () => {
+  it('should return false for a normal prompt', () => {
+    expect(detectForgeryIntent('a serene sunset over the ocean')).toBe(false);
+  });
+
+  it('should return true for a screenshot of a Google login page', () => {
+    expect(detectForgeryIntent('generate a screenshot of a Google login page')).toBe(true);
+  });
+
+  it('should return true for "create a fake bank statement"', () => {
+    expect(detectForgeryIntent('create a fake bank statement')).toBe(true);
+  });
+
+  it('should return true for "fabricate an Apple ID verification page"', () => {
+    expect(detectForgeryIntent('fabricate an Apple ID verification page')).toBe(true);
+  });
+
+  it('should return false for "a beautiful mountain landscape"', () => {
+    expect(detectForgeryIntent('a beautiful mountain landscape')).toBe(false);
+  });
+
+  it('should return true for prompts containing real domain names in UI mock context', () => {
+    expect(detectForgeryIntent('mockup of https://www.paypal.com payment screen')).toBe(true);
+  });
+
+  it('should return true for "spoof" keyword', () => {
+    expect(detectForgeryIntent('spoof a bank website')).toBe(true);
+  });
+
+  it('should return true for screengrab of a sign-in page', () => {
+    expect(detectForgeryIntent('screengrab of an account sign-in form')).toBe(true);
+  });
+
+  it('should return false for generic mockup with no auth context', () => {
+    expect(detectForgeryIntent('UI mockup of a photo gallery app')).toBe(false);
+  });
+
+  it('should be case-insensitive', () => {
+    expect(detectForgeryIntent('GENERATE A SCREENSHOT OF A LOGIN PAGE')).toBe(true);
+    expect(detectForgeryIntent('FAKE document')).toBe(true);
   });
 });

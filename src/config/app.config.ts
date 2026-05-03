@@ -25,6 +25,7 @@ export interface AppConfig {
     transport: 'http' | 'stdio';
     port: number;
     apiKey?: string;
+    requireMcpAuth: boolean;
     useElicitation: boolean;
     useSampling: boolean;
   };
@@ -103,7 +104,15 @@ export const configValidationSchema = Joi.object({
   // MCP
   MCP_TRANSPORT: Joi.string().valid('http', 'stdio').optional().default('http'),
   PORT: Joi.number().integer().min(1).max(65535).optional().default(3000),
-  MCP_API_KEY: Joi.string().optional(),
+  REQUIRE_MCP_AUTH: Joi.boolean().optional().default(true),
+  MCP_API_KEY: Joi.when('REQUIRE_MCP_AUTH', {
+    is: true,
+    then: Joi.string().min(16).required().messages({
+      'any.required': 'MCP_API_KEY is required when REQUIRE_MCP_AUTH=true (default). Set REQUIRE_MCP_AUTH=false to allow unauthenticated access (local dev only).',
+      'string.min': 'MCP_API_KEY must be at least 16 characters.',
+    }),
+    otherwise: Joi.string().optional(),
+  }),
 
   // Features
   USE_ELICITATION: Joi.boolean().optional().default(true),
@@ -135,6 +144,7 @@ export const appConfig = (): AppConfig => ({
     transport: (process.env['MCP_TRANSPORT'] as 'http' | 'stdio') || 'http',
     port: parseInt(process.env['PORT'] || '3000', 10),
     apiKey: process.env['MCP_API_KEY'],
+    requireMcpAuth: process.env['REQUIRE_MCP_AUTH'] !== 'false',
     useElicitation: process.env['USE_ELICITATION'] !== 'false',
     useSampling: process.env['USE_SAMPLING'] !== 'false',
   },

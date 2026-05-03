@@ -16,7 +16,9 @@ export class AuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const mcpConfig = this.configService.get<AppConfig['mcp']>('mcp')!;
 
-    // If no MCP_API_KEY configured, allow all requests
+    // Allow unauthenticated access only when explicitly opted out AND no key is configured
+    if (mcpConfig.requireMcpAuth === false && !mcpConfig.apiKey) return true;
+    // requireMcpAuth=true but key not set → Joi already blocked startup; allow as defensive fallback
     if (!mcpConfig.apiKey) return true;
 
     const request = context.switchToHttp().getRequest<Request>();
