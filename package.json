@@ -83,6 +83,6 @@
   "overrides": {
     "multer": "^2.1.1",
     "lodash": "^4.18.1",
-    "file-type": "^21.3.2"
+    "file-type": "^21.3.4"
   }
 }
