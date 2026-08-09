@@ -5,7 +5,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import express from 'express';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
+import type { AddressInfo } from 'net';
 import { AppModule } from '../../../src/app.module';
 import { PROVIDER_TOKEN } from '../../../src/providers/provider.interface';
 
@@ -34,9 +35,9 @@ describe('Input Sanitisation — Integration', () => {
     Object.assign(process.env, {
       IMAGE_PROVIDER: 'openai',
       IMAGE_API_KEY: 'sk-test-sanitise-integration',
-      MCP_TRANSPORT: 'http',
-      PORT: '3004',
-      LOG_LEVEL: 'error',
+      IMAGE_MCP_TRANSPORT: 'http',
+      IMAGE_PORT: '3004',
+      IMAGE_LOG_LEVEL: 'error',
     });
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -46,9 +47,8 @@ describe('Input Sanitisation — Integration', () => {
       .useValue(mockProvider)
       .compile();
 
-    app = moduleRef.createNestApplication();
-    app.use(express.json({ limit: '50mb' }));
-    await app.init();
+    app = moduleRef.createNestApplication(new FastifyAdapter({ bodyLimit: 50 * 1024 * 1024, skipMiddie: true }));
+    await app.listen(0, '127.0.0.1');
   });
 
   afterAll(async () => app.close());
@@ -60,7 +60,7 @@ describe('Input Sanitisation — Integration', () => {
 
   describe('Prompt injection protection', () => {
     it('should strip null bytes from prompt', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 1,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: 'a cat\0 with hat' } },
@@ -75,7 +75,7 @@ describe('Input Sanitisation — Integration', () => {
     });
 
     it('should reject prompt exceeding 32 000 characters', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 2,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: 'a'.repeat(32_001) } },
@@ -86,7 +86,7 @@ describe('Input Sanitisation — Integration', () => {
     });
 
     it('should trim whitespace-only prompt and reject it', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 3,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: '   ' } },
@@ -99,7 +99,7 @@ describe('Input Sanitisation — Integration', () => {
 
   describe('Schema validation', () => {
     it('should reject invalid model enum', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 4,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: 'a cat', size: 'invalid-size' } },
@@ -109,7 +109,7 @@ describe('Input Sanitisation — Integration', () => {
     });
 
     it('should reject n=0', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 5,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: 'a cat', n: 0 } },
@@ -119,7 +119,7 @@ describe('Input Sanitisation — Integration', () => {
     });
 
     it('should reject n=11', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0', id: 6,
         method: 'tools/call',
         params: { name: 'image_generate', arguments: { prompt: 'a cat', n: 11 } },
@@ -132,13 +132,13 @@ describe('Input Sanitisation — Integration', () => {
   describe('Rate limiting', () => {
     it('should return 429 when rate limit exceeded', async () => {
       // Temporarily lower limit
-      // Note: MAX_REQUESTS_PER_MINUTE is read at startup — runtime override not supported
-      // const originalEnv = process.env['MAX_REQUESTS_PER_MINUTE'];
+      // Note: IMAGE_MAX_REQUESTS_PER_MINUTE is read at startup — runtime override not supported
+      // const originalEnv = process.env['IMAGE_MAX_REQUESTS_PER_MINUTE'];
       // We'll use supertest to make many rapid requests and expect a 429
       // Make 65 quick requests — one batch will fail (default limit=60)
       const results: number[] = [];
       for (let i = 0; i < 5; i++) {
-        const r = await mcpPost(app.getHttpServer(), {
+        const r = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
           jsonrpc: '2.0', id: i + 100,
           method: 'tools/list', params: {},
         });

@@ -6,11 +6,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Request } from 'express';
+import type { FastifyRequest } from 'fastify';
 import type { AppConfig } from '../config/app.config';
 
-// NOTE: In production behind a load balancer, ensure Express trust proxy is
-// configured (app.set('trust proxy', 1) in main.ts) so request.ip reflects
+// NOTE: In production behind a load balancer, ensure Fastify trustProxy is
+// configured in main.ts so request.ip reflects
 // the real client IP from X-Forwarded-For, not the proxy's IP.
 
 interface RateLimitEntry {
@@ -24,13 +24,13 @@ export class RateLimitGuard implements CanActivate {
   private readonly store = new Map<string, RateLimitEntry>();
   private readonly windowMs = 60_000; // 1 minute
   private readonly maxBytesPerWindow = parseInt(
-    process.env['MAX_BYTES_PER_MINUTE'] ?? String(50 * 1024 * 1024),
+    process.env['IMAGE_MAX_BYTES_PER_MINUTE'] ?? String(50 * 1024 * 1024),
     10,
   );
 
   constructor(private readonly configService: ConfigService) {}
 
-  private extractRequestBytes(request: Request): number {
+  private extractRequestBytes(request: FastifyRequest): number {
     // Use Content-Length header if present (fastest)
     const contentLength = request.headers['content-length'];
     if (contentLength) return parseInt(contentLength, 10) || 0;
@@ -49,7 +49,7 @@ export class RateLimitGuard implements CanActivate {
     const securityConfig = this.configService.get<AppConfig['security']>('security')!;
     const limit = securityConfig.maxRequestsPerMinute;
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<FastifyRequest>();
     const clientKey = request.ip ?? 'unknown';
     const now = Date.now();
     const requestBytes = this.extractRequestBytes(request);

@@ -44,7 +44,7 @@ register(server: McpServer) {
 
 ---
 
-### C2 — `MCP_SECRET_BACKEND` typo in `docker-compose.yml`
+### C2 — `IMAGE_MCP_SECRET_BACKEND` typo in `docker-compose.yml`
 **File:** `docker-compose.yml` L30  
 **Reviewers:** Security · DevOps · Architect
 
@@ -52,11 +52,11 @@ register(server: McpServer) {
 - SECRET_BACKEND=file    # ← WRONG: reserved by libsecret on Linux
 ```
 
-`SECRET_BACKEND` is a Linux environment variable used by `libsecret` to select which GNOME keyring backend plugin to load. Setting it to `file` instructs the system keyring daemon to look for a plugin called "file", which doesn't exist. On Linux this can crash or corrupt the secret service. The application's variable is `MCP_SECRET_BACKEND`. With this bug, **no `*_FILE` secrets are ever resolved** — the server starts without API keys and all image generation calls fail.
+`SECRET_BACKEND` is a Linux environment variable used by `libsecret` to select which GNOME keyring backend plugin to load. Setting it to `file` instructs the system keyring daemon to look for a plugin called "file", which doesn't exist. On Linux this can crash or corrupt the secret service. The application's variable is `IMAGE_MCP_SECRET_BACKEND`. With this bug, **no `*_FILE` secrets are ever resolved** — the server starts without API keys and all image generation calls fail.
 
 **Fix:**
 ```yaml
-- MCP_SECRET_BACKEND=file    # ← correct
+- IMAGE_MCP_SECRET_BACKEND=file    # ← correct
 ```
 
 ---
@@ -66,7 +66,7 @@ register(server: McpServer) {
 **Reviewers:** Security · Architect · QA  
 **CWE:** CWE-208
 
-The `MCP_API_KEY` bearer token is compared with JavaScript string equality (`!==`), which short-circuits on the first mismatched byte. An attacker can brute-force the key character-by-character by measuring response latency variance.
+The `IMAGE_MCP_API_KEY` bearer token is compared with JavaScript string equality (`!==`), which short-circuits on the first mismatched byte. An attacker can brute-force the key character-by-character by measuring response latency variance.
 
 **Fix:**
 ```typescript
@@ -206,7 +206,7 @@ Behind a load balancer or reverse proxy, `request.ip` is the proxy's IP — all 
 
 **Fix:** Validate the root against a server-configured allowlist:
 ```typescript
-const ALLOWED_ROOT_PREFIXES = process.env['WORKSPACE_ALLOWED_ROOTS']?.split(':') ?? [];
+const ALLOWED_ROOT_PREFIXES = process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS']?.split(':') ?? [];
 if (ALLOWED_ROOT_PREFIXES.length && !ALLOWED_ROOT_PREFIXES.some(p => rootPath.startsWith(p))) {
   this.logger.warn(`Root outside allowlist: ${rootPath}`);
   return null;
@@ -245,7 +245,7 @@ RUN bun run build && bun install --frozen-lockfile --production
 | M10 | `src/mcp/features/roots.service.ts` | Reimplements path traversal inline instead of calling `validateFilePath()` from `sanitise.ts` |
 | M11 | `src/mcp/features/roots.service.ts` | `uriToPath()` silently fails for `file://localhost/path` and Windows `file:///C:/` URIs |
 | M12 | `src/providers/azure/azure.provider.ts` | `normalizeError()` string-matches on masked message text instead of numeric status code |
-| M13 | `src/main.ts` | `NestFactory.create` logger level ignores `LOG_LEVEL` config |
+| M13 | `src/main.ts` | `NestFactory.create` logger level ignores `IMAGE_LOG_LEVEL` config |
 | M14 | `src/main.ts` | Variable shadowing: inner `const bootstrap = app.get(McpStdioBootstrap)` shadows outer function |
 | M15 | `src/mcp/mcp.server.ts` | `public readonly server` exposes SDK internals; should be `private` with purpose-built methods |
 | M16 | `src/providers/provider.interface.ts` | `Symbol()` without `Symbol.for()` — not process-globally unique |
@@ -274,7 +274,7 @@ RUN bun run build && bun install --frozen-lockfile --production
 ## Priority Fix Order
 
 ```
-1. C2  — docker-compose.yml: SECRET_BACKEND → MCP_SECRET_BACKEND        (1 line, blocks all production secrets)
+1. C2  — docker-compose.yml: SECRET_BACKEND → IMAGE_MCP_SECRET_BACKEND        (1 line, blocks all production secrets)
 2. C1  — image-generate.tool.ts: close over server in register()         (2 lines, activates all M4 features)
 3. C3  — auth.guard.ts: timingSafeEqual token comparison                 (5 lines)
 4. C4  — image-generate.tool.ts: sanitisePrompt() after sampling         (1 line)

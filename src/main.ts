@@ -8,11 +8,11 @@
 // before any later imports are resolved.
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import type { NestExpressApplication } from '@nestjs/platform-express';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { hostHeaderValidation, originValidation } from '@modelcontextprotocol/fastify';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
-import express from 'express';
 import { resolveSecrets } from './config/secret-loader';
 
 async function bootstrap() {
@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // In stdio mode stdout is the MCP JSON-RPC wire — any non-JSON bytes break
   // the protocol. Override NestJS ConsoleLogger to write to stderr instead.
-  const isStdio = (process.env['MCP_TRANSPORT'] ?? 'http') === 'stdio';
+  const isStdio = (process.env['IMAGE_MCP_TRANSPORT'] ?? 'http') === 'stdio';
 
   let nestLogger: any;
   if (isStdio) {
@@ -45,19 +45,19 @@ async function bootstrap() {
     nestLogger = ['error', 'warn', 'log', 'debug', 'verbose'];
   }
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+  const adapter = new FastifyAdapter({
+    bodyLimit: 50 * 1024 * 1024,
+    trustProxy: 1,
+    skipMiddie: true,
+  });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
     logger: nestLogger,
     bufferLogs: false,
   });
 
-  app.set('trust proxy', 1); // Trust first proxy — required for correct IP in rate limiting
-
-  // Parse JSON bodies for MCP requests
-  app.use(express.json({ limit: '50mb' }));
-
   const configService = app.get(ConfigService);
-  const transport = configService.get<string>('MCP_TRANSPORT', 'http');
-  const port = configService.get<number>('PORT', 3000);
+  const transport = configService.get<string>('IMAGE_MCP_TRANSPORT', 'http');
+  const port = configService.get<number>('IMAGE_PORT', 3000);
 
   if (transport === 'stdio') {
     // In stdio mode: connect MCP server via stdio transport
@@ -67,9 +67,19 @@ async function bootstrap() {
     await bootstrap.connect();
     logger.log('MCP server running via stdio transport');
   } else {
-    // In HTTP mode: start Express with MCP endpoint
-    await app.listen(port);
-    logger.log(`MCP server listening on http://localhost:${port}/mcp`);
+    // Reuse the official MCP Fastify security hooks while Nest owns the Fastify instance.
+    const fastify = adapter.getInstance();
+    const allowedHosts = (process.env['IMAGE_HTTP_ALLOWED_HOSTS'] ?? 'localhost,127.0.0.1,[::1]')
+      .split(',').map((value) => value.trim()).filter(Boolean);
+    const allowedOrigins = (process.env['IMAGE_HTTP_ALLOWED_ORIGINS'] ?? 'localhost,127.0.0.1,[::1]')
+      .split(',').map((value) => value.trim()).filter(Boolean);
+    // Nest bundles its own compatible Fastify patch release; the hooks are runtime-compatible.
+    fastify.addHook('onRequest', hostHeaderValidation(allowedHosts) as never);
+    fastify.addHook('onRequest', originValidation(allowedOrigins) as never);
+
+    const host = process.env['IMAGE_HTTP_HOST'] ?? '127.0.0.1';
+    await app.listen(port, host);
+    logger.log(`MCP server listening on http://${host}:${port}/mcp`);
     logger.log(`Health check at http://localhost:${port}/health`);
   }
 }

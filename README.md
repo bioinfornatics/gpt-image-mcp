@@ -37,7 +37,7 @@
 IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... bunx @bioinfornatics/gpt-image-mcp
 
 # HTTP transport on port 3000
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... MCP_TRANSPORT=http PORT=3000 bunx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=http IMAGE_PORT=3000 bunx @bioinfornatics/gpt-image-mcp
 
 # Azure AI Foundry
 IMAGE_PROVIDER=azure \
@@ -102,13 +102,16 @@ docker run -p 3000:3000 \
 | `IMAGE_API_VERSION` | ❌ | `2025-04-01-preview` | Azure API version |
 | `IMAGE_MODELS` | ❌ | `custom` | Comma-separated model list (custom provider only) |
 | `IMAGE_DEFAULT_MODEL` | ❌ | `gpt-image-2` | Default model (override per-request via tool param) |
-| `MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
-| `PORT` | ❌ | `3000` | HTTP port |
-| `MCP_API_KEY` | ❌ | — | Bearer token to protect `/mcp` |
-| `USE_ELICITATION` | ❌ | `true` | Enable MCP Elicitation |
-| `USE_SAMPLING` | ❌ | `true` | Enable MCP Sampling |
-| `MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
-| `LOG_LEVEL` | ❌ | `info` | `debug`/`info`/`warn`/`error` |
+| `IMAGE_MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
+| `IMAGE_HTTP_HOST` | ❌ | `127.0.0.1` | HTTP bind address |
+| `IMAGE_PORT` | ❌ | `3000` | HTTP listen port |
+| `IMAGE_HTTP_ALLOWED_HOSTS` | ❌ | localhost addresses | Comma-separated hostnames accepted by MCP Fastify DNS-rebinding protection |
+| `IMAGE_HTTP_ALLOWED_ORIGINS` | ❌ | localhost addresses | Comma-separated browser origin hostnames |
+| `IMAGE_MCP_API_KEY` | ❌ | — | Bearer token to protect `/mcp` |
+| `IMAGE_USE_ELICITATION` | ❌ | `true` | Enable MCP Elicitation |
+| `IMAGE_USE_SAMPLING` | ❌ | `true` | Enable MCP Sampling |
+| `IMAGE_MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
+| `IMAGE_LOG_LEVEL` | ❌ | `info` | `debug`/`info`/`warn`/`error` |
 
 ---
 
@@ -127,8 +130,8 @@ docker run -p 3000:3000 \
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-...",
-        "MCP_TRANSPORT": "stdio",
-        "LOG_LEVEL": "error"
+        "IMAGE_MCP_TRANSPORT": "stdio",
+        "IMAGE_LOG_LEVEL": "error"
       }
     }
   }
@@ -152,7 +155,7 @@ extensions:
       - '@bioinfornatics/gpt-image-mcp'
     envs:
       IMAGE_PROVIDER: openai
-      MCP_TRANSPORT: stdio
+      IMAGE_MCP_TRANSPORT: stdio
     env_keys:
       - IMAGE_API_KEY        # export IMAGE_API_KEY=sk-... in your shell
     timeout: 300
@@ -173,7 +176,7 @@ extensions:
       IMAGE_PROVIDER: azure
       IMAGE_BASE_URL: https://my-resource.openai.azure.com
       IMAGE_DEPLOYMENT: my-gpt-image-deployment
-      MCP_TRANSPORT: stdio
+      IMAGE_MCP_TRANSPORT: stdio
     env_keys:
       - IMAGE_API_KEY
     timeout: 300
@@ -187,7 +190,7 @@ extensions:
 POST http://localhost:3000/mcp
 Accept: application/json, text/event-stream
 Content-Type: application/json
-Authorization: Bearer <MCP_API_KEY>   # only if MCP_API_KEY is set
+Authorization: Bearer <IMAGE_MCP_API_KEY>   # only if IMAGE_MCP_API_KEY is set
 
 {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"image_generate","arguments":{"prompt":"a cat"}}}
 ```

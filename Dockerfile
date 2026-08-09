@@ -44,8 +44,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD bun -e "fetch('http://localhost:3000/health/live').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 # Default: HTTP transport
-ENV MCP_TRANSPORT=http
-ENV PORT=3000
-ENV LOG_LEVEL=info
+ENV IMAGE_MCP_TRANSPORT=http
+ENV IMAGE_PORT=3000
+ENV IMAGE_LOG_LEVEL=info
 
 ENTRYPOINT ["bun", "run", "dist/main.js"]

@@ -91,7 +91,7 @@ describe('ImageGenerateTool', () => {
       expect(parsed.images[0].b64_json).toBe(mockImageResult.b64_json);
     });
 
-    it('should pass all parameters through to the provider (moderation gated to auto without ALLOW_LOW_MODERATION)', async () => {
+    it('should pass all parameters through to the provider (moderation gated to auto without IMAGE_ALLOW_LOW_MODERATION)', async () => {
       await tool.execute({
         prompt: 'a cat',
         model: 'dall-e-3',
@@ -104,7 +104,7 @@ describe('ImageGenerateTool', () => {
         moderation: 'low',
       });
       // moderation='low' is silently gated to 'auto' by resolveModeration()
-      // unless ALLOW_LOW_MODERATION=true is set in the environment
+      // unless IMAGE_ALLOW_LOW_MODERATION=true is set in the environment
       expect(mockProvider.generate).toHaveBeenCalledWith(
         expect.objectContaining({
           model: 'dall-e-3',
@@ -139,23 +139,23 @@ describe('ImageGenerateTool', () => {
       );
     });
 
-    it('should call provider.generate with moderation:auto when moderation=low and ALLOW_LOW_MODERATION is unset', async () => {
-      const original = process.env['ALLOW_LOW_MODERATION'];
-      delete process.env['ALLOW_LOW_MODERATION'];
+    it('should call provider.generate with moderation:auto when moderation=low and IMAGE_ALLOW_LOW_MODERATION is unset', async () => {
+      const original = process.env['IMAGE_ALLOW_LOW_MODERATION'];
+      delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
       await tool.execute({ prompt: 'a cat', moderation: 'low' });
       expect(mockProvider.generate).toHaveBeenCalledWith(
         expect.objectContaining({ moderation: 'auto' }),
       );
-      if (original !== undefined) process.env['ALLOW_LOW_MODERATION'] = original;
+      if (original !== undefined) process.env['IMAGE_ALLOW_LOW_MODERATION'] = original;
     });
 
-    it('should call provider.generate with moderation:low when moderation=low and ALLOW_LOW_MODERATION=true', async () => {
-      process.env['ALLOW_LOW_MODERATION'] = 'true';
+    it('should call provider.generate with moderation:low when moderation=low and IMAGE_ALLOW_LOW_MODERATION=true', async () => {
+      process.env['IMAGE_ALLOW_LOW_MODERATION'] = 'true';
       await tool.execute({ prompt: 'a cat', moderation: 'low' });
       expect(mockProvider.generate).toHaveBeenCalledWith(
         expect.objectContaining({ moderation: 'low' }),
       );
-      delete process.env['ALLOW_LOW_MODERATION'];
+      delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
     });
   });
 

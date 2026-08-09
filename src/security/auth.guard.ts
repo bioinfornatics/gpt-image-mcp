@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
-import type { Request } from 'express';
+import type { FastifyRequest } from 'fastify';
 import type { AppConfig } from '../config/app.config';
 
 @Injectable()
@@ -21,12 +21,12 @@ export class AuthGuard implements CanActivate {
     // requireMcpAuth=true but key not set → Joi already blocked startup; allow as defensive fallback
     if (!mcpConfig.apiKey) return true;
 
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<FastifyRequest>();
     const authHeader = request.headers['authorization'];
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException(
-        'Missing Authorization header. Use: Authorization: Bearer <MCP_API_KEY>',
+        'Missing Authorization header. Use: Authorization: Bearer <IMAGE_MCP_API_KEY>',
       );
     }
 

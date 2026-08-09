@@ -1,5 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider } from '../../providers/provider.interface';

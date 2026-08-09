@@ -22,18 +22,18 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node --max-old-space-size=8192 node_modules/.bin/tsc -p tsconfig.build.json",
+    "build": "node --max-old-space-size=8192 ./node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "postbuild": "chmod +x dist/main.js",
     "start": "node dist/main.js",
     "start:dev": "bun run src/main.ts",
-    "start:http": "MCP_TRANSPORT=http bun run src/main.ts",
-    "start:stdio": "MCP_TRANSPORT=stdio bun run src/main.ts",
+    "start:http": "IMAGE_MCP_TRANSPORT=http bun run src/main.ts",
+    "start:stdio": "IMAGE_MCP_TRANSPORT=stdio bun run src/main.ts",
     "test": "bun test --coverage",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' 'test/**/*.ts' --fix",
-    "type-check": "node --max-old-space-size=8192 node_modules/.bin/tsc -p tsconfig.build.json --noEmit",
+    "type-check": "node --max-old-space-size=8192 ./node_modules/typescript/bin/tsc -p tsconfig.build.json --noEmit",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
     "secret:store": "bun run src/cli/store-secret.ts",
     "secret:delete": "bun run src/cli/store-secret.ts",
@@ -44,29 +44,30 @@
     "version:major": "npm version major --no-git-tag-version"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/fastify": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@nestjs/common": "^11.1.18",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^11.1.18",
-    "@nestjs/platform-express": "^11.1.18",
+    "@nestjs/platform-fastify": "11.1.19",
     "@nestjs/terminus": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4",
-    "express": "^4.22.1",
+    "fastify": "5.8.4",
     "joi": "^17.13.3",
     "openai": "^4.104.0",
     "prom-client": "^15.1.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "winston": "^3.19.0",
-    "zod": "^3.25.76"
+    "zod": "^4.2.0"
   },
   "optionalDependencies": {
     "keytar": "^7.9.0"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.1.18",
-    "@types/express": "^4.17.25",
     "@types/node": "^22.19.17",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
@@ -78,7 +79,8 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.1.0",
+    "node": ">=20"
   },
   "overrides": {
     "multer": "^2.1.1",

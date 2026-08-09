@@ -4,9 +4,9 @@
  *
  * Usage:
  *   bun run src/cli/store-secret.ts IMAGE_API_KEY
- *   bun run src/cli/store-secret.ts MCP_API_KEY
+ *   bun run src/cli/store-secret.ts IMAGE_MCP_API_KEY
  *
- * Then in your .env / config set: MCP_SECRET_BACKEND=keytar
+ * Then in your .env / config set: IMAGE_MCP_SECRET_BACKEND=keytar
  * (and remove the plain-text API key env var entirely)
  *
  * Requires: bun add keytar  (native Node addon — needs build tools)
@@ -16,7 +16,7 @@ import * as readline from 'readline';
 import { storeKeytarSecret, deleteKeytarSecret } from '../config/secret-loader';
 import type { FileSourceableVar } from '../config/secret-loader';
 
-const SUPPORTED: FileSourceableVar[] = ['IMAGE_API_KEY', 'MCP_API_KEY'];
+const SUPPORTED: FileSourceableVar[] = ['IMAGE_API_KEY', 'IMAGE_MCP_API_KEY'];
 
 const varName = process.argv[2] as FileSourceableVar | undefined;
 const action  = process.argv[3] ?? 'store'; // 'store' | 'delete'
@@ -81,4 +81,4 @@ if (!value.trim()) {
 }
 
 await storeKeytarSecret(varName, value.trim());
-console.log(`✅ ${varName} stored in OS keychain. Set MCP_SECRET_BACKEND=keytar in your config.`);
+console.log(`✅ ${varName} stored in OS keychain. Set IMAGE_MCP_SECRET_BACKEND=keytar in your config.`);

@@ -3,17 +3,17 @@ import * as path from 'path';
 import * as os from 'os';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
 
-// Helper: create a RootsService with an optional WORKSPACE_ALLOWED_ROOTS override
+// Helper: create a RootsService with an optional IMAGE_WORKSPACE_ALLOWED_ROOTS override
 function makeService(allowedRoots?: string): RootsService {
-  const orig = process.env['WORKSPACE_ALLOWED_ROOTS'];
+  const orig = process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'];
   if (allowedRoots !== undefined) {
-    process.env['WORKSPACE_ALLOWED_ROOTS'] = allowedRoots;
+    process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'] = allowedRoots;
   } else {
-    delete process.env['WORKSPACE_ALLOWED_ROOTS'];
+    delete process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'];
   }
   const svc = new RootsService();
-  if (orig !== undefined) process.env['WORKSPACE_ALLOWED_ROOTS'] = orig;
-  else delete process.env['WORKSPACE_ALLOWED_ROOTS'];
+  if (orig !== undefined) process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'] = orig;
+  else delete process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'];
   return svc;
 }
 
@@ -49,7 +49,7 @@ describe('RootsService', () => {
       expect(roots[0].uri).toBe('file:///home/user/project');
     });
 
-    it('should call server.listRoots not server.request (SDK v1.29 named method)', async () => {
+    it('should call server.listRoots not server.request', async () => {
       const mockServer = {
         listRoots: jest.fn().mockResolvedValue({ roots: [] }),
         request: jest.fn(),
@@ -139,7 +139,7 @@ describe('RootsService', () => {
   // ─── H6: allowlist enforcement ────────────────────────────────────────────
 
   describe('saveImageToWorkspace() — allowlist (H6)', () => {
-    it('should accept all roots when WORKSPACE_ALLOWED_ROOTS is not set', async () => {
+    it('should accept all roots when IMAGE_WORKSPACE_ALLOWED_ROOTS is not set', async () => {
       // makeService() called with no args → no allowlist → any path allowed
       const mockServer = {
         listRoots: jest.fn().mockResolvedValue({

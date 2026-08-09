@@ -25,23 +25,23 @@ services:
       - "3000:3000"
     environment:
       - IMAGE_PROVIDER=${IMAGE_PROVIDER:-openai}
-      - MCP_SECRET_BACKEND=file          # read *_FILE vars from /run/secrets/
+      - IMAGE_MCP_SECRET_BACKEND=file          # read *_FILE vars from /run/secrets/
       # Point to Docker secret mounts — server reads file contents at startup
       - IMAGE_API_KEY_FILE=/run/secrets/image_api_key
-      - MCP_API_KEY_FILE=/run/secrets/mcp_api_key
+      - IMAGE_MCP_API_KEY_FILE=/run/secrets/mcp_api_key
       # Non-secret provider config (only needed for azure / custom)
       - IMAGE_BASE_URL=${IMAGE_BASE_URL:-}
       - IMAGE_DEPLOYMENT=${IMAGE_DEPLOYMENT:-}
       - IMAGE_API_VERSION=${IMAGE_API_VERSION:-2025-04-01-preview}
       - IMAGE_MODELS=${IMAGE_MODELS:-custom}
       # General config
-      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
-      - PORT=3000
+      - IMAGE_MCP_TRANSPORT=${IMAGE_MCP_TRANSPORT:-http}
+      - IMAGE_PORT=3000
       - IMAGE_DEFAULT_MODEL=${IMAGE_DEFAULT_MODEL:-gpt-image-2}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - MAX_REQUESTS_PER_MINUTE=${MAX_REQUESTS_PER_MINUTE:-60}
-      - USE_ELICITATION=${USE_ELICITATION:-true}
-      - USE_SAMPLING=${USE_SAMPLING:-true}
+      - IMAGE_LOG_LEVEL=${IMAGE_LOG_LEVEL:-info}
+      - IMAGE_MAX_REQUESTS_PER_MINUTE=${IMAGE_MAX_REQUESTS_PER_MINUTE:-60}
+      - IMAGE_USE_ELICITATION=${IMAGE_USE_ELICITATION:-true}
+      - IMAGE_USE_SAMPLING=${IMAGE_USE_SAMPLING:-true}
     secrets:
       - image_api_key
       - mcp_api_key

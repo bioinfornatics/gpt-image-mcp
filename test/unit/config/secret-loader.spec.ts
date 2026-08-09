@@ -165,15 +165,15 @@ describe('resolveFileSecrets()', () => {
     }
   });
 
-  it('should inject MCP_API_KEY from MCP_API_KEY_FILE', () => {
+  it('should inject IMAGE_MCP_API_KEY from IMAGE_MCP_API_KEY_FILE', () => {
     const file = writeTmpSecret('mcp-secret-token');
     try {
-      process.env['MCP_API_KEY_FILE'] = file;
-      delete process.env['MCP_API_KEY'];
+      process.env['IMAGE_MCP_API_KEY_FILE'] = file;
+      delete process.env['IMAGE_MCP_API_KEY'];
 
       resolveFileSecrets();
 
-      expect(process.env['MCP_API_KEY']).toBe('mcp-secret-token');
+      expect(process.env['IMAGE_MCP_API_KEY']).toBe('mcp-secret-token');
     } finally {
       cleanup(file);
     }
@@ -263,10 +263,10 @@ describe('resolveSecrets()', () => {
     Object.assign(process.env, originalEnv);
   });
 
-  it('should call resolveFileSecrets when MCP_SECRET_BACKEND=file (default)', async () => {
+  it('should call resolveFileSecrets when IMAGE_MCP_SECRET_BACKEND=file (default)', async () => {
     const file = writeTmpSecret('sk-backend-file-test');
     try {
-      process.env['MCP_SECRET_BACKEND'] = 'file';
+      process.env['IMAGE_MCP_SECRET_BACKEND'] = 'file';
       process.env['OPENAI_API_KEY_FILE'] = file;
       delete process.env['OPENAI_API_KEY'];
 
@@ -278,10 +278,10 @@ describe('resolveSecrets()', () => {
     }
   });
 
-  it('should resolve _FILE vars when MCP_SECRET_BACKEND is not set (defaults to file)', async () => {
+  it('should resolve _FILE vars when IMAGE_MCP_SECRET_BACKEND is not set (defaults to file)', async () => {
     const file = writeTmpSecret('sk-default-backend');
     try {
-      delete process.env['MCP_SECRET_BACKEND'];
+      delete process.env['IMAGE_MCP_SECRET_BACKEND'];
       process.env['OPENAI_API_KEY_FILE'] = file;
       delete process.env['OPENAI_API_KEY'];
 
@@ -293,10 +293,10 @@ describe('resolveSecrets()', () => {
     }
   });
 
-  it('should NOT resolve _FILE vars when MCP_SECRET_BACKEND=env', async () => {
+  it('should NOT resolve _FILE vars when IMAGE_MCP_SECRET_BACKEND=env', async () => {
     const file = writeTmpSecret('sk-should-not-be-read');
     try {
-      process.env['MCP_SECRET_BACKEND'] = 'env';
+      process.env['IMAGE_MCP_SECRET_BACKEND'] = 'env';
       process.env['OPENAI_API_KEY_FILE'] = file;
       process.env['OPENAI_API_KEY'] = 'sk-plain-wins';
 
@@ -310,12 +310,12 @@ describe('resolveSecrets()', () => {
     }
   });
 
-  it('should warn to stderr and fallback gracefully when MCP_SECRET_BACKEND=keytar but keytar missing', async () => {
+  it('should warn to stderr and fallback gracefully when IMAGE_MCP_SECRET_BACKEND=keytar but keytar missing', async () => {
     const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
     // Intercept the dynamic import — jest.mock at module level won't work for
     // dynamic imports in bun, so we rely on keytar genuinely not being installed
     // in the test environment to trigger the warning path.
-    process.env['MCP_SECRET_BACKEND'] = 'keytar';
+    process.env['IMAGE_MCP_SECRET_BACKEND'] = 'keytar';
     const file = writeTmpSecret('sk-keytar-fallback');
     process.env['OPENAI_API_KEY_FILE'] = file;
     delete process.env['OPENAI_API_KEY'];

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server } from '@modelcontextprotocol/server';
 import type { AppConfig } from '../../config/app.config';
 import { maskSecret } from '../../security/sanitise';
 
@@ -50,7 +50,7 @@ export class ElicitationService {
    * Request elicitation from the client for missing image generation parameters.
    *
    * Fires when ALL of the following are true:
-   *   1. USE_ELICITATION=true (env, default true)
+   *   1. IMAGE_USE_ELICITATION=true (env, default true)
    *   2. A connected MCP Server is available
    *   3. skip_elicitation was NOT set to true in the tool call
    *   4. quality and/or size were not explicitly set to a non-auto value by the caller
@@ -102,12 +102,12 @@ export class ElicitationService {
     }
 
     try {
-      // SDK v1.29: server.elicitInput() is a typed method on Server (not McpServer).
-      // No cast needed — server is correctly typed as Server from @mcp/sdk/server/index.js.
+      // MCP server v2: elicitInput() is exposed by the inner Server connection.
       const result = await server.elicitInput({
         message:
           'A few quick settings for your image — all have smart defaults, just change what matters to you.',
-        requestedSchema: { type: 'object' as const, properties },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        requestedSchema: { type: 'object' as const, properties: properties as any },
       });
 
       if (result?.action === 'accept' && result?.content) {

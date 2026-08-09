@@ -243,13 +243,13 @@ export const ProviderValidateSchema = z.object({
 });
 
 /**
- * Resolves the moderation level, enforcing 'auto' unless ALLOW_LOW_MODERATION=true.
+ * Resolves the moderation level, enforcing 'auto' unless IMAGE_ALLOW_LOW_MODERATION=true.
  * Moderation='low' bypasses OpenAI safety filters and requires explicit opt-in.
  */
 export function resolveModeration(
   requested: 'auto' | 'low' | undefined,
 ): 'auto' | 'low' {
-  if (requested === 'low' && process.env['ALLOW_LOW_MODERATION'] !== 'true') {
+  if (requested === 'low' && process.env['IMAGE_ALLOW_LOW_MODERATION'] !== 'true') {
     return 'auto'; // silently downgrade — moderation=low requires explicit opt-in
   }
   return requested ?? 'auto';

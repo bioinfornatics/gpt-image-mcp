@@ -26,12 +26,12 @@ const BASE_CTX: ImagePromptContext = { model: 'gpt-image-2' };
 describe('SamplingService', () => {
   // ── isEnabled ────────────────────────────────────────────────────────────
   describe('isEnabled', () => {
-    it('should be true when USE_SAMPLING=true', async () => {
+    it('should be true when IMAGE_USE_SAMPLING=true', async () => {
       const svc = await makeService(true);
       expect(svc.isEnabled).toBe(true);
     });
 
-    it('should be false when USE_SAMPLING=false', async () => {
+    it('should be false when IMAGE_USE_SAMPLING=false', async () => {
       const svc = await makeService(false);
       expect(svc.isEnabled).toBe(false);
     });

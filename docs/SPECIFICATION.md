@@ -182,7 +182,7 @@ Key integration points:
 - API keys MUST NOT appear in logs (masked to `***`)
 - Input prompts sanitised to prevent injection into API calls
 - Rate limiting: configurable per-client (default: 60 req/min)
-- MCP endpoint optionally protected by a bearer token (`MCP_API_KEY`)
+- MCP endpoint optionally protected by a bearer token (`IMAGE_MCP_API_KEY`)
 - All secrets validated at startup; service refuses to start without required credentials
 
 ### NFR-004: Observability

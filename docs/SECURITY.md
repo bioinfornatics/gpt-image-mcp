@@ -39,7 +39,7 @@
 | Asset | Sensitivity | Impact if Compromised |
 |-------|-------------|----------------------|
 | `IMAGE_API_KEY` | Critical | Financial loss, quota abuse, generation of abusive content |
-| `MCP_API_KEY` | High | Unauthorized tool invocation, prompt injection surface |
+| `IMAGE_MCP_API_KEY` | High | Unauthorized tool invocation, prompt injection surface |
 | User-supplied image files | Medium | Path traversal leading to file exfiltration |
 | Generated image files written to workspace | Low–Medium | Overwrites or reads of unintended paths |
 | System prompt / sampling context | Medium | Prompt injection influencing LLM behaviour |
@@ -98,9 +98,9 @@
 | Variable | Purpose | Example Value |
 |----------|---------|---------------|
 | `IMAGE_API_KEY` | Authenticates requests to OpenAI | `sk-proj-…` |
-| `MCP_API_KEY` | Guards the HTTP MCP server endpoint | Any high-entropy random string |
+| `IMAGE_MCP_API_KEY` | Guards the HTTP MCP server endpoint | Any high-entropy random string |
 
-**Generating a strong `MCP_API_KEY`:**
+**Generating a strong `IMAGE_MCP_API_KEY`:**
 
 ```bash
 openssl rand -base64 32
@@ -326,23 +326,23 @@ In `stdio` mode, there is no network attack surface for remote callers. Security
 
 ## 5. Authentication & Authorization
 
-### 5.1 MCP_API_KEY Bearer Token Guard
+### 5.1 IMAGE_MCP_API_KEY Bearer Token Guard
 
 In HTTP mode, every incoming MCP request must present a valid bearer token.
 
 **Header format:**
 ```
-Authorization: Bearer <MCP_API_KEY>
+Authorization: Bearer <IMAGE_MCP_API_KEY>
 ```
 
 **Guard implementation:**
 
 ```typescript
 function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const apiKey = process.env.MCP_API_KEY;
+  const apiKey = process.env.IMAGE_MCP_API_KEY;
   if (!apiKey) {
     // No key configured — allow (dev mode only; log warning)
-    console.warn('[SECURITY] MCP_API_KEY not set — running without authentication');
+    console.warn('[SECURITY] IMAGE_MCP_API_KEY not set — running without authentication');
     return next();
   }
 
@@ -570,7 +570,7 @@ Use `npm audit fix` for automated patches; review diffs before merging.
 
 ## 8. Secrets Rotation
 
-### 8.1 Rotating `MCP_API_KEY`
+### 8.1 Rotating `IMAGE_MCP_API_KEY`
 
 Rotating the MCP API key causes a brief authentication interruption. Use this zero-downtime procedure:
 
@@ -591,7 +591,7 @@ For Docker/Kubernetes:
 ```bash
 # Update secret
 kubectl create secret generic mcp-secrets \
-  --from-literal=MCP_API_KEY="$NEW_KEY" \
+  --from-literal=IMAGE_MCP_API_KEY="$NEW_KEY" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Rolling restart (zero-downtime)
@@ -601,7 +601,7 @@ kubectl rollout status deployment/gpt-image-mcp
 
 For `.env`-based deployment:
 ```bash
-sed -i "s/^MCP_API_KEY=.*/MCP_API_KEY=$NEW_KEY/" /etc/gpt-image-mcp/.env
+sed -i "s/^IMAGE_MCP_API_KEY=.*/IMAGE_MCP_API_KEY=$NEW_KEY/" /etc/gpt-image-mcp/.env
 systemctl reload gpt-image-mcp  # or restart
 ```
 
@@ -626,7 +626,7 @@ curl -H "Authorization: Bearer $NEW_KEY" https://mcp.example.com/health
 
 | Secret | Recommended Rotation Frequency | Mandatory on Compromise |
 |--------|--------------------------------|------------------------|
-| `MCP_API_KEY` | Every 90 days | Immediately |
+| `IMAGE_MCP_API_KEY` | Every 90 days | Immediately |
 | `IMAGE_API_KEY` | Every 180 days | Immediately |
 
 ---
@@ -648,7 +648,7 @@ curl -H "Authorization: Bearer $NEW_KEY" https://mcp.example.com/health
 6. **Remove from git history** if found committed (use `git-filter-repo` or BFG).
 7. **Notify OpenAI support** if significant abuse is detected.
 
-### 9.2 If `MCP_API_KEY` Is Leaked
+### 9.2 If `IMAGE_MCP_API_KEY` Is Leaked
 
 **Immediate actions:**
 
@@ -688,7 +688,7 @@ The following security-focused tests **must** exist and pass in CI.
 | SEC-002 | `save_to_workspace` with `../../etc/passwd` is rejected | `McpError` with `InvalidParams` code |
 | SEC-003 | `save_to_workspace` with null byte is rejected | `McpError` with `InvalidParams` code |
 | SEC-004 | `save_to_workspace` with absolute path outside workspace is rejected | `McpError` with `InvalidParams` code |
-| SEC-005 | Request with invalid `MCP_API_KEY` returns HTTP 401 | `{ error: 'Unauthorized' }` |
+| SEC-005 | Request with invalid `IMAGE_MCP_API_KEY` returns HTTP 401 | `{ error: 'Unauthorized' }` |
 | SEC-006 | Request without `Authorization` header returns HTTP 401 when key is configured | HTTP 401 |
 | SEC-007 | Rate limit enforced after 20 image_generate calls in 60s | HTTP 429 with `Retry-After` |
 | SEC-008 | `prompt` field over 32 000 characters is rejected | `McpError` with `InvalidParams` |
@@ -706,7 +706,7 @@ The following security-focused tests **must** exist and pass in CI.
 |---------|-------------|
 | SEC-I01 | Full generate flow — verify no API key in response body or headers |
 | SEC-I02 | File saved via `save_to_workspace` stays within workspace root |
-| SEC-I03 | Server starts without `MCP_API_KEY` and logs a warning (not an error) |
+| SEC-I03 | Server starts without `IMAGE_MCP_API_KEY` and logs a warning (not an error) |
 | SEC-I04 | `npm audit` exits 0 on clean dependency tree |
 
 ### 10.3 Running Security Tests
@@ -730,7 +730,7 @@ The following table maps relevant [OWASP Top 10 (2021)](https://owasp.org/www-pr
 
 | # | OWASP Category | Applicable? | How Mitigated in gpt-image-mcp |
 |---|---------------|-------------|-------------------------------|
-| A01 | Broken Access Control | ✅ Yes | `MCP_API_KEY` bearer token; path traversal checks; workspace root enforcement |
+| A01 | Broken Access Control | ✅ Yes | `IMAGE_MCP_API_KEY` bearer token; path traversal checks; workspace root enforcement |
 | A02 | Cryptographic Failures | ✅ Yes | TLS required for HTTP; `timingSafeEqual` for key comparison; secrets never in plaintext logs |
 | A03 | Injection | ✅ Yes | Prompt injection mitigations; input schema validation; null byte rejection; path sanitisation |
 | A04 | Insecure Design | ✅ Yes | Threat model documented; security tests required; elicitation rules prevent credential collection |

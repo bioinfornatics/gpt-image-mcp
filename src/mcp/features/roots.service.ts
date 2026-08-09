@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server } from '@modelcontextprotocol/server';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { maskSecret } from '../../security/sanitise';
@@ -15,11 +15,11 @@ export class RootsService {
 
   /**
    * Server-side allowlist of permitted workspace root prefixes.
-   * Read from WORKSPACE_ALLOWED_ROOTS (colon-separated absolute paths).
+   * Read from IMAGE_WORKSPACE_ALLOWED_ROOTS (colon-separated absolute paths).
    *
    * Examples:
-   *   WORKSPACE_ALLOWED_ROOTS=/home/user/workspace:/home/user/documents
-   *   WORKSPACE_ALLOWED_ROOTS=/tmp/generated        (single path)
+   *   IMAGE_WORKSPACE_ALLOWED_ROOTS=/home/user/workspace:/home/user/documents
+   *   IMAGE_WORKSPACE_ALLOWED_ROOTS=/tmp/generated        (single path)
    *
    * If the env var is empty or unset, ALL file:// roots are accepted
    * (backward-compatible default for trusted single-user setups).
@@ -27,7 +27,7 @@ export class RootsService {
    * In any multi-user or production deployment set this var explicitly.
    */
   private readonly allowedRootPrefixes: string[] = (
-    process.env['WORKSPACE_ALLOWED_ROOTS'] ?? ''
+    process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'] ?? ''
   )
     .split(':')
     .map((p) => p.trim())
@@ -42,8 +42,7 @@ export class RootsService {
    */
   async getRoots(server: Server): Promise<WorkspaceRoot[]> {
     try {
-      // SDK v1.29: server.listRoots() is a typed method on Server (not McpServer).
-      // No cast needed — server is correctly typed as Server from @mcp/sdk/server/index.js.
+      // MCP server v2: listRoots() is exposed by the inner Server connection.
       const result = await server.listRoots();
       return (result?.roots as WorkspaceRoot[]) ?? [];
     } catch (err) {
@@ -57,7 +56,7 @@ export class RootsService {
    *
    * Security guarantees:
    *   1. Only file:// URIs are accepted (no http://, smb://, etc.)
-   *   2. Root path validated against WORKSPACE_ALLOWED_ROOTS allowlist (if set)
+   *   2. Root path validated against IMAGE_WORKSPACE_ALLOWED_ROOTS allowlist (if set)
    *   3. Generated filename is timestamp-based — no user input in the filename
    *   4. Final resolved path checked to be strictly inside root (path traversal)
    *
@@ -81,7 +80,7 @@ export class RootsService {
       if (!this.isRootAllowed(rootPath)) {
         this.logger.warn(
           `Root rejected by allowlist: ${rootPath}. ` +
-          `Set WORKSPACE_ALLOWED_ROOTS to permit it.`,
+          `Set IMAGE_WORKSPACE_ALLOWED_ROOTS to permit it.`,
         );
         continue;
       }

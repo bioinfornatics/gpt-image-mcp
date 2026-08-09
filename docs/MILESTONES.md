@@ -86,8 +86,8 @@
 - [ ] `POST /mcp` accepts JSON-RPC 2.0 MCP requests
 - [ ] `initialize` handshake returns correct capabilities
 - [ ] `tools/list` returns the tool registry (initially empty, populated in M3)
-- [ ] `PORT` env var controls the listening port (default: 3000)
-- [ ] `MCP_API_KEY` env var, if set, requires `Authorization: Bearer <key>` header
+- [ ] `IMAGE_PORT` env var controls the listening port (default: 3000)
+- [ ] `IMAGE_MCP_API_KEY` env var, if set, requires `Authorization: Bearer <key>` header
 - [ ] Integration test: `initialize` → `tools/list` returns 200 with valid MCP response
 - [ ] Integration test: missing/wrong API key returns 401
 
@@ -101,10 +101,10 @@
 **So that** it can be used as a subprocess by local MCP clients (Claude Desktop)
 
 **Acceptance Criteria:**
-- [ ] `MCP_TRANSPORT=stdio` switches to stdio mode
+- [ ] `IMAGE_MCP_TRANSPORT=stdio` switches to stdio mode
 - [ ] Server does NOT log to stdout (only stderr) in stdio mode
 - [ ] `initialize` handshake works over stdio
-- [ ] Unit test: transport factory creates correct transport based on `MCP_TRANSPORT`
+- [ ] Unit test: transport factory creates correct transport based on `IMAGE_MCP_TRANSPORT`
 
 ---
 
@@ -258,7 +258,7 @@
 - [ ] Sampling only sent during active `tools/call` requests
 - [ ] Sampling request asks LLM to produce a detailed, specific image generation prompt
 - [ ] Sampling result replaces (or augments) the original prompt before API call
-- [ ] Sampling is opt-in (controlled by `USE_SAMPLING` env var, default: true)
+- [ ] Sampling is opt-in (controlled by `IMAGE_USE_SAMPLING` env var, default: true)
 - [ ] Unit test: sampling request message format is correct per MCP spec
 - [ ] Unit test: sampling disabled → original prompt used directly
 - [ ] Integration test: sampling → enriched prompt → better API call
@@ -291,7 +291,7 @@
 **So that** the service is protected from abuse and excessive API costs
 
 **Acceptance Criteria:**
-- [ ] Rate limit configurable via `MAX_REQUESTS_PER_MINUTE` (default: 60)
+- [ ] Rate limit configurable via `IMAGE_MAX_REQUESTS_PER_MINUTE` (default: 60)
 - [ ] Exceeding rate limit returns MCP error with "rate limit exceeded" message
 - [ ] Rate limit tracked per client IP (or MCP session ID)
 - [ ] Unit test: 61st request within a minute → rate limit error

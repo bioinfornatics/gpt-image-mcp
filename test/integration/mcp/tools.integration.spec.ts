@@ -10,7 +10,8 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import express from 'express';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
+import type { AddressInfo } from 'net';
 import { AppModule } from '../../../src/app.module';
 import { PROVIDER_TOKEN } from '../../../src/providers/provider.interface';
 import type {
@@ -63,9 +64,9 @@ async function buildApp(): Promise<INestApplication> {
   Object.assign(process.env, {
     IMAGE_PROVIDER: 'openai',
     IMAGE_API_KEY: 'sk-test-tools-integration',
-    MCP_TRANSPORT: 'http',
-    PORT: '3003',
-    LOG_LEVEL: 'error',
+    IMAGE_MCP_TRANSPORT: 'http',
+    IMAGE_PORT: '3003',
+    IMAGE_LOG_LEVEL: 'error',
   });
 
   const moduleRef: TestingModule = await Test.createTestingModule({
@@ -75,9 +76,8 @@ async function buildApp(): Promise<INestApplication> {
     .useValue(mockProvider)
     .compile();
 
-  const app = moduleRef.createNestApplication();
-  app.use(express.json({ limit: '50mb' }));
-  await app.init();
+  const app = moduleRef.createNestApplication(new FastifyAdapter({ bodyLimit: 50 * 1024 * 1024, skipMiddie: true }));
+  await app.listen(0, '127.0.0.1');
   return app;
 }
 
@@ -105,7 +105,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
   describe('image_generate', () => {
     it('valid prompt returns 200 + base64 in response text', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(10, 'image_generate', { prompt: 'a white cat' }),
       );
 
@@ -121,7 +121,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
       mockProvider.generate.mockResolvedValueOnce([FAKE_IMAGE, second]);
 
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(11, 'image_generate', { prompt: 'two cats', n: 2 }),
       );
 
@@ -134,7 +134,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
     it('response_format=json returns parseable JSON with images array', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(12, 'image_generate', {
           prompt: 'a blue sphere',
           response_format: 'json',
@@ -152,7 +152,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
     it('empty prompt returns isError: true', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(13, 'image_generate', { prompt: '' }),
       );
 
@@ -163,7 +163,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
     it('prompt too long (32001 chars) returns isError: true', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(14, 'image_generate', { prompt: 'x'.repeat(32_001) }),
       );
 
@@ -175,7 +175,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
       mockProvider.generate.mockRejectedValueOnce(new Error('API quota exceeded'));
 
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(15, 'image_generate', { prompt: 'a cat' }),
       );
 
@@ -190,7 +190,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
   describe('image_edit', () => {
     it('valid image + prompt returns 200 + base64', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(20, 'image_edit', {
           image: VALID_B64,
           prompt: 'add a hat',
@@ -207,7 +207,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
       const maskB64 = VALID_B64; // reuse same small image as mask
 
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(21, 'image_edit', {
           image: VALID_B64,
           mask: maskB64,
@@ -224,7 +224,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
     it('empty image returns isError: true', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(22, 'image_edit', {
           image: '',
           prompt: 'add a hat',
@@ -241,7 +241,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
   describe('image_variation', () => {
     it('valid image returns 200 + base64', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(30, 'image_variation', { image: VALID_B64 }),
       );
 
@@ -256,7 +256,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
       Object.defineProperty(mockProvider, 'name', { value: 'azure', configurable: true });
 
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(31, 'image_variation', { image: VALID_B64 }),
       );
 
@@ -273,7 +273,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
   describe('provider_list', () => {
     it('returns 200 with provider name in text', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(40, 'provider_list', {}),
       );
 
@@ -289,7 +289,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
   describe('provider_validate', () => {
     it('valid provider returns ✅ success message', async () => {
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(50, 'provider_validate', { provider: 'openai' }),
       );
 
@@ -302,7 +302,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
     it('wrong provider name returns isError: true', async () => {
       // Active provider is openai, but requesting azure
       const res = await mcpPost(
-        app.getHttpServer(),
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
         toolsCall(51, 'provider_validate', { provider: 'azure' }),
       );
 

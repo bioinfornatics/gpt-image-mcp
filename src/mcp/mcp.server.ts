@@ -1,7 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from '@nestjs/common';
+import { McpServer } from '@modelcontextprotocol/server';
 import { ImageGenerateTool } from './tools/image-generate.tool';
 import { ImageEditTool } from './tools/image-edit.tool';
 import { ImageVariationTool } from './tools/image-variation.tool';
@@ -10,45 +8,41 @@ import { ProviderValidateTool } from './tools/provider-validate.tool';
 
 
 @Injectable()
-export class McpServerService implements OnModuleInit {
+export class McpServerService {
   private readonly logger = new Logger(McpServerService.name);
-  public readonly server: McpServer;
+  private stdioServer?: McpServer;
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly imageGenerateTool: ImageGenerateTool,
     private readonly imageEditTool: ImageEditTool,
     private readonly imageVariationTool: ImageVariationTool,
     private readonly providerListTool: ProviderListTool,
     private readonly providerValidateTool: ProviderValidateTool,
-  ) {
-    this.server = new McpServer({
-      name: 'gpt-image-mcp',
-      version: '0.1.0',
-    });
+  ) {}
+
+  /** Create an isolated MCP server for one stateless HTTP request. */
+  createServer(): McpServer {
+    const server = new McpServer(
+      { name: 'gpt-image-mcp', version: '0.1.0' },
+      { capabilities: this.capabilities },
+    );
+    this.registerTools(server);
+    this.logger.debug('MCP server initialised with 5 tools');
+    return server;
   }
 
-  onModuleInit() {
-    this.registerTools();
-    this.logger.log('MCP server initialised with 5 tools');
+  /** Stdio owns one persistent server for the lifetime of the process. */
+  get server(): McpServer {
+    this.stdioServer ??= this.createServer();
+    return this.stdioServer;
   }
 
-  private registerTools() {
-    this.imageGenerateTool.register(this.server);
-    this.imageEditTool.register(this.server);
-    this.imageVariationTool.register(this.server);
-    this.providerListTool.register(this.server);
-    this.providerValidateTool.register(this.server);
-  }
-
-  /**
-   * The inner SDK Server instance — exposes elicitInput(), createMessage(), listRoots().
-   * McpServer (the outer wrapper) does NOT have these methods; Server (inner) does.
-   * Feature services (ElicitationService, SamplingService, RootsService) must receive
-   * this inner Server, not the McpServer, for M4 features to function.
-   */
-  get innerServer(): Server {
-    return this.server.server;
+  private registerTools(server: McpServer) {
+    this.imageGenerateTool.register(server);
+    this.imageEditTool.register(server);
+    this.imageVariationTool.register(server);
+    this.providerListTool.register(server);
+    this.providerValidateTool.register(server);
   }
 
   /**

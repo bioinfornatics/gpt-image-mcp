@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server } from '@modelcontextprotocol/server';
 import type { AppConfig } from '../../config/app.config';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 

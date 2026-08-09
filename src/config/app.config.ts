@@ -31,7 +31,7 @@ export interface AppConfig {
 
 export const configValidationSchema = Joi.object({
   // Secret backend selection (resolved before validation, so not in AppConfig)
-  MCP_SECRET_BACKEND: Joi.string().valid('file', 'keytar', 'env').optional().default('file'),
+  IMAGE_MCP_SECRET_BACKEND: Joi.string().valid('file', 'keytar', 'env').optional().default('file'),
 
   // ── Image provider ────────────────────────────────────────────────────────
   IMAGE_PROVIDER: Joi.string().valid('openai', 'azure', 'together', 'custom').required().messages({
@@ -105,28 +105,28 @@ export const configValidationSchema = Joi.object({
   DEFAULT_MODEL: Joi.string().optional(),
 
   // ── MCP ───────────────────────────────────────────────────────────────────
-  MCP_TRANSPORT: Joi.string().valid('http', 'stdio').optional().default('http'),
-  PORT: Joi.number().integer().min(1).max(65535).optional().default(3000),
-  REQUIRE_MCP_AUTH: Joi.boolean().optional().default(true),
-  MCP_API_KEY: Joi.when('REQUIRE_MCP_AUTH', {
+  IMAGE_MCP_TRANSPORT: Joi.string().valid('http', 'stdio').optional().default('http'),
+  IMAGE_PORT: Joi.number().integer().min(1).max(65535).optional().default(3000),
+  IMAGE_REQUIRE_MCP_AUTH: Joi.boolean().optional().default(true),
+  IMAGE_MCP_API_KEY: Joi.when('IMAGE_REQUIRE_MCP_AUTH', {
     is: true,
     then: Joi.string().min(16).required().messages({
       'any.required':
-        'MCP_API_KEY is required when REQUIRE_MCP_AUTH=true (default). Set REQUIRE_MCP_AUTH=false to allow unauthenticated access (local dev only).',
-      'string.min': 'MCP_API_KEY must be at least 16 characters.',
+        'IMAGE_MCP_API_KEY is required when IMAGE_REQUIRE_MCP_AUTH=true (default). Set IMAGE_REQUIRE_MCP_AUTH=false to allow unauthenticated access (local dev only).',
+      'string.min': 'IMAGE_MCP_API_KEY must be at least 16 characters.',
     }),
     otherwise: Joi.string().optional(),
   }),
 
   // ── Features ──────────────────────────────────────────────────────────────
-  USE_ELICITATION: Joi.boolean().optional().default(true),
-  USE_SAMPLING: Joi.boolean().optional().default(true),
+  IMAGE_USE_ELICITATION: Joi.boolean().optional().default(true),
+  IMAGE_USE_SAMPLING: Joi.boolean().optional().default(true),
 
   // ── Security ──────────────────────────────────────────────────────────────
-  MAX_REQUESTS_PER_MINUTE: Joi.number().integer().min(1).optional().default(60),
+  IMAGE_MAX_REQUESTS_PER_MINUTE: Joi.number().integer().min(1).optional().default(60),
 
   // ── Logging ───────────────────────────────────────────────────────────────
-  LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error').optional().default('info'),
+  IMAGE_LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error').optional().default('info'),
 });
 
 export const appConfig = (): AppConfig => ({
@@ -139,18 +139,18 @@ export const appConfig = (): AppConfig => ({
     models: (process.env['IMAGE_MODELS'] || 'custom').split(',').map((s) => s.trim()),
   },
   mcp: {
-    transport: (process.env['MCP_TRANSPORT'] as 'http' | 'stdio') || 'http',
-    port: parseInt(process.env['PORT'] || '3000', 10),
-    apiKey: process.env['MCP_API_KEY'],
-    requireMcpAuth: process.env['REQUIRE_MCP_AUTH'] !== 'false',
-    useElicitation: process.env['USE_ELICITATION'] !== 'false',
-    useSampling: process.env['USE_SAMPLING'] !== 'false',
+    transport: (process.env['IMAGE_MCP_TRANSPORT'] as 'http' | 'stdio') || 'http',
+    port: parseInt(process.env['IMAGE_PORT'] || '3000', 10),
+    apiKey: process.env['IMAGE_MCP_API_KEY'],
+    requireMcpAuth: process.env['IMAGE_REQUIRE_MCP_AUTH'] !== 'false',
+    useElicitation: process.env['IMAGE_USE_ELICITATION'] !== 'false',
+    useSampling: process.env['IMAGE_USE_SAMPLING'] !== 'false',
   },
   defaults: {
     model: process.env['IMAGE_DEFAULT_MODEL'] || LATEST_MODEL,
   },
   security: {
-    maxRequestsPerMinute: parseInt(process.env['MAX_REQUESTS_PER_MINUTE'] || '60', 10),
+    maxRequestsPerMinute: parseInt(process.env['IMAGE_MAX_REQUESTS_PER_MINUTE'] || '60', 10),
   },
-  logLevel: process.env['LOG_LEVEL'] || 'info',
+  logLevel: process.env['IMAGE_LOG_LEVEL'] || 'info',
 });

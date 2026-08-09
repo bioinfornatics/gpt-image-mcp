@@ -28,12 +28,12 @@ function p(overrides: Partial<{ hasQuality: boolean; hasSize: boolean; model: st
 
 describe('ElicitationService', () => {
   describe('isEnabled', () => {
-    it('should be true when USE_ELICITATION=true', async () => {
+    it('should be true when IMAGE_USE_ELICITATION=true', async () => {
       const svc = await makeService(true);
       expect(svc.isEnabled).toBe(true);
     });
 
-    it('should be false when USE_ELICITATION=false', async () => {
+    it('should be false when IMAGE_USE_ELICITATION=false', async () => {
       const svc = await makeService(false);
       expect(svc.isEnabled).toBe(false);
     });

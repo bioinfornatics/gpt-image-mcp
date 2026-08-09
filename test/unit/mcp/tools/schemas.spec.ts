@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, afterEach } from 'bun:test';
 import {
   ImageGenerateSchema,
   ImageEditSchema,
@@ -429,53 +429,53 @@ describe('ImageVariationSchema', () => {
 // resolveModeration
 // ---------------------------------------------------------------------------
 describe('resolveModeration', () => {
-  const originalEnv = process.env['ALLOW_LOW_MODERATION'];
+  const originalEnv = process.env['IMAGE_ALLOW_LOW_MODERATION'];
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env['ALLOW_LOW_MODERATION'];
+      delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
     } else {
-      process.env['ALLOW_LOW_MODERATION'] = originalEnv;
+      process.env['IMAGE_ALLOW_LOW_MODERATION'] = originalEnv;
     }
   });
 
   it('returns "auto" when requested is undefined', () => {
-    delete process.env['ALLOW_LOW_MODERATION'];
+    delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
     expect(resolveModeration(undefined)).toBe('auto');
   });
 
   it('returns "auto" when requested is "auto"', () => {
-    delete process.env['ALLOW_LOW_MODERATION'];
+    delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
     expect(resolveModeration('auto')).toBe('auto');
   });
 
-  it('downgrades "low" to "auto" when ALLOW_LOW_MODERATION is unset', () => {
-    delete process.env['ALLOW_LOW_MODERATION'];
+  it('downgrades "low" to "auto" when IMAGE_ALLOW_LOW_MODERATION is unset', () => {
+    delete process.env['IMAGE_ALLOW_LOW_MODERATION'];
     expect(resolveModeration('low')).toBe('auto');
   });
 
-  it('downgrades "low" to "auto" when ALLOW_LOW_MODERATION is "false"', () => {
-    process.env['ALLOW_LOW_MODERATION'] = 'false';
+  it('downgrades "low" to "auto" when IMAGE_ALLOW_LOW_MODERATION is "false"', () => {
+    process.env['IMAGE_ALLOW_LOW_MODERATION'] = 'false';
     expect(resolveModeration('low')).toBe('auto');
   });
 
-  it('downgrades "low" to "auto" when ALLOW_LOW_MODERATION is "1"', () => {
-    process.env['ALLOW_LOW_MODERATION'] = '1';
+  it('downgrades "low" to "auto" when IMAGE_ALLOW_LOW_MODERATION is "1"', () => {
+    process.env['IMAGE_ALLOW_LOW_MODERATION'] = '1';
     expect(resolveModeration('low')).toBe('auto');
   });
 
-  it('allows "low" when ALLOW_LOW_MODERATION is "true"', () => {
-    process.env['ALLOW_LOW_MODERATION'] = 'true';
+  it('allows "low" when IMAGE_ALLOW_LOW_MODERATION is "true"', () => {
+    process.env['IMAGE_ALLOW_LOW_MODERATION'] = 'true';
     expect(resolveModeration('low')).toBe('low');
   });
 
-  it('returns "auto" when ALLOW_LOW_MODERATION is "true" but requested is undefined', () => {
-    process.env['ALLOW_LOW_MODERATION'] = 'true';
+  it('returns "auto" when IMAGE_ALLOW_LOW_MODERATION is "true" but requested is undefined', () => {
+    process.env['IMAGE_ALLOW_LOW_MODERATION'] = 'true';
     expect(resolveModeration(undefined)).toBe('auto');
   });
 
-  it('returns "auto" when ALLOW_LOW_MODERATION is "true" but requested is "auto"', () => {
-    process.env['ALLOW_LOW_MODERATION'] = 'true';
+  it('returns "auto" when IMAGE_ALLOW_LOW_MODERATION is "true" but requested is "auto"', () => {
+    process.env['IMAGE_ALLOW_LOW_MODERATION'] = 'true';
     expect(resolveModeration('auto')).toBe('auto');
   });
 });

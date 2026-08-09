@@ -40,9 +40,9 @@ jobs:
         env:
           IMAGE_PROVIDER: openai
           IMAGE_API_KEY: sk-test-fake-key-for-ci
-          MCP_TRANSPORT: http
-          PORT: 3001
-          LOG_LEVEL: error
+          IMAGE_MCP_TRANSPORT: http
+          IMAGE_PORT: 3001
+          IMAGE_LOG_LEVEL: error
 
       - name: Check coverage thresholds (aggregate, excluding bootstrap files)
         run: |

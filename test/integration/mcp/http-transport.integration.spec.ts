@@ -3,13 +3,14 @@
  * Tests the full JSON-RPC cycle through NestJS using supertest.
  * Provider is mocked — no real API calls made.
  *
- * The MCP SDK's StreamableHTTPServerTransport requires:
+ * The MCP NodeStreamableHTTPServerTransport requires:
  *   Accept: application/json, text/event-stream   (on POST /mcp)
  */
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import express from 'express';
+import { FastifyAdapter } from '@nestjs/platform-fastify';
+import type { AddressInfo } from 'net';
 import { AppModule } from '../../../src/app.module';
 import { PROVIDER_TOKEN } from '../../../src/providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../../src/providers/provider.interface';
@@ -50,9 +51,8 @@ async function buildApp(extraEnv: Record<string, string> = {}): Promise<INestApp
     .useValue(mockProvider)
     .compile();
 
-  const app = moduleRef.createNestApplication();
-  app.use(express.json({ limit: '50mb' }));
-  await app.init();
+  const app = moduleRef.createNestApplication(new FastifyAdapter({ bodyLimit: 50 * 1024 * 1024, skipMiddie: true }));
+  await app.listen(0, '127.0.0.1');
   return app;
 }
 
@@ -63,9 +63,9 @@ describe('MCP HTTP Transport — Integration', () => {
     app = await buildApp({
       IMAGE_PROVIDER: 'openai',
       IMAGE_API_KEY: 'sk-test-integration-key',
-      MCP_TRANSPORT: 'http',
-      PORT: '3001',
-      LOG_LEVEL: 'error',
+      IMAGE_MCP_TRANSPORT: 'http',
+      IMAGE_PORT: '3001',
+      IMAGE_LOG_LEVEL: 'error',
     });
   });
 
@@ -83,7 +83,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
   describe('MCP initialize handshake', () => {
     it('should respond 200 with server info and capabilities', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 1,
         method: 'initialize',
@@ -104,7 +104,7 @@ describe('MCP HTTP Transport — Integration', () => {
     it('should return a valid capabilities object with at least tools', async () => {
       // The MCP SDK manages capability declarations; we verify the shape is correct.
       // elicitation/sampling/roots are CLIENT capabilities declared by the client.
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 1,
         method: 'initialize',
@@ -129,7 +129,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
   describe('tools/list', () => {
     it('should return all 5 registered tools', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 2,
         method: 'tools/list',
@@ -146,7 +146,7 @@ describe('MCP HTTP Transport — Integration', () => {
     });
 
     it('should include inputSchema.properties.prompt for image_generate', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 2,
         method: 'tools/list',
@@ -166,7 +166,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
   describe('tools/call — image_generate', () => {
     it('should return base64 image content for a valid prompt', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 3,
         method: 'tools/call',
@@ -182,7 +182,7 @@ describe('MCP HTTP Transport — Integration', () => {
     });
 
     it('should return isError for empty prompt', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 4,
         method: 'tools/call',
@@ -197,7 +197,7 @@ describe('MCP HTTP Transport — Integration', () => {
     });
 
     it('should return JSON format when response_format=json', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 5,
         method: 'tools/call',
@@ -215,7 +215,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
   describe('tools/call — provider_validate', () => {
     it('should return ✅ for valid configured provider', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 6,
         method: 'tools/call',
@@ -232,7 +232,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
   describe('tools/call — provider_list', () => {
     it('should return provider info with 200', async () => {
-      const res = await mcpPost(app.getHttpServer(), {
+      const res = await mcpPost(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`, {
         jsonrpc: '2.0',
         id: 7,
         method: 'tools/call',
@@ -249,20 +249,20 @@ describe('MCP HTTP Transport — Integration', () => {
 
   // ── Authentication ────────────────────────────────────────────────────────
 
-  describe('Authentication (MCP_API_KEY)', () => {
+  describe('Authentication (IMAGE_MCP_API_KEY)', () => {
     let guardedApp: INestApplication;
 
     beforeAll(async () => {
-      guardedApp = await buildApp({ MCP_API_KEY: 'test-secret-mcp-key' });
+      guardedApp = await buildApp({ IMAGE_MCP_API_KEY: 'test-secret-mcp-key' });
     });
 
     afterAll(async () => {
-      delete process.env['MCP_API_KEY'];
+      delete process.env['IMAGE_MCP_API_KEY'];
       await guardedApp.close();
     });
 
     it('should return 401 when Authorization header is missing', async () => {
-      const res = await request(guardedApp.getHttpServer())
+      const res = await request(`http://127.0.0.1:${(guardedApp.getHttpServer().address() as AddressInfo).port}`)
         .post('/mcp')
         .set('Accept', MCP_ACCEPT)
         .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} });
@@ -270,7 +270,7 @@ describe('MCP HTTP Transport — Integration', () => {
     });
 
     it('should return 401 when wrong token is provided', async () => {
-      const res = await request(guardedApp.getHttpServer())
+      const res = await request(`http://127.0.0.1:${(guardedApp.getHttpServer().address() as AddressInfo).port}`)
         .post('/mcp')
         .set('Accept', MCP_ACCEPT)
         .set('Authorization', 'Bearer wrong-token')
@@ -279,7 +279,7 @@ describe('MCP HTTP Transport — Integration', () => {
     });
 
     it('should allow request with correct Bearer token', async () => {
-      const res = await request(guardedApp.getHttpServer())
+      const res = await request(`http://127.0.0.1:${(guardedApp.getHttpServer().address() as AddressInfo).port}`)
         .post('/mcp')
         .set('Accept', MCP_ACCEPT)
         .set('Authorization', 'Bearer test-secret-mcp-key')
@@ -288,17 +288,51 @@ describe('MCP HTTP Transport — Integration', () => {
     });
   });
 
+  describe('HTTP protocol contract', () => {
+    it('should reject POST without the required Accept media types', async () => {
+      const res = await request(
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
+      )
+        .post('/mcp')
+        .set('Accept', 'application/json')
+        .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} });
+
+      expect(res.status).toBe(406);
+    });
+  });
+
+  describe('Unsupported HTTP methods', () => {
+    it('GET /mcp should return a JSON-RPC 405 response', async () => {
+      const res = await request(
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
+      ).get('/mcp');
+
+      expect(res.status).toBe(405);
+      expect(res.body.jsonrpc).toBe('2.0');
+      expect(res.body.error.code).toBe(-32000);
+    });
+
+    it('DELETE /mcp should return a JSON-RPC 405 response', async () => {
+      const res = await request(
+        `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`,
+      ).delete('/mcp');
+
+      expect(res.status).toBe(405);
+      expect(res.body.error.message).toBe('Method not allowed.');
+    });
+  });
+
   // ── Health ────────────────────────────────────────────────────────────────
 
   describe('Health endpoints', () => {
     it('GET /health/live should return 200 with status ok', async () => {
-      const res = await request(app.getHttpServer()).get('/health/live');
+      const res = await request(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`).get('/health/live');
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('ok');
     });
 
     it('GET /health/ready should return 200', async () => {
-      const res = await request(app.getHttpServer()).get('/health/ready');
+      const res = await request(`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`).get('/health/ready');
       expect(res.status).toBe(200);
     });
   });

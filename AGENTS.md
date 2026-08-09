@@ -29,7 +29,7 @@ bun run build               # tsc -p tsconfig.build.json + chmod +x dist/main.js
 
 # Keychain (keytar — optional backend)
 bun run secret:store IMAGE_API_KEY      # store in OS keychain
-bun run secret:store MCP_API_KEY
+bun run secret:store IMAGE_MCP_API_KEY
 
 # Docker
 docker build -t gpt-image-mcp .
@@ -78,7 +78,7 @@ src/
 │   ├── openai/openai.provider.ts # generate / edit / variation / validate
 │   └── azure/azure.provider.ts  # generate / edit / variation (throws) / validate
 ├── security/
-│   ├── auth.guard.ts             # Bearer token guard (MCP_API_KEY, constant-time)
+│   ├── auth.guard.ts             # Bearer token guard (IMAGE_MCP_API_KEY, constant-time)
 │   ├── rate-limit.guard.ts      # Per-session-ID sliding window, Prometheus tracked
 │   └── sanitise.ts              # maskSecret / sanitisePrompt / validateFilePath
 ├── health/
@@ -112,9 +112,9 @@ test/
 ```
 main.ts → resolveSecrets() → (keytar | *_FILE | plain env) → Joi validation → NestJS bootstrap
 ```
-- `MCP_SECRET_BACKEND=file` (default) — reads `IMAGE_API_KEY_FILE` etc.
-- `MCP_SECRET_BACKEND=keytar` — OS keychain first, then `_FILE` fallback
-- `MCP_SECRET_BACKEND=env` — plain env vars only (dev opt-out)
+- `IMAGE_MCP_SECRET_BACKEND=file` (default) — reads `IMAGE_API_KEY_FILE` etc.
+- `IMAGE_MCP_SECRET_BACKEND=keytar` — OS keychain first, then `_FILE` fallback
+- `IMAGE_MCP_SECRET_BACKEND=env` — plain env vars only (dev opt-out)
 - **Never** set `SECRET_BACKEND` — that is a reserved `libsecret` variable on Linux
 
 ### MCP tool registration
@@ -250,7 +250,7 @@ Do **not** add it back. Use `.mjs` extensions explicitly if ESM output is ever n
 
 The env var `SECRET_BACKEND` is used by `libsecret` (GNOME keyring backend selector).
 Setting it to anything other than a valid libsecret value will crash or hang the secret service.
-This project uses `MCP_SECRET_BACKEND` instead.
+This project uses `IMAGE_MCP_SECRET_BACKEND` instead.
 
 ### 4.7 `(server as any).registerTool` — why the cast
 
@@ -349,21 +349,21 @@ feat(scope): short description
 | `IMAGE_DEPLOYMENT` | ✅ if azure | — | Azure deployment name |
 | `IMAGE_API_VERSION` | — | `2025-04-01-preview` | Azure API version |
 | `IMAGE_MODELS` | — | `custom` | Comma-separated model list (custom provider) |
-| `MCP_TRANSPORT` | — | `http` | `http` or `stdio` |
-| `PORT` | — | `3000` | HTTP listen port |
-| `MCP_API_KEY` | — | — | Bearer token for `/mcp` endpoint (or use `_FILE`) |
-| `MCP_API_KEY_FILE` | — | — | Path to file containing the MCP bearer token |
-| `MCP_SECRET_BACKEND` | — | `file` | `file`, `keytar`, or `env` |
+| `IMAGE_MCP_TRANSPORT` | — | `http` | `http` or `stdio` |
+| `IMAGE_PORT` | — | `3000` | HTTP listen port |
+| `IMAGE_MCP_API_KEY` | — | — | Bearer token for `/mcp` endpoint (or use `_FILE`) |
+| `IMAGE_MCP_API_KEY_FILE` | — | — | Path to file containing the MCP bearer token |
+| `IMAGE_MCP_SECRET_BACKEND` | — | `file` | `file`, `keytar`, or `env` |
 | `IMAGE_DEFAULT_MODEL` | — | `gpt-image-1` | Default image model |
-| `USE_ELICITATION` | — | `true` | Enable MCP Elicitation |
-| `USE_SAMPLING` | — | `true` | Enable MCP Sampling |
-| `MAX_REQUESTS_PER_MINUTE` | — | `60` | Rate limit per client |
-| `LOG_LEVEL` | — | `info` | `debug` / `info` / `warn` / `error` |
+| `IMAGE_USE_ELICITATION` | — | `true` | Enable MCP Elicitation |
+| `IMAGE_USE_SAMPLING` | — | `true` | Enable MCP Sampling |
+| `IMAGE_MAX_REQUESTS_PER_MINUTE` | — | `60` | Rate limit per client |
+| `IMAGE_LOG_LEVEL` | — | `info` | `debug` / `info` / `warn` / `error` |
 
 **Test environment** (set by `test/setup.ts` before any spec runs):
 ```
 IMAGE_PROVIDER=openai · IMAGE_API_KEY=sk-test-fake-key-for-tests
-MCP_TRANSPORT=http · PORT=3001 · LOG_LEVEL=error
+IMAGE_MCP_TRANSPORT=http · IMAGE_PORT=3001 · IMAGE_LOG_LEVEL=error
 ```
 
 ---

@@ -940,7 +940,7 @@ These errors are returned at the JSON-RPC level (not inside tool results) and in
 | `-32601` | Method not found | Requested MCP method does not exist |
 | `-32602` | Invalid params | Tool arguments fail schema validation |
 | `-32603` | Internal error | Unhandled server-side error |
-| `-32001` | Unauthorized | Missing or invalid `MCP_API_KEY` bearer token (HTTP mode) |
+| `-32001` | Unauthorized | Missing or invalid `IMAGE_MCP_API_KEY` bearer token (HTTP mode) |
 | `-32002` | Rate limited | Rate limit exceeded at transport level |
 | `-32003` | Tool not found | `tools/call` references a tool name that does not exist |
 

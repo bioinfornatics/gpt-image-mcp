@@ -300,7 +300,7 @@ Automated E2E suite (`test/e2e/`) covers:
 - `tools/list` returns all 5 tools with correct schemas
 - `image_generate` with mocked provider HTTP returns valid base64 result
 - Rate limiting: 61st request in 60s window returns rate-limit error
-- Wrong/missing `MCP_API_KEY` returns 401 (HTTP transport)
+- Wrong/missing `IMAGE_MCP_API_KEY` returns 401 (HTTP transport)
 - `save_to_workspace: true` writes file to temp directory, path returned in result
 
 ---

@@ -44,24 +44,25 @@ describe('McpServerService', () => {
     }).compile();
 
     service = module.get(McpServerService);
-    service.onModuleInit();
+    void service.server;
   });
 
   it('should create McpServer with correct name and version', () => {
     expect(service.server).toBeDefined();
   });
 
-  it('innerServer should be the inner SDK Server (has elicitInput / createMessage / listRoots)', () => {
-    const inner = service.innerServer;
-    expect(inner).toBeDefined();
-    expect(typeof inner.elicitInput).toBe('function');
-    expect(typeof inner.createMessage).toBe('function');
-    expect(typeof inner.listRoots).toBe('function');
-    // Must NOT be the McpServer wrapper itself
-    expect(inner).not.toBe(service.server);
+  it('should create isolated server instances for stateless HTTP requests', () => {
+    const first = service.createServer();
+    const second = service.createServer();
+    expect(first).not.toBe(second);
+    expect(typeof first.server.elicitInput).toBe('function');
+    expect(typeof first.server.createMessage).toBe('function');
+    expect(typeof first.server.listRoots).toBe('function');
   });
 
-  it('should call register() on all 5 tools during init', () => {
+  it('should register all 5 tools on each created server', () => {
+    jest.clearAllMocks();
+    service.createServer();
     expect(noopTool.register).toHaveBeenCalledTimes(5);
   });
 

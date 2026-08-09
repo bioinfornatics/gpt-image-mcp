@@ -6,10 +6,10 @@
  *   2. keytar          → OS keychain (macOS Keychain, GNOME Keyring, Windows Credential Manager)
  *   3. plain env var   → fallback (least secure, convenient for dev)
  *
- * The active backend is selected by MCP_SECRET_BACKEND env var:
- *   MCP_SECRET_BACKEND=file    (default) — _FILE vars only, plain vars as fallback
- *   MCP_SECRET_BACKEND=keytar  — keytar first, then _FILE, then plain
- *   MCP_SECRET_BACKEND=env     — plain env vars only (opt-out of _FILE resolution)
+ * The active backend is selected by IMAGE_MCP_SECRET_BACKEND env var:
+ *   IMAGE_MCP_SECRET_BACKEND=file    (default) — _FILE vars only, plain vars as fallback
+ *   IMAGE_MCP_SECRET_BACKEND=keytar  — keytar first, then _FILE, then plain
+ *   IMAGE_MCP_SECRET_BACKEND=env     — plain env vars only (opt-out of _FILE resolution)
  *
  * SECURITY NOTES:
  *   - File paths in *_FILE vars are validated to prevent path traversal.
@@ -28,7 +28,7 @@ export type SecretBackend = 'file' | 'keytar' | 'env';
 const FILE_SOURCEABLE_VARS = [
   // New unified names
   'IMAGE_API_KEY',
-  'MCP_API_KEY',
+  'IMAGE_MCP_API_KEY',
   // Deprecated — kept so IMAGE_API_KEY_FILE is NOT the only _FILE mechanism;
   // old OPENAI_API_KEY_FILE / AZURE_OPENAI_API_KEY_FILE configs still work:
   // resolveFileSecrets() sets OPENAI_API_KEY, then resolveImageEnvAliases()
@@ -130,7 +130,7 @@ const KEYTAR_SERVICE = 'gpt-image-mcp';
  */
 const KEYTAR_ACCOUNT_MAP: Record<FileSourceableVar, string> = {
   IMAGE_API_KEY: 'image-api-key',
-  MCP_API_KEY: 'mcp-api-key',
+  IMAGE_MCP_API_KEY: 'mcp-api-key',
   // Deprecated aliases — map to old keychain accounts for backward compat
   OPENAI_API_KEY: 'openai-api-key',
   AZURE_OPENAI_API_KEY: 'azure-openai-api-key',
@@ -139,7 +139,7 @@ const KEYTAR_ACCOUNT_MAP: Record<FileSourceableVar, string> = {
 /**
  * Attempt to load secrets from the OS keychain via keytar.
  * keytar is an *optional* peer dependency — if not installed this is a no-op
- * (with a clear startup warning if MCP_SECRET_BACKEND=keytar was requested).
+ * (with a clear startup warning if IMAGE_MCP_SECRET_BACKEND=keytar was requested).
  *
  * Requires: `bun add keytar` (native Node addon, needs build tools).
  */
@@ -153,7 +153,7 @@ export async function resolveKeytarSecrets(): Promise<void> {
     keytar = await import('keytar' as string); // cast avoids TS2307 when not installed
   } catch {
     process.stderr.write(
-      `[gpt-image-mcp] WARNING: MCP_SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
+      `[gpt-image-mcp] WARNING: IMAGE_MCP_SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
       `  Install with: bun add keytar\n` +
       `  Falling back to _FILE and plain env var resolution.\n`,
     );
@@ -291,7 +291,7 @@ export function resolveImageEnvAliases(): void {
  */
 export async function resolveSecrets(): Promise<void> {
   const backend: SecretBackend =
-    (process.env['MCP_SECRET_BACKEND'] as SecretBackend | undefined) ?? 'file';
+    (process.env['IMAGE_MCP_SECRET_BACKEND'] as SecretBackend | undefined) ?? 'file';
 
   if (backend === 'env') {
     // Explicit opt-out of file/keychain resolution — still apply alias migration

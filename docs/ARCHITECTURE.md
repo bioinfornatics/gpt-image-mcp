@@ -88,7 +88,7 @@ src/
 │   ├── mcp.server.ts              # McpServer lifecycle wrapper
 │   ├── transport/
 │   │   ├── transport.factory.ts   # Picks HTTP vs stdio from env
-│   │   ├── http.transport.ts      # StreamableHTTPServerTransport
+│   │   ├── http.transport.ts      # Fastify + NodeStreamableHTTPServerTransport
 │   │   └── stdio.transport.ts     # StdioServerTransport
 │   ├── tools/
 │   │   ├── image-generate.tool.ts
@@ -296,7 +296,7 @@ Incoming Request
        │
        ▼
 ┌────────────────────┐
-│   Auth Guard       │  ← Checks Authorization: Bearer <MCP_API_KEY>
+│   Auth Guard       │  ← Checks Authorization: Bearer <IMAGE_MCP_API_KEY>
 │   (if configured)  │    Returns 401 if wrong / missing
 └─────────┬──────────┘
           ▼
@@ -332,15 +332,20 @@ Incoming Request
 ### Streamable HTTP (Default, Multi-Client)
 
 ```typescript
-// One transport per request — stateless, avoids ID collisions
-app.post('/mcp', async (req, res) => {
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // stateless
+// Fastify is owned by Nest; @modelcontextprotocol/fastify supplies security hooks.
+fastify.addHook('onRequest', hostHeaderValidation(allowedHosts));
+fastify.addHook('onRequest', originValidation(allowedOrigins));
+
+// One isolated server + transport per request — fully stateless.
+app.post('/mcp', async (request, reply) => {
+  const server = mcpServerFactory.createServer();
+  const transport = new NodeStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  res.on('close', () => transport.close());
-  await mcpServer.connect(transport);
-  await transport.handleRequest(req, res, req.body);
+  reply.raw.on('close', () => Promise.allSettled([transport.close(), server.close()]));
+  await server.connect(transport);
+  await transport.handleRequest(request.raw, reply.raw, request.body);
 });
 ```
 
@@ -353,7 +358,7 @@ await mcpServer.connect(transport);
 // NEVER log to stdout — use stderr only
 ```
 
-**Transport selection** is controlled by the `MCP_TRANSPORT` env var (`http` | `stdio`, default: `http`).
+**Transport selection** is controlled by the `IMAGE_MCP_TRANSPORT` env var (`http` | `stdio`, default: `http`).
 
 ---
 
@@ -371,16 +376,16 @@ await mcpServer.connect(transport);
 - **Trade-offs:** More boilerplate than bare Express; ~1-2s startup overhead
 - **Status:** Accepted
 
-### ADR-003: MCP SDK v1.x (not v2 pre-alpha)
-- **Decision:** `@modelcontextprotocol/sdk` v1.x
-- **Rationale:** v2 is pre-alpha (stable ETA unknown); v1.x is production-stable with active security fixes for ≥6 months after v2 GA. Migration path is abstracted behind `McpServer` wrapper.
-- **Trade-offs:** Will require migration to v2 once stable
+### ADR-003: MCP SDK v2 packages
+- **Decision:** `@modelcontextprotocol/server`, `@modelcontextprotocol/node`, and `@modelcontextprotocol/fastify` v2
+- **Rationale:** Uses the stable, framework-specific SDK packages and the official Fastify Host/Origin security hooks.
+- **Trade-offs:** Requires Node.js 20+ and Zod 4.
 - **Status:** Accepted
 
 ### ADR-004: Stateless Streamable HTTP Transport
-- **Decision:** One `StreamableHTTPServerTransport` instance per HTTP request
-- **Rationale:** Avoids JSON-RPC request ID collisions across concurrent sessions; simplifies horizontal scaling; matches MCP "stateless JSON" recommendation for remote servers
-- **Trade-offs:** No server-sent streaming per persistent session; each request self-contained
+- **Decision:** One `McpServer` and one `NodeStreamableHTTPServerTransport` instance per HTTP request
+- **Rationale:** Isolates request IDs, client capabilities, feature calls, and transport lifecycle across concurrent sessions; simplifies horizontal scaling.
+- **Trade-offs:** No persistent HTTP session state; each request is self-contained.
 - **Status:** Accepted
 
 ### ADR-005: `openai` npm SDK for Both Providers

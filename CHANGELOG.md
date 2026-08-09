@@ -42,7 +42,7 @@ Migrate before upgrading to v0.3.0.
 - **`gpt-image-2` arbitrary resolution**: size now accepts any `WxH` string validated against all four API constraints (multiples of 16, max edge < 3840, ratio ≤ 3:1, pixels 655 360–8 294 400). Fixed-size presets still work unchanged.
 - **`isExperimentalResolution()`**: sizes above 2 560 × 1 440 are flagged as experimental in tool output per the OpenAI guide.
 - **`skip_elicitation` parameter**: set `true` to bypass the interactive quality/size form — recommended for automated pipelines.
-- **`resolveModeration()` helper**: `moderation: "low"` is silently downgraded to `"auto"` unless `ALLOW_LOW_MODERATION=true` is set in the environment.
+- **`resolveModeration()` helper**: `moderation: "low"` is silently downgraded to `"auto"` unless `IMAGE_ALLOW_LOW_MODERATION=true` is set in the environment.
 
 #### `image_edit` tool
 - **Multi-image compositing**: new `images: string[]` parameter (1–5 base64 images) for virtual try-on, person-in-scene insertion, and general compositing. `image` (single) and `images` (array) are mutually exclusive and validated at the schema layer.
@@ -61,9 +61,9 @@ Migrate before upgrading to v0.3.0.
 - **Static helpers** `resolveMaxTokens()` and `buildUserMessage()` are exported and independently unit-tested.
 
 #### Security
-- **`REQUIRE_MCP_AUTH`** env var (default `true`): `MCP_API_KEY` is now required by default. Set `REQUIRE_MCP_AUTH=false` to allow unauthenticated access for local development.
+- **`IMAGE_REQUIRE_MCP_AUTH`** env var (default `true`): `IMAGE_MCP_API_KEY` is now required by default. Set `IMAGE_REQUIRE_MCP_AUTH=false` to allow unauthenticated access for local development.
 - **`detectForgeryIntent()`** in `sanitise.ts`: heuristic detection of prompts describing screenshot forgery, domain impersonation, or fabrication of official-looking documents.
-- **Byte-aware rate limiting**: `RateLimitGuard` now tracks cumulative payload bytes per client window in addition to request count. Configurable via `MAX_BYTES_PER_MINUTE` (default 50 MB). Separate 429 error messages distinguish count-limit from byte-limit violations.
+- **Byte-aware rate limiting**: `RateLimitGuard` now tracks cumulative payload bytes per client window in addition to request count. Configurable via `IMAGE_MAX_BYTES_PER_MINUTE` (default 50 MB). Separate 429 error messages distinguish count-limit from byte-limit violations.
 
 #### Provider interface
 - `EditParams.image` changed to optional (required when `images[]` not provided).
@@ -126,7 +126,7 @@ Migrate before upgrading to v0.3.0.
 - OpenAI and Azure OpenAI providers via `@openai/openai` SDK.
 - HTTP (Streamable HTTP, stateless per-request) and stdio transports.
 - MCP Elicitation, Sampling, and Roots (M4 features).
-- Bearer token authentication (`MCP_API_KEY`), rate limiting, prompt sanitisation.
+- Bearer token authentication (`IMAGE_MCP_API_KEY`), rate limiting, prompt sanitisation.
 - Multi-platform Docker image (`linux/amd64`, `linux/arm64`).
 - CI/CD pipeline: quality gate → Trivy CVE scan → GitHub Packages → npmjs.com → GitHub Release.
 - Renovate dependency automation.
@@ -144,7 +144,7 @@ Migrate before upgrading to v0.3.0.
 ### Added
 - Project scaffold: NestJS 10, Bun ≥ 1.1, TypeScript strict, MCP SDK v1.29.
 - Core architecture: providers, tools, security, health, metrics modules.
-- Secret resolution: `_FILE` env vars, keytar OS keychain, plain env (`MCP_SECRET_BACKEND`).
+- Secret resolution: `_FILE` env vars, keytar OS keychain, plain env (`IMAGE_MCP_SECRET_BACKEND`).
 - GitHub Actions CI skeleton.
 
 ---

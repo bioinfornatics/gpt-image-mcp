@@ -45,7 +45,7 @@ jobs:
           token: ${{ secrets.RENOVATE_TOKEN }}
         env:
           # Forwarded to the Renovate container
-          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+          IMAGE_LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
           RENOVATE_DRY_RUN: ${{ inputs.dryRun || 'false' }}
           # Repository autodiscovery is off — this workflow runs in a single repo
           RENOVATE_AUTODISCOVER: 'false'

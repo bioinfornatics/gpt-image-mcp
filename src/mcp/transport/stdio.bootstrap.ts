@@ -1,6 +1,6 @@
-/* c8 ignore file -- stdio transport bootstrap: only active in MCP_TRANSPORT=stdio runtime */
+/* c8 ignore file -- stdio transport bootstrap: only active in IMAGE_MCP_TRANSPORT=stdio runtime */
 import { Injectable, Logger } from '@nestjs/common';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { McpServerService } from '../mcp.server';
 
 @Injectable()

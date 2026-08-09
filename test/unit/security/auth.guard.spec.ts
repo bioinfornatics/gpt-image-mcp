@@ -21,7 +21,7 @@ function makeGuard(apiKey?: string) {
 }
 
 describe('AuthGuard', () => {
-  it('should allow all requests when MCP_API_KEY is not configured', () => {
+  it('should allow all requests when IMAGE_MCP_API_KEY is not configured', () => {
     const guard = makeGuard(undefined);
     expect(guard.canActivate(makeContext({}))).toBe(true);
   });

@@ -184,11 +184,11 @@ All configuration is via **environment variables** (never hardcoded).
 | `IMAGE_API_VERSION` | ❌ | `2025-04-01-preview` | Azure API version |
 | `IMAGE_MODELS` | if custom | `custom` | Comma-separated model list for custom provider |
 | `IMAGE_DEFAULT_MODEL` | ❌ | `gpt-image-1` | Default model for generation requests |
-| `MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
-| `PORT` | ❌ | `3000` | HTTP server port |
-| `MCP_API_KEY` | ❌ | — | Protect the MCP endpoint |
-| `LOG_LEVEL` | ❌ | `info` | `debug|info|warn|error` |
-| `MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
+| `IMAGE_MCP_TRANSPORT` | ❌ | `http` | `http` or `stdio` |
+| `IMAGE_PORT` | ❌ | `3000` | HTTP server port |
+| `IMAGE_MCP_API_KEY` | ❌ | — | Protect the MCP endpoint |
+| `IMAGE_LOG_LEVEL` | ❌ | `info` | `debug|info|warn|error` |
+| `IMAGE_MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
 
 ---
 
