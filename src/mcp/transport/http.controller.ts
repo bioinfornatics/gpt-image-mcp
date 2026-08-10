@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
+  UseFilters,
 } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
@@ -15,13 +16,21 @@ import { McpServerService } from '../mcp.server';
 import { AuthGuard } from '../../security/auth.guard';
 import { RateLimitGuard } from '../../security/rate-limit.guard';
 import { maskSecret } from '../../security/sanitise';
+import { ENTRA_AUTH, type ValidatedEntraAuth } from '../../security/entra-token-validator.service';
+import { RequestIdentityContextService } from '../../security/request-identity-context.service';
+import { randomUUID } from 'node:crypto';
+import { BearerAuthFilter } from '../../security/bearer-auth.filter';
 
 @Controller('mcp')
 @UseGuards(AuthGuard, RateLimitGuard)
+@UseFilters(BearerAuthFilter)
 export class McpHttpController {
   private readonly logger = new Logger(McpHttpController.name);
 
-  constructor(private readonly mcpService: McpServerService) {}
+  constructor(
+    private readonly mcpService: McpServerService,
+    private readonly identityContext: RequestIdentityContextService,
+  ) {}
 
   @Post()
   @HttpCode(200)
@@ -49,8 +58,20 @@ export class McpHttpController {
     reply.raw.once('close', () => void close());
 
     try {
-      await server.connect(transport);
-      await transport.handleRequest(req.raw, reply.raw, req.body);
+      const execute = async () => {
+        await server.connect(transport);
+        await transport.handleRequest(req.raw, reply.raw, req.body);
+      };
+      const auth = (req as FastifyRequest & { [ENTRA_AUTH]?: ValidatedEntraAuth })[ENTRA_AUTH];
+      if (auth) {
+        await this.identityContext.run(
+          { ...auth.identity, correlationId: randomUUID() },
+          auth.assertion,
+          execute,
+        );
+      } else {
+        await execute();
+      }
     } catch (err) {
       this.logger.error(`MCP request error: ${maskSecret(String(err))}`);
       if (!reply.raw.headersSent) {

@@ -62,6 +62,7 @@ describe('AppConfig validation', () => {
           IMAGE_PROVIDER: 'azure',
           IMAGE_BASE_URL: 'https://x.openai.azure.com',
           IMAGE_DEPLOYMENT: 'dep',
+          IMAGE_AZURE_AUTH_MODE: 'api_key',
           IMAGE_REQUIRE_MCP_AUTH: 'false',
         }),
       ).toThrow(/IMAGE_API_KEY is required/);
@@ -74,6 +75,33 @@ describe('AppConfig validation', () => {
       });
       expect(result.IMAGE_PROVIDER).toBe('azure');
       expect(result.IMAGE_API_VERSION).toBe('2025-04-01-preview');
+    });
+  });
+
+  describe('Azure authentication modes', () => {
+    const azure = {
+      IMAGE_PROVIDER: 'azure', IMAGE_BASE_URL: 'https://x.openai.azure.com',
+      IMAGE_DEPLOYMENT: 'dep', IMAGE_MCP_TRANSPORT: 'stdio',
+    };
+
+    it('infers api_key only for compatible legacy Azure configuration', () => {
+      expect(validateConfig({ ...azure, IMAGE_API_KEY: 'legacy-key' }).IMAGE_AZURE_AUTH_MODE).toBe('api_key');
+    });
+
+    it.each(['azure_cli', 'az-cli'])("accepts keyless Azure CLI mode %s", (mode) => {
+      expect(validateConfig({ ...azure, IMAGE_AZURE_AUTH_MODE: mode }).IMAGE_AZURE_AUTH_MODE).toBe('azure_cli');
+    });
+
+    it('never infers Azure CLI when the key and mode are absent', () => {
+      expect(() => validateConfig(azure)).toThrow(/never inferred automatically/);
+    });
+
+    it('rejects Azure modes for non-Azure providers', () => {
+      expect(() => validateConfig({ ...openaiBase, IMAGE_AZURE_AUTH_MODE: 'azure_cli' })).toThrow(/only valid/);
+    });
+
+    it('requires an API key in explicit api_key mode', () => {
+      expect(() => validateConfig({ ...azure, IMAGE_AZURE_AUTH_MODE: 'api_key' })).toThrow(/IMAGE_API_KEY is required/);
     });
   });
 

@@ -1,60 +1,36 @@
-/* c8 ignore file -- NestJS DI factory: exercised only with a real provider at runtime */
+/* c8 ignore file -- NestJS DI factory: exercised through integration tests */
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { PROVIDER_TOKEN } from './provider.interface';
+import { PROVIDER_TOKEN, type IImageProvider } from './provider.interface';
 import { OpenAICompatibleProvider } from './openai-compatible.provider';
 import { OpenAIStrategy } from './strategies/openai.strategy';
 import { AzureStrategy } from './strategies/azure.strategy';
 import { TogetherStrategy } from './strategies/together.strategy';
 import { CustomStrategy } from './strategies/custom.strategy';
+import { AzureOpenAIClientFactory, DefaultAzureCredentialProviderFactory } from './azure-openai-client.factory';
+import { RequestAwareAzureProvider } from './request-aware-azure.provider';
 import type { AppConfig } from '../config/app.config';
 
 @Module({
   providers: [
+    DefaultAzureCredentialProviderFactory,
+    AzureOpenAIClientFactory,
     {
       provide: PROVIDER_TOKEN,
-      useFactory: (configService: ConfigService): OpenAICompatibleProvider => {
-        const ip = configService.get<AppConfig['imageProvider']>('imageProvider')!;
-
+      useFactory: (config: ConfigService, azureClients: AzureOpenAIClientFactory): IImageProvider => {
+        const ip = config.get<AppConfig['imageProvider']>('imageProvider')!;
         if (ip.name === 'azure') {
-          // Azure endpoint: https://my-resource.openai.azure.com → append /openai/v1
-          const baseURL = ip.baseUrl.replace(/\/$/, '') + '/openai/v1';
-          const client = new OpenAI({ baseURL, apiKey: ip.apiKey! });
-          const strategy = new AzureStrategy(ip.deployment!);
-          return new OpenAICompatibleProvider(client, strategy);
+          if (ip.azureAuthMode === 'on_behalf_of') return new RequestAwareAzureProvider(azureClients, ip.deployment!, ip.azureAuthMode);
+          return new OpenAICompatibleProvider(azureClients.create(ip), new AzureStrategy(ip.deployment!, ip.azureAuthMode));
         }
-
-        if (ip.name === 'together') {
-          // Together AI base URL is always hardcoded — IMAGE_BASE_URL is not used
-          const client = new OpenAI({
-            baseURL: 'https://api.together.xyz/v1',
-            apiKey: ip.apiKey!,
-          });
-          const strategy = new TogetherStrategy();
-          return new OpenAICompatibleProvider(client, strategy);
-        }
-
-        if (ip.name === 'custom') {
-          const client = new OpenAI({
-            baseURL: ip.baseUrl,
-            apiKey: ip.apiKey || 'none',
-          });
-          const strategy = new CustomStrategy();
-          return new OpenAICompatibleProvider(client, strategy);
-        }
-
-        // Default: OpenAI (direct or via compatible endpoint)
-        const client = new OpenAI({
-          apiKey: ip.apiKey!,
-          baseURL: ip.baseUrl,
-        });
-        const strategy = new OpenAIStrategy();
-        return new OpenAICompatibleProvider(client, strategy);
+        if (ip.name === 'together') return new OpenAICompatibleProvider(new OpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey: ip.apiKey! }), new TogetherStrategy());
+        if (ip.name === 'custom') return new OpenAICompatibleProvider(new OpenAI({ baseURL: ip.baseUrl, apiKey: ip.apiKey || 'none' }), new CustomStrategy());
+        return new OpenAICompatibleProvider(new OpenAI({ apiKey: ip.apiKey!, baseURL: ip.baseUrl }), new OpenAIStrategy());
       },
-      inject: [ConfigService],
+      inject: [ConfigService, AzureOpenAIClientFactory],
     },
   ],
-  exports: [PROVIDER_TOKEN],
+  exports: [PROVIDER_TOKEN, AzureOpenAIClientFactory],
 })
 export class ProvidersModule {}

@@ -1,13 +1,17 @@
 import { maskSecret } from '../../security/sanitise';
 import type { ProviderStrategy } from './provider.strategy';
 import type { GenerateParams, EditParams } from '../provider.interface';
+import type { AzureAuthMode } from '../../config/app.config';
 
 export class AzureStrategy implements ProviderStrategy {
   readonly name = 'azure' as const;
   readonly logPrefix = '[Azure]';
   readonly supportsVariation = false;
 
-  constructor(private readonly deployment: string) {}
+  constructor(
+    private readonly deployment: string,
+    private readonly authMode: AzureAuthMode = 'api_key',
+  ) {}
 
   resolveModel(_params: Pick<GenerateParams, 'model'>): string {
     // Azure always uses the deployment name, not the model from params
@@ -32,11 +36,17 @@ export class AzureStrategy implements ProviderStrategy {
         return new Error(`Rate limit exceeded (Azure): ${msg}. Please wait before retrying.`);
       }
       if (msg.includes('401') || msg.toLowerCase().includes('unauthorized')) {
-        return new Error('Authentication failed: invalid API key for Azure AI Foundry provider.');
+        return new Error(
+          this.authMode === 'azure_cli'
+            ? 'Azure CLI authentication failed. Run `az login`, verify IMAGE_AZURE_TENANT_ID, and retry.'
+            : this.authMode === 'on_behalf_of'
+              ? 'Microsoft Entra OBO authentication failed. Acquire a fresh MCP token and verify server consent and confidential credentials.'
+              : 'Authentication failed: invalid API key for Azure AI Foundry provider.',
+        );
       }
       if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
         return new Error(
-          `Access denied (Azure): ${msg}. ` +
+          `Access denied (Azure): ${msg}. Verify Azure OpenAI RBAC permissions for the selected identity. ` +
           `gpt-image-1, gpt-image-1.5, and gpt-image-1-mini require limited-access registration — ` +
           `apply at https://aka.ms/oai/gptimage1access. ` +
           `gpt-image-2 is Public Preview and does not require prior approval.`,

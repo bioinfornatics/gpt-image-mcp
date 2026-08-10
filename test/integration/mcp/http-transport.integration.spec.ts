@@ -253,10 +253,14 @@ describe('MCP HTTP Transport — Integration', () => {
     let guardedApp: INestApplication;
 
     beforeAll(async () => {
-      guardedApp = await buildApp({ IMAGE_MCP_API_KEY: 'test-secret-mcp-key' });
+      guardedApp = await buildApp({
+        IMAGE_MCP_AUTH_MODE: 'static_bearer',
+        IMAGE_MCP_API_KEY: 'test-secret-mcp-key',
+      });
     });
 
     afterAll(async () => {
+      delete process.env['IMAGE_MCP_AUTH_MODE'];
       delete process.env['IMAGE_MCP_API_KEY'];
       await guardedApp.close();
     });

@@ -29,6 +29,7 @@ const FILE_SOURCEABLE_VARS = [
   // New unified names
   'IMAGE_API_KEY',
   'IMAGE_MCP_API_KEY',
+  'IMAGE_ENTRA_CLIENT_SECRET',
   // Deprecated — kept so IMAGE_API_KEY_FILE is NOT the only _FILE mechanism;
   // old OPENAI_API_KEY_FILE / AZURE_OPENAI_API_KEY_FILE configs still work:
   // resolveFileSecrets() sets OPENAI_API_KEY, then resolveImageEnvAliases()
@@ -131,6 +132,7 @@ const KEYTAR_SERVICE = 'gpt-image-mcp';
 const KEYTAR_ACCOUNT_MAP: Record<FileSourceableVar, string> = {
   IMAGE_API_KEY: 'image-api-key',
   IMAGE_MCP_API_KEY: 'mcp-api-key',
+  IMAGE_ENTRA_CLIENT_SECRET: 'entra-client-secret',
   // Deprecated aliases — map to old keychain accounts for backward compat
   OPENAI_API_KEY: 'openai-api-key',
   AZURE_OPENAI_API_KEY: 'azure-openai-api-key',

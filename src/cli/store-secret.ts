@@ -16,7 +16,7 @@ import * as readline from 'readline';
 import { storeKeytarSecret, deleteKeytarSecret } from '../config/secret-loader';
 import type { FileSourceableVar } from '../config/secret-loader';
 
-const SUPPORTED: FileSourceableVar[] = ['IMAGE_API_KEY', 'IMAGE_MCP_API_KEY'];
+const SUPPORTED: FileSourceableVar[] = ['IMAGE_API_KEY', 'IMAGE_MCP_API_KEY', 'IMAGE_ENTRA_CLIENT_SECRET'];
 
 const varName = process.argv[2] as FileSourceableVar | undefined;
 const action  = process.argv[3] ?? 'store'; // 'store' | 'delete'

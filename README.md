@@ -98,10 +98,21 @@ docker run -p 3000:3000 \
 
 ## Configuration
 
+Azure users can choose among **API key**, **Azure CLI**, and **Microsoft Entra OBO**. Start with the [authentication decision guide](docs/authentication/README.md).
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `IMAGE_PROVIDER` | ✅ | — | `openai`, `azure`, `together`, or `custom` |
-| `IMAGE_API_KEY` | ✅ | — | API key for the configured provider |
+| `IMAGE_API_KEY` | Conditional | — | API key for OpenAI/Together and Azure `api_key` mode |
+| `IMAGE_AZURE_AUTH_MODE` | Azure only | inferred from existing key | `api_key`, `azure_cli`, or `on_behalf_of` |
+| `IMAGE_AZURE_TENANT_ID` | ❌ | active CLI tenant | Optional tenant for `azure_cli` |
+| `IMAGE_MCP_AUTH_MODE` | ❌ | transport-sensitive | `none`, `static_bearer`, or `entra`; OBO requires `entra` |
+| `IMAGE_ENTRA_TENANT_ID` | OBO | — | Trusted Entra tenant |
+| `IMAGE_ENTRA_CLIENT_ID` | OBO | — | MCP server app registration ID |
+| `IMAGE_ENTRA_AUDIENCE` | OBO | — | Exact MCP API token audience |
+| `IMAGE_ENTRA_SCOPE` | OBO | `mcp.access` | Required delegated scope |
+| `IMAGE_ENTRA_ALLOWED_CLIENT_IDS` | ❌ | all | Comma-separated allowed OAuth clients |
+| `IMAGE_ENTRA_CLIENT_SECRET` | Current OBO baseline | — | Confidential credential; use a secure secret source |
 | `IMAGE_BASE_URL` | ✅ if `azure`/`custom` | `https://api.openai.com/v1` | Provider endpoint (Azure resource URL or custom OpenAI-compatible URL) |
 | `IMAGE_DEPLOYMENT` | ✅ if `azure` | — | Azure deployment name |
 | `IMAGE_API_VERSION` | ❌ | `2025-04-01-preview` | Azure API version |

@@ -8,6 +8,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Three Azure authentication modes: API key, local Azure CLI, and Microsoft Entra On-Behalf-Of.
+- Entra JWT validation, request-isolated OBO exchange, privacy-safe auth telemetry, and `auth doctor`.
+- Enterprise authentication guides and Azure Container Apps Bicep starter.
+
+### Security
+- OBO confidential secrets support `_FILE` and OS keychain backends.
+- Dependency audit is clean through moderate severity.
+
 ## [0.1.2] — 2026-08-10
 
 ### Fixed

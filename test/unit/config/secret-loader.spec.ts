@@ -135,6 +135,17 @@ describe('resolveFileSecrets()', () => {
     }
   });
 
+  it('should inject IMAGE_ENTRA_CLIENT_SECRET from its _FILE source', () => {
+    const file = writeTmpSecret('entra-secret-from-file');
+    try {
+      process.env['IMAGE_ENTRA_CLIENT_SECRET_FILE'] = file;
+      delete process.env['IMAGE_ENTRA_CLIENT_SECRET'];
+      resolveFileSecrets();
+      expect(process.env['IMAGE_ENTRA_CLIENT_SECRET']).toBe('entra-secret-from-file');
+      expect(process.env['IMAGE_ENTRA_CLIENT_SECRET_FILE']).toBeUndefined();
+    } finally { cleanup(file); }
+  });
+
   it('should inject IMAGE_API_KEY from IMAGE_API_KEY_FILE', () => {
     const file = writeTmpSecret('image-api-key-from-file');
     try {

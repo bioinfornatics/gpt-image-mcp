@@ -17,6 +17,10 @@ import { resolveSecrets } from './config/secret-loader';
 import { getMcpRuntimeConfig, isCompatibleHttpServerRunning } from './config/mcp-runtime.config';
 
 async function bootstrap() {
+  if (process.argv[2] === 'auth' && process.argv[3] === 'doctor') {
+    await import('./cli/auth-doctor');
+    return;
+  }
   // Resolve secrets BEFORE NestJS bootstrap so Joi validation sees the real values.
   // Supports: *_FILE env vars (Docker/K8s secrets), OS keychain (keytar), plain env vars.
   await resolveSecrets();
