@@ -44,6 +44,9 @@ jobs:
           IMAGE_PORT: 3001
           IMAGE_LOG_LEVEL: error
           IMAGE_OUTPUT_DIR: /tmp/gpt-image-mcp-test-output
+          IMAGE_USE_ELICITATION: "false"
+          IMAGE_USE_SAMPLING: "false"
+          IMAGE_MAX_REQUESTS_PER_MINUTE: "1000"
 
       - name: Check coverage thresholds (aggregate, excluding bootstrap files)
         run: |
