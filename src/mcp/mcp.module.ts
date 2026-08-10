@@ -10,6 +10,7 @@ import { ProviderValidateTool } from './tools/provider-validate.tool';
 import { ElicitationService } from './features/elicitation.service';
 import { SamplingService } from './features/sampling.service';
 import { RootsService } from './features/roots.service';
+import { ImageStorageService } from './features/image-storage.service';
 import { ProvidersModule } from '../providers/providers.module';
 
 @Module({
@@ -28,6 +29,7 @@ import { ProvidersModule } from '../providers/providers.module';
     ElicitationService,
     SamplingService,
     RootsService,
+    ImageStorageService,
   ],
   exports: [McpServerService],
 })

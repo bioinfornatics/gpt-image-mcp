@@ -11,6 +11,7 @@ import type { IImageProvider, ImageResult } from '../../../../src/providers/prov
 import { ElicitationService } from '../../../../src/mcp/features/elicitation.service';
 import { SamplingService } from '../../../../src/mcp/features/sampling.service';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
+import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 
 const MOCK_RESULT: ImageResult = {
   b64_json: 'ZmVhdHVyZXNUZXN0',
@@ -73,6 +74,7 @@ describe('ImageGenerateTool — with M4 features', () => {
         { provide: ElicitationService, useValue: mockElicitation },
         { provide: SamplingService, useValue: mockSampling },
         { provide: RootsService, useValue: mockRoots },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
       ],
     }).compile();
 
@@ -347,7 +349,8 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const text: string = result.content[0].text;
-      expect(text).not.toContain('Saved to');
+      expect(text).toContain('/tmp/gpt-image-mcp/image.png');
+      expect(text).not.toContain('Workspace copy:');
     });
   });
 
@@ -356,17 +359,17 @@ describe('ImageGenerateTool — with M4 features', () => {
   describe('H4: output_format in data URI', () => {
     it('should use png in data URI when output_format not specified', async () => {
       const result = await tool.execute({ prompt: 'a cat' });
-      expect(result.content[0].text).toContain('data:image/png;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
 
     it('should use webp in data URI when output_format=webp', async () => {
       const result = await tool.execute({ prompt: 'a cat', output_format: 'webp' });
-      expect(result.content[0].text).toContain('data:image/webp;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/webp' }));
     });
 
     it('should use jpeg in data URI when output_format=jpeg', async () => {
       const result = await tool.execute({ prompt: 'a cat', output_format: 'jpeg' });
-      expect(result.content[0].text).toContain('data:image/jpeg;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/jpeg' }));
     });
   });
 
@@ -410,7 +413,8 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].saved_to).toBe(savedPath);
+      expect(parsed.images[0].saved_to).toBe('/tmp/gpt-image-mcp/image.png');
+      expect(parsed.images[0].workspace_copy).toBe(savedPath);
     });
 
     it('should omit saved_to from JSON output when not saved', async () => {
@@ -421,7 +425,8 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0]).not.toHaveProperty('saved_to');
+      expect(parsed.images[0].saved_to).toBe('/tmp/gpt-image-mcp/image.png');
+      expect(parsed.images[0]).not.toHaveProperty('workspace_copy');
     });
   });
 });

@@ -3,6 +3,7 @@ import { ImageVariationTool } from '../../../../src/mcp/tools/image-variation.to
 import { PROVIDER_TOKEN } from '../../../../src/providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
+import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 
 const mockResult: ImageResult = { b64_json: 'dmFyaWF0aW9u', model: 'dall-e-2', created: 0 };
 
@@ -27,6 +28,7 @@ describe('ImageVariationTool', () => {
         ImageVariationTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
         { provide: RootsService, useValue: mockRoots },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
       ],
     }).compile();
     tool = module.get(ImageVariationTool);
@@ -39,7 +41,7 @@ describe('ImageVariationTool', () => {
       mockProvider.variation.mockResolvedValue([mockResult]);
       const result = await tool.execute({ image: VALID_B64 });
       expect(result.isError).toBeUndefined();
-      expect(result.content[0].text).toContain(mockResult.b64_json);
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', data: mockResult.b64_json, mimeType: 'image/png' }));
     });
 
     it('should propagate provider errors', async () => {
@@ -51,7 +53,7 @@ describe('ImageVariationTool', () => {
     it('should use png MIME type in data URI', async () => {
       mockProvider.variation.mockResolvedValue([mockResult]);
       const result = await tool.execute({ image: VALID_B64 });
-      expect(result.content[0].text).toContain('data:image/png;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
   });
 
@@ -114,7 +116,8 @@ describe('ImageVariationTool', () => {
         mockServer,
       );
 
-      expect(result.content[0].text).not.toContain('Saved to');
+      expect(result.content[0].text).toContain('Saved to');
+      expect(result.content[0].text).not.toContain('Workspace copy:');
     });
   });
 

@@ -112,8 +112,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
       expect(res.status).toBe(200);
       expect(res.body.result).toBeDefined();
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
-      expect(text).toContain(FAKE_IMAGE.b64_json);
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: FAKE_IMAGE.b64_json }));
     });
 
     it('n=2 returns 2 images', async () => {
@@ -127,9 +126,8 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
-      expect(text).toContain(FAKE_IMAGE.b64_json);
-      expect(text).toContain(second.b64_json);
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: FAKE_IMAGE.b64_json }));
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: second.b64_json }));
     });
 
     it('response_format=json returns parseable JSON with images array', async () => {
@@ -143,11 +141,10 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
       const parsed = JSON.parse(text);
       expect(parsed).toHaveProperty('images');
       expect(Array.isArray(parsed.images)).toBe(true);
-      expect(parsed.images[0].b64_json).toBe(FAKE_IMAGE.b64_json);
+      expect(parsed.images[0].saved_to).toBeString();
     });
 
     it('empty prompt returns isError: true', async () => {
@@ -199,8 +196,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
-      expect(text).toContain(FAKE_IMAGE.b64_json);
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: FAKE_IMAGE.b64_json }));
     });
 
     it('valid image + mask + prompt calls provider with mask', async () => {
@@ -247,8 +243,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
-      expect(text).toContain(FAKE_IMAGE.b64_json);
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: FAKE_IMAGE.b64_json }));
     });
 
     it('azure provider returns isError: true (not supported)', async () => {
@@ -279,7 +274,6 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
       expect(text).toMatch(/openai/i);
     });
   });
@@ -295,7 +289,6 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const text: string = res.body.result.content[0].text;
       expect(text).toContain('✅');
     });
 

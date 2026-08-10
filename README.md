@@ -116,7 +116,10 @@ docker run -p 3000:3000 \
 | `IMAGE_USE_ELICITATION` | ❌ | `true` | Enable MCP Elicitation |
 | `IMAGE_USE_SAMPLING` | ❌ | `true` | Enable MCP Sampling |
 | `IMAGE_MAX_REQUESTS_PER_MINUTE` | ❌ | `60` | Rate limit per client |
+| `IMAGE_OUTPUT_DIR` | ❌ | OS Pictures directory | Override the directory where every generated image is persisted |
 | `IMAGE_LOG_LEVEL` | ❌ | `info` | `debug`/`info`/`warn`/`error` |
+
+Every generated, edited, or variation image is returned as native MCP image content and persisted automatically. The default directory is the freedesktop `XDG_PICTURES_DIR/gpt-image-mcp` on Linux (falling back to `~/Images/gpt-image-mcp`), `~/Pictures/gpt-image-mcp` on macOS, and `%USERPROFILE%\\Pictures\\gpt-image-mcp` on Windows. `save_to_workspace: true` additionally creates a copy in the MCP workspace.
 
 ---
 

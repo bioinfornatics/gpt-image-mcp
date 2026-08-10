@@ -4,6 +4,7 @@ import type { Server } from '@modelcontextprotocol/server';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { RootsService } from '../features/roots.service';
+import { ImageStorageService, imageMimeType, pathToFileUri, type ImageFormat } from '../features/image-storage.service';
 import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
@@ -14,6 +15,7 @@ export class ImageEditTool {
   constructor(
     @Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider,
     private readonly roots: RootsService,
+    private readonly storage: ImageStorageService,
   ) {}
 
   register(server: McpServer) {
@@ -114,23 +116,36 @@ Returns: Base64-encoded edited image(s).`,
         input_fidelity: params.input_fidelity,
       });
 
-      // M4: Roots — save to workspace if requested and server available
-      const savedPaths: string[] = [];
+      const outputFormat = (params.output_format ?? 'png') as ImageFormat;
+      const savedPaths = await Promise.all(
+        results.map((img) => this.storage.saveImage(img.b64_json, outputFormat)),
+      );
+      const workspacePaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
-          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, format);
-          if (saved) savedPaths.push(saved);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, outputFormat);
+          if (saved) workspacePaths.push(saved);
         }
       }
-
-      const outputFormat = params.output_format ?? 'png';
-      const text =
-        params.response_format === ResponseFormat.JSON
-          ? JSON.stringify({ count: results.length, images: results }, null, 2)
-          : this.formatMarkdown(results, params.prompt, savedPaths, outputFormat);
-
-      return { content: [{ type: 'text' as const, text }] };
+      const text = params.response_format === ResponseFormat.JSON
+        ? JSON.stringify({ count: results.length, images: results.map((img, i) => ({
+            model: img.model, created: img.created, saved_to: savedPaths[i],
+            file_uri: pathToFileUri(savedPaths[i]),
+            ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
+          })) }, null, 2)
+        : this.formatMarkdown(results, savedPaths, workspacePaths, params.prompt);
+      const mimeType = imageMimeType(outputFormat);
+      return {
+        content: [
+          { type: 'text' as const, text },
+          ...results.flatMap((img, i) => [
+            { type: 'image' as const, data: img.b64_json, mimeType },
+            { type: 'resource_link' as const, uri: pathToFileUri(savedPaths[i]),
+              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${outputFormat}`,
+              description: 'Persisted edit image', mimeType },
+          ]),
+        ],
+      };
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_edit failed: ${message}`);
@@ -142,21 +157,15 @@ Returns: Base64-encoded edited image(s).`,
   }
 
   private formatMarkdown(
-    results: ImageResult[],
-    prompt: string,
-    savedPaths: string[] = [],
-    outputFormat = 'png',
+    results: ImageResult[], savedPaths: string[], workspacePaths: string[] = [], prompt: string,
   ): string {
-    const lines = [`# Edited Image(s)`, ``, `**Prompt:** ${prompt}`, ``];
+    const lines = ['# Edited Image(s)', '', `**Prompt:** ${prompt}`, ''];
     for (const [i, img] of results.entries()) {
-      lines.push(`## Image ${i + 1}`);
-      lines.push(`**Model:** ${img.model}`);
-      if (savedPaths[i]) {
-        lines.push(`**Saved to:** ${savedPaths[i]}`);
-      }
-      lines.push(`**Data:** data:image/${outputFormat};base64,${img.b64_json}`);
+      lines.push(`## Image ${i + 1}`, `**Model:** ${img.model}`, `**Saved to:** ${savedPaths[i]}`);
+      if (workspacePaths[i]) lines.push(`**Workspace copy:** ${workspacePaths[i]}`);
       lines.push('');
     }
     return lines.join('\n');
   }
+
 }

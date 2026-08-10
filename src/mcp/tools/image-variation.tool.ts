@@ -5,6 +5,7 @@ import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { maskSecret } from '../../security/sanitise';
 import { RootsService } from '../features/roots.service';
+import { ImageStorageService, imageMimeType, pathToFileUri, type ImageFormat } from '../features/image-storage.service';
 import { ImageVariationSchema, ResponseFormat } from './schemas';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ImageVariationTool {
   constructor(
     @Inject(PROVIDER_TOKEN) private readonly provider: IImageProvider,
     private readonly roots: RootsService,
+    private readonly storage: ImageStorageService,
   ) {}
 
   register(server: McpServer) {
@@ -82,21 +84,36 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
         size: params.size,
       });
 
-      // M4: Roots — save to workspace if requested and server available
-      const savedPaths: string[] = [];
+      const outputFormat = 'png' as ImageFormat;
+      const savedPaths = await Promise.all(
+        results.map((img) => this.storage.saveImage(img.b64_json, outputFormat)),
+      );
+      const workspacePaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, 'png');
-          if (saved) savedPaths.push(saved);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, outputFormat);
+          if (saved) workspacePaths.push(saved);
         }
       }
-
-      const text =
-        params.response_format === ResponseFormat.JSON
-          ? JSON.stringify({ count: results.length, images: results }, null, 2)
-          : this.formatMarkdown(results, savedPaths);
-
-      return { content: [{ type: 'text' as const, text }] };
+      const text = params.response_format === ResponseFormat.JSON
+        ? JSON.stringify({ count: results.length, images: results.map((img, i) => ({
+            model: img.model, created: img.created, saved_to: savedPaths[i],
+            file_uri: pathToFileUri(savedPaths[i]),
+            ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
+          })) }, null, 2)
+        : this.formatMarkdown(results, savedPaths, workspacePaths);
+      const mimeType = imageMimeType(outputFormat);
+      return {
+        content: [
+          { type: 'text' as const, text },
+          ...results.flatMap((img, i) => [
+            { type: 'image' as const, data: img.b64_json, mimeType },
+            { type: 'resource_link' as const, uri: pathToFileUri(savedPaths[i]),
+              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${outputFormat}`,
+              description: 'Persisted variation image', mimeType },
+          ]),
+        ],
+      };
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_variation failed: ${message}`);
@@ -107,16 +124,16 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
     }
   }
 
-  private formatMarkdown(results: ImageResult[], savedPaths: string[] = []): string {
-    const lines = [`# Image Variation(s)`, ``];
+  private formatMarkdown(
+    results: ImageResult[], savedPaths: string[], workspacePaths: string[] = [],
+  ): string {
+    const lines = ['# Image Variation(s)', ''];
     for (const [i, img] of results.entries()) {
-      lines.push(`## Variation ${i + 1}`);
-      if (savedPaths[i]) {
-        lines.push(`**Saved to:** ${savedPaths[i]}`);
-      }
-      lines.push(`**Data:** data:image/png;base64,${img.b64_json}`);
+      lines.push(`## Image ${i + 1}`, `**Model:** ${img.model}`, `**Saved to:** ${savedPaths[i]}`);
+      if (workspacePaths[i]) lines.push(`**Workspace copy:** ${workspacePaths[i]}`);
       lines.push('');
     }
     return lines.join('\n');
   }
+
 }

@@ -177,7 +177,7 @@ describe('MCP HTTP Transport — Integration', () => {
       });
 
       expect(res.status).toBe(200);
-      expect(res.body.result.content[0].text).toContain(FAKE_IMAGE.b64_json);
+      expect(res.body.result.content).toContainEqual(expect.objectContaining({ type: 'image', data: FAKE_IMAGE.b64_json }));
       expect(mockProvider.generate).toHaveBeenCalledTimes(1);
     });
 
@@ -209,7 +209,7 @@ describe('MCP HTTP Transport — Integration', () => {
 
       expect(res.status).toBe(200);
       const parsed = JSON.parse(res.body.result.content[0].text);
-      expect(parsed.images[0].b64_json).toBe(FAKE_IMAGE.b64_json);
+      expect(parsed.images[0].saved_to).toBeString();
     });
   });
 

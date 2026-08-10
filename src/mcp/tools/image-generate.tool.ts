@@ -6,6 +6,7 @@ import type { IImageProvider, ImageResult } from '../../providers/provider.inter
 import { ElicitationService } from '../features/elicitation.service';
 import { SamplingService } from '../features/sampling.service';
 import { RootsService } from '../features/roots.service';
+import { ImageStorageService, imageMimeType, pathToFileUri, type ImageFormat } from '../features/image-storage.service';
 import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT, resolveModeration } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 
@@ -18,6 +19,7 @@ export class ImageGenerateTool {
     private readonly elicitation: ElicitationService,
     private readonly sampling: SamplingService,
     private readonly roots: RootsService,
+    private readonly storage: ImageStorageService,
   ) {}
 
   register(server: McpServer) {
@@ -146,24 +148,37 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         moderation: resolveModeration(params.moderation),
       });
 
-      // M4: Roots — save to workspace if requested and server available
-      const savedPaths: string[] = [];
+      const outputFormat = (params.output_format ?? 'png') as ImageFormat;
+      const savedPaths = await Promise.all(
+        results.map((img) => this.storage.saveImage(img.b64_json, outputFormat)),
+      );
+
+      const workspacePaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const format = (params.output_format ?? 'png') as 'png' | 'jpeg' | 'webp';
-          const path = await this.roots.saveImageToWorkspace(server, img.b64_json, format);
-          if (path) savedPaths.push(path);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, outputFormat);
+          if (saved) workspacePaths.push(saved);
         }
       }
 
-      const outputFormat = params.output_format ?? 'png';
-      const text =
-        params.response_format === ResponseFormat.JSON
-          ? this.formatJson(results, params.model, savedPaths)
-          : this.formatMarkdown(results, prompt, savedPaths, outputFormat);
-
+      const text = params.response_format === ResponseFormat.JSON
+        ? this.formatJson(results, params.model, savedPaths, workspacePaths)
+        : this.formatMarkdown(results, prompt, savedPaths, workspacePaths);
+      const mimeType = imageMimeType(outputFormat);
       return {
-        content: [{ type: 'text' as const, text }],
+        content: [
+          { type: 'text' as const, text },
+          ...results.flatMap((img, i) => [
+            { type: 'image' as const, data: img.b64_json, mimeType },
+            {
+              type: 'resource_link' as const,
+              uri: pathToFileUri(savedPaths[i]),
+              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${outputFormat}`,
+              description: 'Persisted generated image',
+              mimeType,
+            },
+          ]),
+        ],
       };
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
@@ -178,40 +193,38 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
   private formatMarkdown(
     results: ImageResult[],
     prompt: string,
-    savedPaths: string[] = [],
-    outputFormat = 'png',
+    savedPaths: string[],
+    workspacePaths: string[] = [],
   ): string {
-    const lines = [`# Generated Image(s)`, ``, `**Prompt:** ${prompt}`, ``];
+    const lines = ['# Generated Image(s)', '', `**Prompt:** ${prompt}`, ''];
     for (const [i, img] of results.entries()) {
-      lines.push(`## Image ${i + 1}`);
-      lines.push(`**Model:** ${img.model}`);
-      if (img.revised_prompt) {
-        lines.push(`**Revised prompt:** ${img.revised_prompt}`);
-      }
-      if (savedPaths[i]) {
-        lines.push(`**Saved to:** ${savedPaths[i]}`);
-      }
-      lines.push(`**Data:** data:image/${outputFormat};base64,${img.b64_json}`);
+      lines.push(`## Image ${i + 1}`, `**Model:** ${img.model}`);
+      if (img.revised_prompt) lines.push(`**Revised prompt:** ${img.revised_prompt}`);
+      lines.push(`**Saved to:** ${savedPaths[i]}`);
+      if (workspacePaths[i]) lines.push(`**Workspace copy:** ${workspacePaths[i]}`);
       lines.push('');
     }
     return lines.join('\n');
   }
 
-  private formatJson(results: ImageResult[], model: string, savedPaths: string[] = []): string {
-    return JSON.stringify(
-      {
-        model,
-        count: results.length,
-        images: results.map((img, i) => ({
-          index: i,
-          b64_json: img.b64_json,
-          revised_prompt: img.revised_prompt,
-          created: img.created,
-          ...(savedPaths[i] ? { saved_to: savedPaths[i] } : {}),
-        })),
-      },
-      null,
-      2,
-    );
+  private formatJson(
+    results: ImageResult[],
+    model: string,
+    savedPaths: string[],
+    workspacePaths: string[] = [],
+  ): string {
+    return JSON.stringify({
+      model,
+      count: results.length,
+      images: results.map((img, i) => ({
+        index: i,
+        saved_to: savedPaths[i],
+        file_uri: pathToFileUri(savedPaths[i]),
+        revised_prompt: img.revised_prompt,
+        created: img.created,
+        ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
+      })),
+    }, null, 2);
   }
+
 }

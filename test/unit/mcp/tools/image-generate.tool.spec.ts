@@ -4,6 +4,7 @@ import { PROVIDER_TOKEN } from '../../../../src/providers/provider.interface';
 import { ElicitationService } from '../../../../src/mcp/features/elicitation.service';
 import { SamplingService } from '../../../../src/mcp/features/sampling.service';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
+import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
 import { LATEST_MODEL } from '../../../../src/config/models';
 
@@ -33,6 +34,7 @@ describe('ImageGenerateTool', () => {
         { provide: ElicitationService, useValue: { isEnabled: false, requestImageParams: jest.fn().mockResolvedValue(null) } },
         { provide: SamplingService, useValue: { isEnabled: false, enhancePrompt: jest.fn().mockImplementation((_s, p, _ctx) => Promise.resolve(p)) } },
         { provide: RootsService, useValue: { getRoots: jest.fn().mockResolvedValue([]), saveImageToWorkspace: jest.fn().mockResolvedValue(null) } },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
       ],
     }).compile();
 
@@ -80,7 +82,7 @@ describe('ImageGenerateTool', () => {
     it('should return markdown by default containing base64 data', async () => {
       const result = await tool.execute({ prompt: 'a cat' });
       expect(result.isError).toBeUndefined();
-      expect(result.content[0].text).toContain(mockImageResult.b64_json);
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', data: mockImageResult.b64_json, mimeType: 'image/png' }));
       expect(result.content[0].text).toContain('# Generated Image');
     });
 
@@ -88,7 +90,7 @@ describe('ImageGenerateTool', () => {
       const result = await tool.execute({ prompt: 'a cat', response_format: 'json' });
       expect(result.isError).toBeUndefined();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].b64_json).toBe(mockImageResult.b64_json);
+      expect(parsed.images[0].saved_to).toContain('/tmp/gpt-image-mcp/');
     });
 
     it('should pass all parameters through to the provider (moderation gated to auto without IMAGE_ALLOW_LOW_MODERATION)', async () => {

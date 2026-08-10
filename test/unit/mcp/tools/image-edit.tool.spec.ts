@@ -3,6 +3,7 @@ import { ImageEditTool } from '../../../../src/mcp/tools/image-edit.tool';
 import { PROVIDER_TOKEN } from '../../../../src/providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
+import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 
 const mockResult: ImageResult = {
   b64_json: 'ZWRpdGVkaW1hZ2U=',
@@ -31,6 +32,7 @@ describe('ImageEditTool', () => {
         ImageEditTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
         { provide: RootsService, useValue: mockRoots },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
       ],
     }).compile();
     tool = module.get(ImageEditTool);
@@ -69,14 +71,14 @@ describe('ImageEditTool', () => {
 
     it('should return markdown with base64 data by default', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
-      expect(result.content[0].text).toContain(mockResult.b64_json);
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', data: mockResult.b64_json, mimeType: 'image/png' }));
       expect(result.content[0].text).toContain('# Edited Image');
     });
 
     it('should return JSON when response_format=json', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', response_format: 'json' });
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].b64_json).toBe(mockResult.b64_json);
+      expect(parsed.images[0].saved_to).toContain('/tmp/gpt-image-mcp/');
     });
 
     it('should pass model through to provider', async () => {
@@ -86,17 +88,17 @@ describe('ImageEditTool', () => {
 
     it('should use correct MIME type for output_format=jpeg in markdown', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'jpeg' });
-      expect(result.content[0].text).toContain('data:image/jpeg;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/jpeg' }));
     });
 
     it('should use correct MIME type for output_format=webp in markdown', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'webp' });
-      expect(result.content[0].text).toContain('data:image/webp;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/webp' }));
     });
 
     it('should default to png MIME type when output_format not set', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
-      expect(result.content[0].text).toContain('data:image/png;base64,');
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
   });
 
@@ -154,7 +156,8 @@ describe('ImageEditTool', () => {
         mockServer,
       );
 
-      expect(result.content[0].text).not.toContain('Saved to');
+      expect(result.content[0].text).toContain('Saved to');
+      expect(result.content[0].text).not.toContain('Workspace copy:');
     });
   });
 
