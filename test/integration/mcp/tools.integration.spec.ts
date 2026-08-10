@@ -141,7 +141,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(res.body.result.content[0].text);
       expect(parsed).toHaveProperty('images');
       expect(Array.isArray(parsed.images)).toBe(true);
       expect(parsed.images[0].saved_to).toBeString();
@@ -274,7 +274,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      expect(text).toMatch(/openai/i);
+      expect(res.body.result.content[0].text).toMatch(/openai/i);
     });
   });
 
@@ -289,7 +289,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.result.isError).toBeFalsy();
-      expect(text).toContain('✅');
+      expect(res.body.result.content[0].text).toContain('✅');
     });
 
     it('wrong provider name returns isError: true', async () => {
