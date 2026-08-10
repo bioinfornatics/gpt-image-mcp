@@ -20,6 +20,10 @@ RUN bun install --frozen-lockfile --production
 # ─────────────────────────────────────────────────────────────────────────────
 FROM oven/bun:1.3.12-alpine AS runtime
 
+# Refresh Alpine packages so the runtime contains current security fixes even
+# when the published Bun base-image digest lags behind the Alpine repository.
+RUN apk upgrade --no-cache
+
 WORKDIR /app
 
 # Security: run as non-root user
