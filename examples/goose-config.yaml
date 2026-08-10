@@ -1,7 +1,7 @@
 # Goose configuration for gpt-image-mcp
 # Merge the relevant extension block into: ~/.config/goose/config.yaml
 #
-# Documentation: https://block.github.io/goose/docs/configuration
+# Documentation: https://goose-docs.ai/docs/guides/config-files
 #
 # NOTE: Goose uses a map under `extensions:` (not a list).
 #       env_keys:  variables Goose reads from your host environment and forwards.
@@ -9,15 +9,16 @@
 
 extensions:
 
-  # ─── Option A: OpenAI — bunx (RECOMMENDED) ───────────────────────────────
+  # ─── Option A: OpenAI — npx (RECOMMENDED FOR END USERS) ───────────────────────────────
   gptimagemcp:
     enabled: true
     type: stdio
     name: GPT Image MCP
     description: AI image generation — gpt-image-1 via OpenAI
-    cmd: bunx
+    cmd: npx
     args:
-      - '@bioinfornatics/gpt-image-mcp'
+      - "--yes"
+      - "@bioinfornatics/gpt-image-mcp@0.1.2"
     envs:
       IMAGE_PROVIDER: openai
       IMAGE_MCP_TRANSPORT: stdio
@@ -34,9 +35,10 @@ extensions:
   #   type: stdio
   #   name: GPT Image MCP
   #   description: AI image generation — gpt-image-2 via Azure AI Foundry
-  #   cmd: bunx
+  #   cmd: npx
   #   args:
-  #     - '@bioinfornatics/gpt-image-mcp'
+  #     - "--yes"
+  #     - "@bioinfornatics/gpt-image-mcp@0.1.2"
   #   envs:
   #     IMAGE_PROVIDER: azure
   #     IMAGE_BASE_URL: https://my-resource.openai.azure.com
@@ -55,9 +57,10 @@ extensions:
   #   type: stdio
   #   name: GPT Image MCP (Together)
   #   description: AI image generation — FLUX models via Together AI
-  #   cmd: bunx
+  #   cmd: npx
   #   args:
-  #     - '@bioinfornatics/gpt-image-mcp'
+  #     - "--yes"
+  #     - "@bioinfornatics/gpt-image-mcp@0.1.2"
   #   envs:
   #     IMAGE_PROVIDER: together
   #     IMAGE_MCP_TRANSPORT: stdio
@@ -72,9 +75,10 @@ extensions:
   #   type: stdio
   #   name: GPT Image MCP (Custom)
   #   description: AI image generation via any OpenAI-compatible endpoint
-  #   cmd: bunx
+  #   cmd: npx
   #   args:
-  #     - '@bioinfornatics/gpt-image-mcp'
+  #     - "--yes"
+  #     - "@bioinfornatics/gpt-image-mcp@0.1.2"
   #   envs:
   #     IMAGE_PROVIDER: custom
   #     IMAGE_BASE_URL: https://openrouter.ai/api/v1
@@ -90,9 +94,10 @@ extensions:
   #   enabled: true
   #   type: stdio
   #   name: GPT Image MCP
-  #   cmd: bunx
+  #   cmd: npx
   #   args:
-  #     - '@bioinfornatics/gpt-image-mcp@0.0.2'
+  #     - "--yes"
+  #     - "@bioinfornatics/gpt-image-mcp@0.1.2"
   #   envs:
   #     IMAGE_PROVIDER: openai
   #     IMAGE_MCP_TRANSPORT: stdio

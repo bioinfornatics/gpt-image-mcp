@@ -8,6 +8,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-08-10
+
+### Fixed
+- Do not require HTTP bearer authentication in local `stdio` transport; HTTP remains authenticated by default.
+- Add an npx-first Goose HOWTO and correct end-user OpenAI/Azure examples.
+
 ## [0.1.1] — 2026-08-10
 
 ### Added
@@ -160,7 +166,8 @@ Migrate before upgrading to v0.3.0.
 
 ---
 
-[Unreleased]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.2...v0.1.0
 [0.0.2]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.1...v0.0.2

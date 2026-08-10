@@ -108,14 +108,18 @@ export const configValidationSchema = Joi.object({
   IMAGE_MCP_TRANSPORT: Joi.string().valid('http', 'stdio').optional().default('http'),
   IMAGE_PORT: Joi.number().integer().min(1).max(65535).optional().default(3000),
   IMAGE_REQUIRE_MCP_AUTH: Joi.boolean().optional().default(true),
-  IMAGE_MCP_API_KEY: Joi.when('IMAGE_REQUIRE_MCP_AUTH', {
-    is: true,
-    then: Joi.string().min(16).required().messages({
-      'any.required':
-        'IMAGE_MCP_API_KEY is required when IMAGE_REQUIRE_MCP_AUTH=true (default). Set IMAGE_REQUIRE_MCP_AUTH=false to allow unauthenticated access (local dev only).',
-      'string.min': 'IMAGE_MCP_API_KEY must be at least 16 characters.',
+  IMAGE_MCP_API_KEY: Joi.when('IMAGE_MCP_TRANSPORT', {
+    is: 'stdio',
+    then: Joi.string().optional(),
+    otherwise: Joi.when('IMAGE_REQUIRE_MCP_AUTH', {
+      is: true,
+      then: Joi.string().min(16).required().messages({
+        'any.required':
+          'IMAGE_MCP_API_KEY is required for HTTP when IMAGE_REQUIRE_MCP_AUTH=true (default). Set IMAGE_REQUIRE_MCP_AUTH=false only for trusted local HTTP use.',
+        'string.min': 'IMAGE_MCP_API_KEY must be at least 16 characters.',
+      }),
+      otherwise: Joi.string().optional(),
     }),
-    otherwise: Joi.string().optional(),
   }),
 
   // ── Features ──────────────────────────────────────────────────────────────
@@ -142,7 +146,8 @@ export const appConfig = (): AppConfig => ({
     transport: (process.env['IMAGE_MCP_TRANSPORT'] as 'http' | 'stdio') || 'http',
     port: parseInt(process.env['IMAGE_PORT'] || '3000', 10),
     apiKey: process.env['IMAGE_MCP_API_KEY'],
-    requireMcpAuth: process.env['IMAGE_REQUIRE_MCP_AUTH'] !== 'false',
+    requireMcpAuth:
+      process.env['IMAGE_MCP_TRANSPORT'] !== 'stdio' && process.env['IMAGE_REQUIRE_MCP_AUTH'] !== 'false',
     useElicitation: process.env['IMAGE_USE_ELICITATION'] !== 'false',
     useSampling: process.env['IMAGE_USE_SAMPLING'] !== 'false',
   },

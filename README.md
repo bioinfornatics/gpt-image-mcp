@@ -148,6 +148,8 @@ Every generated, edited, or variation image is returned as native MCP image cont
 
 ### Goose
 
+For a copy-paste `npx` setup on Linux, macOS, or Windows, including secrets, Azure, first-run verification, output paths, and troubleshooting, see **[Use gpt-image-mcp with Goose](docs/HOWTO_GOOSE.md)**.
+
 Add to `~/.config/goose/config.yaml` under `extensions:`:
 
 **OpenAI:**
@@ -158,9 +160,10 @@ extensions:
     type: stdio
     name: GPT Image MCP
     description: AI image generation — gpt-image-1 via OpenAI
-    cmd: bunx
+    cmd: npx
     args:
-      - '@bioinfornatics/gpt-image-mcp'
+      - "--yes"
+      - "@bioinfornatics/gpt-image-mcp@0.1.2"
     envs:
       IMAGE_PROVIDER: openai
       IMAGE_MCP_TRANSPORT: stdio
@@ -177,9 +180,10 @@ extensions:
     type: stdio
     name: GPT Image MCP
     description: AI image generation — gpt-image-2 via Azure AI Foundry
-    cmd: bunx
+    cmd: npx
     args:
-      - '@bioinfornatics/gpt-image-mcp'
+      - "--yes"
+      - "@bioinfornatics/gpt-image-mcp@0.1.2"
     envs:
       IMAGE_PROVIDER: azure
       IMAGE_BASE_URL: https://my-resource.openai.azure.com

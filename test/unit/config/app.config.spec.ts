@@ -96,10 +96,20 @@ describe('AppConfig validation', () => {
   });
 
   describe('IMAGE_REQUIRE_MCP_AUTH / IMAGE_MCP_API_KEY', () => {
-    it('should default IMAGE_REQUIRE_MCP_AUTH to true', () => {
+    it('should require authentication by default for HTTP', () => {
       expect(() =>
         validateConfig({ IMAGE_PROVIDER: 'openai', IMAGE_API_KEY: 'sk-test' }),
-      ).toThrow(/IMAGE_MCP_API_KEY is required when IMAGE_REQUIRE_MCP_AUTH=true/);
+      ).toThrow(/IMAGE_MCP_API_KEY is required for HTTP/);
+    });
+
+    it('should not require IMAGE_MCP_API_KEY for stdio', () => {
+      const result = validateConfig({
+        IMAGE_PROVIDER: 'openai',
+        IMAGE_API_KEY: 'sk-test',
+        IMAGE_MCP_TRANSPORT: 'stdio',
+      });
+      expect(result.IMAGE_MCP_TRANSPORT).toBe('stdio');
+      expect(result.IMAGE_MCP_API_KEY).toBeUndefined();
     });
 
     it('should require IMAGE_MCP_API_KEY of at least 16 chars when IMAGE_REQUIRE_MCP_AUTH=true', () => {
@@ -168,10 +178,18 @@ describe('AppConfig validation', () => {
       expect(config.mcp.requireMcpAuth).toBe(false);
     });
 
-    it('should set requireMcpAuth=true when IMAGE_REQUIRE_MCP_AUTH=true', () => {
+    it('should set requireMcpAuth=true when IMAGE_REQUIRE_MCP_AUTH=true over HTTP', () => {
+      process.env['IMAGE_MCP_TRANSPORT'] = 'http';
       process.env['IMAGE_REQUIRE_MCP_AUTH'] = 'true';
       const config = appConfig();
       expect(config.mcp.requireMcpAuth).toBe(true);
+    });
+
+    it('should always disable HTTP bearer authentication for stdio', () => {
+      process.env['IMAGE_MCP_TRANSPORT'] = 'stdio';
+      process.env['IMAGE_REQUIRE_MCP_AUTH'] = 'true';
+      const config = appConfig();
+      expect(config.mcp.requireMcpAuth).toBe(false);
     });
 
     it('should read IMAGE_PROVIDER into imageProvider.name', () => {
