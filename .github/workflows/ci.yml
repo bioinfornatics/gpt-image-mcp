@@ -43,6 +43,7 @@ jobs:
           IMAGE_MCP_TRANSPORT: http
           IMAGE_PORT: 3001
           IMAGE_LOG_LEVEL: error
+          IMAGE_OUTPUT_DIR: /tmp/gpt-image-mcp-test-output
 
       - name: Check coverage thresholds (aggregate, excluding bootstrap files)
         run: |
