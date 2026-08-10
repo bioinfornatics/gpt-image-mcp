@@ -195,6 +195,7 @@ jobs:
             -e IMAGE_PROVIDER=openai \
             -e IMAGE_API_KEY=sk-fake-ci-key \
             -e IMAGE_REQUIRE_MCP_AUTH=false \
+            -e IMAGE_HTTP_HOST=0.0.0.0 \
             -p 3002:3000 \
             gpt-image-mcp:ci
           for i in $(seq 1 12); do
