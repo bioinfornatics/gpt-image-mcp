@@ -13,4 +13,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
+
+# MCP hosts may intentionally launch child processes with a minimal environment.
+# Default this stdio-specific launcher to stdio so it can never accidentally bind
+# the HTTP port when the host omits or filters IMAGE_MCP_TRANSPORT.
+export IMAGE_MCP_TRANSPORT="${IMAGE_MCP_TRANSPORT:-stdio}"
+
 exec bun run src/main.ts "$@"

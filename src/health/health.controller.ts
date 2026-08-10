@@ -10,7 +10,7 @@ export class HealthController {
 
   @Get('live')
   liveness() {
-    return { status: 'ok', timestamp: new Date().toISOString() };
+    return { status: 'ok', service: 'gpt-image-mcp', timestamp: new Date().toISOString() };
   }
 
   @Get('ready')

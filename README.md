@@ -34,7 +34,7 @@
 
 ```bash
 # stdio transport (Claude Desktop, Goose, Cursor)
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... bunx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio bunx @bioinfornatics/gpt-image-mcp
 
 # HTTP transport on port 3000
 IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=http IMAGE_PORT=3000 bunx @bioinfornatics/gpt-image-mcp
@@ -50,8 +50,13 @@ IMAGE_PROVIDER=azure \
 **With `npx` (Node.js users):**
 
 ```bash
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... npx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio npx @bioinfornatics/gpt-image-mcp
 ```
+
+### Repeated launches and port reuse
+
+- **Goose and other local MCP hosts should use `stdio`.** Each host launch gets its own pipe-backed process and never binds the shared HTTP port. The packaged command should set `IMAGE_MCP_TRANSPORT=stdio`; the local `bin/start.sh` also defaults to `stdio` when it is omitted.
+- **HTTP is a persistent, multi-client server.** Start it once and configure Goose with a `streamable_http` URI. If the HTTP command is run again with the same host and port, it probes `/health/live`: a compatible `gpt-image-mcp` listener is reused and the duplicate process exits successfully. An unrelated listener still produces a port conflict rather than being mistaken for this server.
 
 ---
 

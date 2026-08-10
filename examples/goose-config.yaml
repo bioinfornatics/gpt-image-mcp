@@ -101,6 +101,8 @@ extensions:
   #   timeout: 300
 
   # ─── Option F: HTTP transport (remote / Docker server) ────────────────────
+  # Start the HTTP server once; Goose sessions reuse this URI. Re-running the
+  # same server command detects and reuses a compatible listener on the port.
   # gptimagemcp:
   #   enabled: true
   #   type: streamable_http

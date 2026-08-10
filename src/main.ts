@@ -14,6 +14,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { resolveSecrets } from './config/secret-loader';
+import { getMcpRuntimeConfig, isCompatibleHttpServerRunning } from './config/mcp-runtime.config';
 
 async function bootstrap() {
   // Resolve secrets BEFORE NestJS bootstrap so Joi validation sees the real values.
@@ -56,8 +57,7 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const transport = configService.get<string>('IMAGE_MCP_TRANSPORT', 'http');
-  const port = configService.get<number>('IMAGE_PORT', 3000);
+  const { transport, port } = getMcpRuntimeConfig(configService);
 
   if (transport === 'stdio') {
     // In stdio mode: connect MCP server via stdio transport
@@ -78,7 +78,21 @@ async function bootstrap() {
     fastify.addHook('onRequest', originValidation(allowedOrigins) as never);
 
     const host = process.env['IMAGE_HTTP_HOST'] ?? '127.0.0.1';
-    await app.listen(port, host);
+    if (await isCompatibleHttpServerRunning(host, port)) {
+      logger.log(`Reusing compatible MCP server already listening on http://${host}:${port}/mcp`);
+      await app.close();
+      return;
+    }
+    try {
+      await app.listen(port, host);
+    } catch (error: unknown) {
+      if (await isCompatibleHttpServerRunning(host, port)) {
+        logger.log(`Reusing compatible MCP server already listening on http://${host}:${port}/mcp`);
+        await app.close();
+        return;
+      }
+      throw error;
+    }
     logger.log(`MCP server listening on http://${host}:${port}/mcp`);
     logger.log(`Health check at http://localhost:${port}/health`);
   }
