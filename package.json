@@ -1,6 +1,6 @@
 {
   "name": "@bioinfornatics/gpt-image-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for AI image generation via OpenAI and Azure OpenAI gpt-image-* models",
   "license": "CECILL-2.1",
   "repository": {
@@ -47,14 +47,14 @@
     "@modelcontextprotocol/fastify": "^2.0.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@nestjs/common": "^11.1.18",
+    "@nestjs/common": "^11.1.29",
     "@nestjs/config": "^3.3.0",
-    "@nestjs/core": "^11.1.18",
-    "@nestjs/platform-fastify": "11.1.19",
+    "@nestjs/core": "^11.1.29",
+    "@nestjs/platform-fastify": "11.1.29",
     "@nestjs/terminus": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.4",
-    "fastify": "5.8.4",
+    "fastify": "^5.11.3",
     "joi": "^17.13.3",
     "openai": "^4.104.0",
     "prom-client": "^15.1.3",
@@ -67,7 +67,7 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.1.18",
+    "@nestjs/testing": "^11.1.29",
     "@types/node": "^22.19.17",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
@@ -83,8 +83,12 @@
     "node": ">=20"
   },
   "overrides": {
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "lodash": "^4.18.1",
-    "file-type": "^21.3.2"
+    "file-type": "^21.3.2",
+    "form-data": "^4.0.6",
+    "find-my-way": "^9.7.0",
+    "js-yaml": "^4.3.0",
+    "brace-expansion": "^1.1.17"
   }
 }

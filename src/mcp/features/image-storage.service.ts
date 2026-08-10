@@ -2,10 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
+import { getXdgPaths } from '../../config/xdg-paths';
 export type ImageFormat = 'png' | 'jpeg' | 'webp';
 
 @Injectable()
@@ -38,19 +35,11 @@ export class ImageStorageService {
 
   private async getLinuxPicturesDirectory(): Promise<string> {
     const configured = await this.readFreedesktopPicturesDirectory();
-    if (configured) return configured;
-    try {
-      const { stdout } = await execFileAsync('xdg-user-dir', ['PICTURES'], { timeout: 1_000 });
-      const result = stdout.trim();
-      if (result && result !== os.homedir()) return path.resolve(this.expandHome(result));
-    } catch {
-      // xdg-user-dir is optional; use the localized project fallback below.
-    }
-    return path.join(os.homedir(), 'Images');
+    return configured ?? path.join(os.homedir(), 'Images');
   }
 
   private async readFreedesktopPicturesDirectory(): Promise<string | null> {
-    const configHome = process.env['XDG_CONFIG_HOME'] || path.join(os.homedir(), '.config');
+    const { configHome } = getXdgPaths();
     try {
       const content = await fs.readFile(path.join(configHome, 'user-dirs.dirs'), 'utf8');
       const match = content.match(/^XDG_PICTURES_DIR=(?:"([^"]*)"|'([^']*)'|([^\n#]*))\s*$/m);

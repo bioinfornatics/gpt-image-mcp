@@ -8,6 +8,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-08-10
+
+### Added
+- Persist generated images automatically in the platform Pictures directory and return native MCP image content with file resource links.
+- Resolve freedesktop base directories from `XDG_*` variables with specification defaults (`~/.local/share`, `~/.config`, `~/.cache`, `~/.local/state`).
+- Support `IMAGE_OUTPUT_DIR` as an explicit output-location override.
+
+### Fixed
+- Remove the blocking `xdg-user-dir` subprocess from image generation, making CI and headless Linux execution deterministic.
+- Update vulnerable HTTP dependencies and lock transitive security fixes; `bun audit --audit-level=high` is clean.
+
 ### Deprecated
 
 The following environment variable names were renamed in **v0.1.0** and will be **removed in v0.3.0**.
@@ -149,7 +160,8 @@ Migrate before upgrading to v0.3.0.
 
 ---
 
-[Unreleased]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.2...v0.1.0
 [0.0.2]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/bioinfornatics/gpt-image-mcp/releases/tag/v0.0.1
