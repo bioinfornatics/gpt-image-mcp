@@ -40,11 +40,18 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
     return 0;
   }
 
+  // File flags carry paths only. Apply them before config inspection so
+  // --check-config validates the same resolved secret sources as startup.
+  if (parsed.apiKeyFile) process.env['IMAGE_API_KEY_FILE'] = parsed.apiKeyFile;
+  if (parsed.mcpApiKeyFile) process.env['IMAGE_MCP_API_KEY_FILE'] = parsed.mcpApiKeyFile;
+
   const overrides = withFoundryDefaults(parsed.overrides, process.env);
 
   if (parsed.checkConfig || parsed.showConfigSources) {
-    // Lazy-import to keep --help/--version free of any config-resolver cost.
+    // Lazy imports keep --help/--version free of config/secret initialization.
+    const { resolveSecrets } = await import('./config/secret-loader');
     const { resolveConfig } = await import('./config/config-resolver');
+    await resolveSecrets();
     const resolution = resolveConfig(overrides, process.env);
     const redacted: Record<string, string | undefined> = {};
     for (const [key, value] of Object.entries(resolution.values)) {
@@ -58,13 +65,6 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
     return 0;
   }
 
-  // Apply file-path overrides (never raw secrets) as env vars for downstream resolution.
-  if (parsed.apiKeyFile) {
-    process.env['IMAGE_API_KEY_FILE'] = parsed.apiKeyFile;
-  }
-  if (parsed.mcpApiKeyFile) {
-    process.env['IMAGE_MCP_API_KEY_FILE'] = parsed.mcpApiKeyFile;
-  }
   if (overrides.provider) process.env['IMAGE_PROVIDER'] = overrides.provider;
   if (overrides.baseUrl) process.env['IMAGE_BASE_URL'] = overrides.baseUrl;
   if (overrides.foundryProjectEndpoint) process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'] = overrides.foundryProjectEndpoint;
