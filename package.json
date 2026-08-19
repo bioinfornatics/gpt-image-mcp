@@ -27,10 +27,12 @@
   "scripts": {
     "build": "node --max-old-space-size=8192 ./node_modules/typescript/bin/tsc -p tsconfig.build.json",
     "postbuild": "chmod +x dist/main.js",
+    "prepack": "bun run build",
     "start": "node dist/main.js",
     "start:dev": "bun run src/main.ts",
     "start:http": "IMAGE_MCP_TRANSPORT=http bun run src/main.ts",
     "start:stdio": "IMAGE_MCP_TRANSPORT=stdio bun run src/main.ts",
+    "quality-gate": "bash bin/quality-gate.sh",
     "test": "bun test --coverage",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
