@@ -87,6 +87,10 @@ describe('installation smoke: src/main.ts', () => {
     const fixtureKeyFile = resolve(PROJECT_ROOT, 'test/fixtures/bin/dummy-api-key.txt');
     const result = runMain(['--provider', 'openai', '--api-key-file', fixtureKeyFile, '--check-config'], {
       ...BARE_ENV,
+      // The preload respects inherited CI variables. Explicitly remove the
+      // canonical key so this test always exercises the _FILE resolution path.
+      IMAGE_API_KEY: undefined,
+      IMAGE_API_KEY_FILE: undefined,
     });
     expect(result.status).toBe(0);
     const parsed = JSON.parse(result.stdout) as { values: Record<string, string> };
