@@ -2,8 +2,8 @@
 
 **Project:** image-mcp  
 **Protocol:** Model Context Protocol (MCP) — JSON-RPC 2.0  
-**Package version:** 0.1.7  
-**Reference revision:** 0.1.7  
+**Package version:** 0.2.0  
+**Reference revision:** 0.2.0  
 **Date:** 2026-08-19  
 **Status:** Active
 

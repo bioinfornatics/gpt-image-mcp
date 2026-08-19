@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.0] — 2026-08-20
+
+### Added
+- First-class OpenRouter Image API support for Nano Banana 2 and Microsoft MAI-Image-2.5.
+- Dynamic Foundry/OpenRouter model discovery, structured provider errors, and controlled model fallback.
+- Primary `image-mcp` executable with temporary `gpt-image-mcp` compatibility alias.
+
+### Changed
+- Project and npm package renamed from `gpt-image-mcp` to `image-mcp` / `@bioinfornatics/image-mcp`.
+- MCP server, health identity, metrics, Docker resources, output directory, documentation, and examples use the provider-neutral name.
+
+### Migration
+- Replace `@bioinfornatics/gpt-image-mcp` with `@bioinfornatics/image-mcp`.
+- Existing `IMAGE_*` variables remain unchanged.
+- The legacy executable, HTTP health identity, and keytar service lookup remain temporarily supported.
+
 ## [0.1.7] — 2026-08-19
 
 ### Added
