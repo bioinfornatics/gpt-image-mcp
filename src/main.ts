@@ -6,21 +6,98 @@
 // This is safe with both `node dist/main.js` and `bun run src/main.ts`
 // because Node/Bun process `import` statements sequentially within a file
 // before any later imports are resolved.
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import { hostHeaderValidation, originValidation } from '@modelcontextprotocol/fastify';
-import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
-import { Logger } from '@nestjs/common';
-import { resolveSecrets } from './config/secret-loader';
-import { getMcpRuntimeConfig, isCompatibleHttpServerRunning } from './config/mcp-runtime.config';
+import type { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { parseCliArgs } from './cli/cli-options';
+import { printHelp, printVersion } from './cli/help';
+
+/**
+ * Dispatches pure, side-effect-free CLI subcommands (--help / --version /
+ * --check-config / --show-config-sources) BEFORE any NestJS/secret/keytar
+ * initialization. Returns a process exit code when the CLI has fully
+ * handled the invocation, or `undefined` to fall through to normal server
+ * bootstrap (imports NestJS lazily so plain --help/--version stay instant).
+ */
+async function dispatchCli(argv: readonly string[]): Promise<number | undefined> {
+  const parsed = parseCliArgs(argv);
+
+  if (!parsed.valid) {
+    for (const error of parsed.errors) {
+      console.error(`Error: ${error}`);
+    }
+    console.error('');
+    printHelp((line) => console.error(line));
+    return 1;
+  }
+
+  if (parsed.help) {
+    printHelp();
+    return 0;
+  }
+
+  if (parsed.version) {
+    printVersion();
+    return 0;
+  }
+
+  if (parsed.checkConfig || parsed.showConfigSources) {
+    // Lazy-import to keep --help/--version free of any config-resolver cost.
+    const { resolveConfig } = await import('./config/config-resolver');
+    const overrides = { ...parsed.overrides };
+    const resolution = resolveConfig(overrides, process.env);
+    const redacted: Record<string, string | undefined> = {};
+    for (const [key, value] of Object.entries(resolution.values)) {
+      const isSecret = resolution.provenance[key]?.secret ?? false;
+      redacted[key] = isSecret && value ? '***' : value;
+    }
+    console.log(JSON.stringify({ values: redacted }, null, 2));
+    if (parsed.showConfigSources) {
+      console.log(JSON.stringify({ provenance: resolution.provenance, diagnostics: resolution.diagnostics }, null, 2));
+    }
+    return 0;
+  }
+
+  // Apply file-path overrides (never raw secrets) as env vars for downstream resolution.
+  if (parsed.apiKeyFile) {
+    process.env['IMAGE_API_KEY_FILE'] = parsed.apiKeyFile;
+  }
+  if (parsed.mcpApiKeyFile) {
+    process.env['IMAGE_MCP_API_KEY_FILE'] = parsed.mcpApiKeyFile;
+  }
+  if (parsed.overrides.provider) process.env['IMAGE_PROVIDER'] = parsed.overrides.provider;
+  if (parsed.overrides.deployment) process.env['IMAGE_DEPLOYMENT'] = parsed.overrides.deployment;
+  if (parsed.overrides.transport) process.env['IMAGE_MCP_TRANSPORT'] = parsed.overrides.transport;
+  if (parsed.overrides.port) process.env['IMAGE_PORT'] = parsed.overrides.port;
+  if (parsed.overrides.logLevel) process.env['IMAGE_LOG_LEVEL'] = parsed.overrides.logLevel;
+  if (parsed.overrides.useElicitation) process.env['IMAGE_USE_ELICITATION'] = parsed.overrides.useElicitation;
+  if (parsed.overrides.useSampling) process.env['IMAGE_USE_SAMPLING'] = parsed.overrides.useSampling;
+
+  return undefined;
+}
 
 async function bootstrap() {
   if (process.argv[2] === 'auth' && process.argv[3] === 'doctor') {
     await import('./cli/auth-doctor');
     return;
   }
+
+  const cliArgv = process.argv.slice(2);
+  const cliExitCode = await dispatchCli(cliArgv);
+  if (cliExitCode !== undefined) {
+    process.exit(cliExitCode);
+  }
+
+  // Lazy imports below: NestJS/reflect-metadata/secret-loader must not be
+  // touched for pure CLI subcommands handled above (--help, --version, etc.)
+  await import('reflect-metadata');
+  const { NestFactory } = await import('@nestjs/core');
+  const { FastifyAdapter } = await import('@nestjs/platform-fastify');
+  const { hostHeaderValidation, originValidation } = await import('@modelcontextprotocol/fastify');
+  const { AppModule } = await import('./app.module');
+  const { ConfigService } = await import('@nestjs/config');
+  const { Logger } = await import('@nestjs/common');
+  const { resolveSecrets } = await import('./config/secret-loader');
+  const { getMcpRuntimeConfig, isCompatibleHttpServerRunning } = await import('./config/mcp-runtime.config');
+
   // Resolve secrets BEFORE NestJS bootstrap so Joi validation sees the real values.
   // Supports: *_FILE env vars (Docker/K8s secrets), OS keychain (keytar), plain env vars.
   await resolveSecrets();
