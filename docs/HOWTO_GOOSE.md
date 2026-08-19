@@ -41,7 +41,14 @@ extensions:
     timeout: 300
 ```
 
-### Azure OpenAI
+### Microsoft Foundry
+
+Before copying the YAML, collect these values from Foundry:
+
+- resource endpoint: `https://<resource>.services.ai.azure.com`;
+- project endpoint: `https://<resource>.services.ai.azure.com/api/projects/<project>`;
+- exact deployment name (customer-chosen; it may differ from the model name);
+- resource API key.
 
 ```yaml
 extensions:
@@ -74,9 +81,18 @@ Note: listing a name under `env_keys` only tells Goose which variable to forward
 
 Restart Goose after changing the extension or its secret.
 
+## 3. Validate before generating
+
+Start a new Goose session and ask:
+
+- OpenAI: **Validate the configured OpenAI provider.**
+- Azure: **Validate the configured Azure provider.**
+
+Resolve any key, endpoint, project, or deployment error before spending quota on generation.
+
 Goose may also add its own fields to the saved extension entry (e.g. `cwd`, `bundled`, `available_tools`) when it writes or normalizes `config.yaml`. These are managed by Goose itself — leave them as written; you do not need to set them by hand.
 
-## 3. First image
+## 4. First image
 
 Start a new Goose session and ask:
 
@@ -104,75 +120,12 @@ Set `IMAGE_OUTPUT_DIR` under `envs` to override the final directory.
 | `Failed to fetch secret IMAGE_API_KEY` | Run `goose configure`, edit the extension, and enter the provider API key. |
 | `Failed to fetch secret IMAGE_MODELS` | Remove `IMAGE_MODELS` from `env_keys`; if needed, put its non-secret value in `envs`. |
 | `Incorrect API key` / HTTP 401 from provider | Replace `IMAGE_API_KEY` through `goose configure`. |
-| `IMAGE_MCP_API_KEY is required` with package 0.1.1 | Upgrade the extension argument to `@0.1.2`; as a temporary 0.1.1 workaround, set `IMAGE_REQUIRE_MCP_AUTH: "false"` in `envs`. |
 | npm prints dependency deprecation warnings | Warnings alone are non-blocking; inspect the final `ERROR` line if the extension exits. |
 | Running `npx` manually appears to hang | This is normal for an MCP `stdio` process waiting for a client; launch it through Goose. |
 
-## v0.1.3 initialization failure (bin/start.sh launch mode)
+## Local clone
 
-Symptom seen only with **v0.1.3** and only when the extension is configured to run the
-source directly from a local clone (`cmd: bun`, `args: ["run", "/abs/path/src/main.ts"]`)
-instead of the packaged `npx` distribution above:
-
-```
-TypeError: undefined is not an object (evaluating 'descriptor.value')
-```
-
-**Root cause:** the Goose host spawns the server process from **its own working
-directory**, not from the project root. Bun only reads `bunfig.toml` (which preloads
-`reflect-metadata`) from the process's current working directory. Without that preload,
-NestJS decorators (`@Controller()`, `@Injectable()`, `@Post()`, …) call
-`Reflect.defineMetadata()` before `reflect-metadata` has patched the global `Reflect`
-object, and the process crashes on the first decorated class it evaluates. This is a
-`cwd` problem, not a dependency, network, or secret problem.
-
-**Resolution — pick one:**
-
-1. **Preferred (packaged releases): use the packaged `npx` distribution** shown in section 2 above.
-   The published npm package does not depend on a project-local `bunfig.toml` at all, so
-   this failure mode does not apply. Upgrade the extension's package version pin from
-   `@0.1.3` (or `bun run src/main.ts`) to `@0.1.2`.
-2. **Local clone / development use only:** launch through the repository's
-   `bin/start.sh`, which `cd`s into the project root before invoking Bun, guaranteeing
-   `bunfig.toml` is found and `reflect-metadata` is preloaded:
-
-   ```yaml
-   extensions:
-     gptimagemcp:
-       enabled: true
-       type: stdio
-       name: GPT Image MCP (local clone)
-       cmd: /ABSOLUTE/PATH/TO/gpt-image-mcp/bin/start.sh
-       args: []
-       env_keys:
-         - IMAGE_API_KEY
-       envs:
-         IMAGE_PROVIDER: openai
-         IMAGE_MCP_TRANSPORT: stdio
-         IMAGE_LOG_LEVEL: error
-       timeout: 300
-   ```
-
-   Use an **absolute path** to `bin/start.sh` in `cmd` — Goose does not otherwise know
-   the project root, and a relative path is resolved against Goose's own `cwd`, which is
-   exactly the problem being fixed. Do **not** point `cmd` at `bun` with `src/main.ts` in
-   `args`.
-
-**Credential configuration (either launch mode):**
-
-- Set `IMAGE_PROVIDER` (and, for Azure, `IMAGE_BASE_URL` / `IMAGE_DEPLOYMENT` /
-  `IMAGE_API_VERSION`) as plain, non-secret values under `envs:` — see the OpenAI/Azure
-  examples in section 2.
-- Provide the actual API key through one of:
-  - `env_keys: [IMAGE_API_KEY]` with the value entered via `goose configure`, which stores
-    it in Goose's own keyring/secret store (recommended, shown above); or
-  - `IMAGE_API_KEY_FILE: /path/to/secret/file` under `envs:` with
-    `IMAGE_MCP_SECRET_BACKEND: file` (the server's default), pointing at a file readable
-    only by the local user — useful when the key is already provisioned by another
-    secrets manager on disk.
-- Never place the raw key value under `envs:` or commit it to `config.yaml`.
-- `IMAGE_MCP_API_KEY` (the bearer token) is **not required** for `stdio` — it only
-  protects the `IMAGE_MCP_TRANSPORT=http` network listener, irrelevant to this failure.
+For development from a clone, configure Goose with the absolute path to `bin/start.sh`; do not launch an absolute `src/main.ts` path directly. Historical v0.1.3 details are archived in [legacy-v0.1.3.md](troubleshooting/legacy-v0.1.3.md).
 
 ## HTTP deployments
 

@@ -2,8 +2,9 @@
 
 **Project:** gpt-image-mcp  
 **Protocol:** Model Context Protocol (MCP) — JSON-RPC 2.0  
-**Version:** 1.0  
-**Date:** 2026-04-22  
+**Package version:** 0.1.7  
+**Reference revision:** 0.1.7  
+**Date:** 2026-08-19  
 **Status:** Active
 
 ---
@@ -94,17 +95,17 @@ Generated images are returned as base64-encoded strings within MCP `image` conte
 }
 ```
 
-The `mimeType` reflects the requested `output_format` (e.g., `image/png`, `image/jpeg`, `image/webp`).
+The `mimeType` reflects the verified response bytes (for example `image/png`, `image/jpeg`, or `image/webp`), even if a provider ignores the requested format.
 
 ### 2.4 Workspace File Saving
 
-When `save_to_workspace` is provided, the generated image is saved to the specified relative path within the MCP-granted workspace root. The tool response includes the resolved absolute file path. If the path already exists, it is overwritten.
+`save_to_workspace` is a boolean. When `true`, the server creates an additional copy with a generated filename under the MCP workspace `generated/` directory. Every image is also persisted automatically in `IMAGE_OUTPUT_DIR` or the platform Images/Pictures directory.
 
 ### 2.5 Units & Limits
 
 | Parameter | Unit | Notes |
 |-----------|------|-------|
-| `output_compression` | Integer 0–100 | 0 = lossless / maximum size; 100 = maximum compression |
+| `output_compression` | Integer 0–100 | Provider-specific JPEG/WebP control; omit unless the selected adapter documents support |
 | `n` | Integer | Number of images to generate in one call |
 | Prompt length | Characters | Maximum 32 000 characters |
 | Image payload | Bytes | Maximum 20 MB decoded |
@@ -131,15 +132,17 @@ Generates one or more images from a text prompt using OpenAI or Azure OpenAI `gp
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `prompt` | string | ✅ Yes | — | Text description of the image to generate. Max 32 000 chars. |
-| `model` | string | No | `gpt-image-2` | Model to use. OpenAI: `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`. Azure: same list. `dall-e-2` for variations only; `dall-e-3` retired 2026-03-04. |
+| `model` | string | No | provider default | Model or deployment. Omit it to use the configured provider default. |
 | `n` | integer | No | `1` | Number of images to generate (1–10). All `gpt-image-*` models support up to 10. |
 | `size` | string | No | `auto` | Image dimensions. See model-specific size table below. |
 | `quality` | string | No | `auto` | Quality setting. `auto`\|`high`\|`medium`\|`low` (gpt-image-* models). |
 | `background` | string | No | `auto` | Background transparency. `transparent`\|`opaque`\|`auto`. Supported on `gpt-image-*` with `png` or `webp` output. |
 | `output_format` | string | No | `png` | Output image format. `png`\|`jpeg`\|`webp` |
 | `output_compression` | integer | No | `100` | Compression level 0–100 for `jpeg` and `webp` output formats |
-| `moderation` | string | No | `auto` | Content moderation level. `auto`\|`low`. Only `gpt-image-1`. |
-| `save_to_workspace` | string | No | — | Relative path within workspace root to save the generated image (e.g., `images/hero.png`) |
+| `moderation` | string | No | `auto` | GPT image moderation level. `low` requires the server opt-in `IMAGE_ALLOW_LOW_MODERATION=true`. |
+| `fallback_model` | string | No | — | Explicit `gpt-image-2` fallback after an output-stage safety block; never used for prompt-stage blocks. |
+| `skip_elicitation` | boolean | No | `false` | Skip interactive size/quality elicitation. |
+| `save_to_workspace` | boolean | No | `false` | Create an additional generated-name copy in the MCP workspace |
 | `response_format` | string | No | `markdown` | Tool response format. `markdown`\|`json` |
 
 **Size options by model:**
@@ -150,6 +153,7 @@ Generates one or more images from a text prompt using OpenAI or Azure OpenAI `gp
 | `gpt-image-1.5` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `gpt-image-1-mini` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `gpt-image-1` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
+| `MAI-Image-2.5` | `auto` (= `1024x1024`) or `WxH` with both edges ≥ 768 and total pixels ≤ 1,048,576; PNG output; omit quality |
 | `dall-e-2` | `256x256`, `512x512`, `1024x1024` — variations only |
 | ~~`dall-e-3`~~ | ⛔ Retired 2026-03-04 |
 
@@ -173,61 +177,29 @@ and exceeded starting at the next multiple-of-16 step. Output quality/reliabilit
 is documented as more variable above this boundary; the warning is advisory only and does not
 block the request.
 
-#### Output Schema
+#### Output Contract
 
-**`response_format: markdown` (default):**
+The MCP result contains one text block, then an `image` block and a `resource_link` for each image. Base64 bytes are in the native `image` block, not inside text JSON.
 
-```markdown
-## Generated Image
-
-**Model:** gpt-image-1  
-**Size:** 1024x1024  
-**Quality:** high  
-**Format:** png  
-**Prompt:** A photorealistic sunset over a mountain range
-
-![Generated Image](data:image/png;base64,iVBORw0KGgo...)
-
-*Saved to: /workspace/images/sunset.png*
-```
-
-**`response_format: json`:**
+With `response_format: json`, the text block contains:
 
 ```json
 {
-  "success": true,
-  "model": "gpt-image-1",
-  "provider": "openai",
-  "images": [
-    {
-      "index": 0,
-      "data": "iVBORw0KGgo...",
-      "mimeType": "image/png",
-      "size": "1024x1024",
-      "savedTo": "/workspace/images/sunset.png",
-      "revisedPrompt": null
-    }
-  ],
-  "usage": {
-    "total_tokens": 1250,
-    "input_tokens": 50,
-    "output_tokens": 1200,
-    "input_tokens_details": {
-      "image_tokens": 0,
-      "text_tokens": 50
-    }
-  },
-  "metadata": {
-    "quality": "high",
-    "background": "auto",
-    "output_format": "png",
-    "output_compression": 100,
-    "n": 1
-  }
+  "model": "gpt-image-2",
+  "requested_model": "gpt-image-2",
+  "effective_model": "gpt-image-2",
+  "fallback_used": false,
+  "count": 1,
+  "images": [{
+    "index": 0,
+    "saved_to": "/home/user/Images/gpt-image-mcp/img.png",
+    "file_uri": "file:///home/user/Images/gpt-image-mcp/img.png",
+    "created": 1700000000
+  }]
 }
 ```
 
-> **Note:** `revisedPrompt` is always `null` — `dall-e-3` (the only model that auto-revised prompts) was retired 2026-03-04. `usage` token counts are available for all `gpt-image-*` models.
+An explicit successful fallback adds `fallback_reason`; a workspace copy adds `workspace_copy`.
 
 #### Error Cases
 
@@ -238,7 +210,6 @@ block the request.
 | `INVALID_PARAM` | 400 | `n` > 10 |
 | `INVALID_PARAM` | 400 | `background: transparent` with `jpeg` output |
 | `INVALID_PARAM` | 400 | `output_compression` out of range 0–100 |
-| `PATH_TRAVERSAL` | 400 | `save_to_workspace` attempts to escape workspace root |
 | `OPENAI_ERROR` | 502 | OpenAI API returned an error (content policy, quota, etc.) |
 | `PROVIDER_NOT_CONFIGURED` | 503 | `IMAGE_API_KEY` is not set |
 | `RATE_LIMIT_EXCEEDED` | 429 | Client has exceeded per-minute rate limit |
@@ -259,7 +230,7 @@ block the request.
       "quality": "high",
       "output_format": "png",
       "background": "opaque",
-      "save_to_workspace": "outputs/mountain_dawn.png",
+      "save_to_workspace": true,
       "response_format": "json"
     }
   }
@@ -307,67 +278,20 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 | `images` | string[] | No¹ | — | Array of base64-encoded images for multi-image compositing (e.g. virtual try-on, person-in-scene, style transfer). Use instead of `image`. Max 16 images, 10 MB aggregate payload cap (enforced regardless of image count). Provider-independent — supported identically on OpenAI and Azure. |
 | `mask` | string | No | — | Base64-encoded mask image or HTTPS URL. Transparent areas indicate regions to edit. Must be same dimensions as `image`. PNG only. |
 | `prompt` | string | ✅ Yes | — | Description of the desired edit. Max 32 000 chars. |
-| `model` | string | No | `gpt-image-2` | Model to use. Any `gpt-image-*` model or `dall-e-2` (limited). |
+| `model` | string | No | provider default | Model or deployment; omit to use the configured provider default. |
 | `n` | integer | No | `1` | Number of edited images to generate (1–10). |
-| `size` | string | No | `1024x1024` | Output image dimensions. See model size table in §3.1. |
+| `size` | string | No | `auto` | Output image dimensions. See model size table in §3.1. |
 | `quality` | string | No | `auto` | Quality setting. See model quality options in §3.1. |
 | `output_format` | string | No | `png` | Output format. `png`\|`jpeg`\|`webp` |
 | `output_compression` | integer | No | `100` | Compression level 0–100 for `jpeg`/`webp` |
-| `save_to_workspace` | string | No | — | Relative path within workspace root to save the result |
+| `save_to_workspace` | boolean | No | `false` | Create an additional generated-name copy in the MCP workspace |
 | `response_format` | string | No | `markdown` | Tool response format. `markdown`\|`json` |
 
 ¹ Exactly one of `image` or `images` must be provided (mutually exclusive; both-provided and neither-provided are rejected at the schema layer).
 
-#### Output Schema
+#### Output Contract
 
-**`response_format: markdown`:**
-
-```markdown
-## Edited Image
-
-**Model:** gpt-image-1  
-**Size:** 1024x1024  
-**Prompt:** Remove the person from the background and replace with a park bench
-
-![Edited Image](data:image/png;base64,iVBORw0KGgo...)
-
-*Saved to: /workspace/edits/result.png*
-```
-
-**`response_format: json`:**
-
-```json
-{
-  "success": true,
-  "model": "gpt-image-1",
-  "provider": "openai",
-  "images": [
-    {
-      "index": 0,
-      "data": "iVBORw0KGgo...",
-      "mimeType": "image/png",
-      "size": "1024x1024",
-      "savedTo": "/workspace/edits/result.png"
-    }
-  ],
-  "usage": {
-    "total_tokens": 2100,
-    "input_tokens": 900,
-    "output_tokens": 1200,
-    "input_tokens_details": {
-      "image_tokens": 850,
-      "text_tokens": 50
-    }
-  },
-  "metadata": {
-    "quality": "auto",
-    "output_format": "png",
-    "output_compression": 100,
-    "n": 1,
-    "mask_provided": true
-  }
-}
-```
+The MCP result contains text plus native `image` and `resource_link` blocks. With `response_format: json`, the text block contains `count` and image entries with `model`, `created`, `saved_to`, `file_uri`, and optional `workspace_copy`.
 
 #### Error Cases
 
@@ -379,7 +303,6 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 | `INVALID_PARAM` | Mask dimensions differ from image dimensions |
 | `INVALID_PARAM` | `dall-e-2` used with non-PNG or non-square image |
 | `INVALID_PARAM` | `n` > 1 with `gpt-image-1` |
-| `PATH_TRAVERSAL` | `save_to_workspace` path escapes workspace root |
 | `OPENAI_ERROR` | OpenAI API error (content policy, format error, etc.) |
 | `PROVIDER_NOT_CONFIGURED` | `IMAGE_API_KEY` not set |
 
@@ -400,7 +323,7 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
       "size": "1024x1024",
       "quality": "high",
       "output_format": "png",
-      "save_to_workspace": "edits/clear_sky.png",
+      "save_to_workspace": true,
       "response_format": "json"
     }
   }
@@ -429,72 +352,14 @@ Generates one or more variations of an existing image without a text prompt. Use
 | `image` | string | ✅ Yes | — | Base64-encoded PNG image or HTTPS URL. Must be square. Max 20 MB. |
 | `n` | integer | No | `1` | Number of variations to generate. Range: 1–10. |
 | `size` | string | No | `1024x1024` | Output size. One of: `256x256`, `512x512`, `1024x1024` |
-| `save_to_workspace` | string | No | — | Relative path within workspace root to save the first generated variation |
+| `save_to_workspace` | boolean | No | `false` | Create additional generated-name workspace copies |
 | `response_format` | string | No | `markdown` | Tool response format. `markdown`\|`json` |
 
 > **Note:** `output_format`, `quality`, `background`, and `prompt` are not accepted by this tool. DALL-E 2 always returns PNG at the requested size.
 
-#### Output Schema
+#### Output Contract
 
-**`response_format: markdown`:**
-
-```markdown
-## Image Variations
-
-**Model:** dall-e-2  
-**Size:** 1024x1024  
-**Variations:** 3
-
-### Variation 1
-![Variation 1](data:image/png;base64,iVBORw0KGgo...)
-
-### Variation 2
-![Variation 2](data:image/png;base64,iVBORw0KGgo...)
-
-### Variation 3
-![Variation 3](data:image/png;base64,iVBORw0KGgo...)
-
-*First variation saved to: /workspace/variations/v1.png*
-```
-
-**`response_format: json`:**
-
-```json
-{
-  "success": true,
-  "model": "dall-e-2",
-  "provider": "openai",
-  "images": [
-    {
-      "index": 0,
-      "data": "iVBORw0KGgo...",
-      "mimeType": "image/png",
-      "size": "1024x1024",
-      "savedTo": "/workspace/variations/v1.png"
-    },
-    {
-      "index": 1,
-      "data": "iVBORw0KGgo...",
-      "mimeType": "image/png",
-      "size": "1024x1024",
-      "savedTo": null
-    },
-    {
-      "index": 2,
-      "data": "iVBORw0KGgo...",
-      "mimeType": "image/png",
-      "size": "1024x1024",
-      "savedTo": null
-    }
-  ],
-  "metadata": {
-    "n": 3,
-    "size": "1024x1024"
-  }
-}
-```
-
-> **Note:** When `n` > 1, only the first image (`index: 0`) is saved to workspace if `save_to_workspace` is provided.
+The MCP result contains text plus native `image` and `resource_link` blocks. With `response_format: json`, the text block contains `count` and image entries with `model`, `created`, `saved_to`, `file_uri`, and optional `workspace_copy`.
 
 #### Error Cases
 
@@ -506,7 +371,6 @@ Generates one or more variations of an existing image without a text prompt. Use
 | `INVALID_PARAM` | Image exceeds 20 MB |
 | `INVALID_PARAM` | `n` outside range 1–10 |
 | `INVALID_PARAM` | `size` not one of `256x256`, `512x512`, `1024x1024` |
-| `PATH_TRAVERSAL` | `save_to_workspace` path escapes workspace root |
 | `OPENAI_ERROR` | OpenAI API error |
 | `PROVIDER_NOT_CONFIGURED` | `IMAGE_API_KEY` not set |
 
@@ -523,7 +387,7 @@ Generates one or more variations of an existing image without a text prompt. Use
       "image": "iVBORw0KGgo...",
       "n": 4,
       "size": "512x512",
-      "save_to_workspace": "variations/reference_v1.png",
+      "save_to_workspace": true,
       "response_format": "json"
     }
   }
@@ -534,215 +398,55 @@ Generates one or more variations of an existing image without a text prompt. Use
 
 ### 3.4 `provider_list`
 
-#### Description
+Returns the active provider, its effective default, and the models/deployments that this server can route. It accepts no parameters.
 
-Returns a list of all image generation providers known to the server, including their configuration status, available models, and health status. Use this tool to discover what capabilities are available before invoking generation tools.
-
-**When to use:**
-- Checking which providers are configured and available.
-- Discovering the list of supported models.
-- Diagnosing configuration issues before attempting generation.
-
-#### Input Schema
-
-This tool accepts **no parameters**.
-
-#### Output Schema
-
-**`response_format: markdown` (default):**
-
-```markdown
-## Available Image Providers
-
-### ✅ openai
-- **Status:** configured
-- **Models:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)
-- **API Key:** Configured (sk-pro…REDACTED)
-
----
-
-*1 of 1 providers configured.*
-```
-
-**`response_format: json`:**
+The tool returns human-readable text plus `structuredContent`:
 
 ```json
 {
-  "providers": [
-    {
-      "name": "openai",
-      "configured": true,
-      "status": "available",
-      "models": [
-        {
-          "id": "gpt-image-1",
-          "capabilities": ["generate", "edit"],
-          "default": true
-        },
-        {
-          "id": "gpt-image-1.5",
-          "capabilities": ["generate", "edit"],
-          "default": false
-        },
-        {
-          "id": "gpt-image-1-mini",
-          "capabilities": ["generate", "edit"],
-          "default": false
-        },
-        {
-          "id": "gpt-image-1",
-          "capabilities": ["generate", "edit"],
-          "default": false
-        },
-        {
-          "id": "dall-e-2",
-          "capabilities": ["variation"],
-          "default": false
-        }
-      ],
-      "apiKeyPrefix": "sk-pro…REDACTED"
-    }
-  ],
-  "summary": {
-    "total": 1,
-    "configured": 1,
-    "unavailable": 0
-  }
+  "configured_provider": "azure",
+  "default_model": "MAI-Image-2.5",
+  "providers": [{
+    "name": "azure",
+    "configured": true,
+    "available_models": ["MAI-Image-2.5", "gpt-image-2"],
+    "status": "configured"
+  }]
 }
 ```
 
-> **Note:** API key values are always masked — only the first 6 characters are shown, followed by `…REDACTED`. Full key values are never returned.
+With Foundry discovery enabled, `available_models` contains only discovered supported image deployments.
 
 #### Example MCP Call
 
 ```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-004",
-  "method": "tools/call",
-  "params": {
-    "name": "provider_list",
-    "arguments": {}
-  }
-}
-```
-
-**Response (JSON):**
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-004",
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "## Available Image Providers\n\n### ✅ openai\n- **Status:** configured\n- **Models:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)\n"
-      }
-    ],
-    "isError": false
-  }
-}
+{"jsonrpc":"2.0","id":"req-004","method":"tools/call","params":{"name":"provider_list","arguments":{}}}
 ```
 
 ---
 
 ### 3.5 `provider_validate`
 
-#### Description
-
-Validates that a specific provider is correctly configured and reachable. Performs a lightweight API connectivity check (not a full image generation) to verify the API key is valid and the service is accessible.
-
-**When to use:**
-- Diagnosing authentication failures before attempting image generation.
-- Health-checking a provider after key rotation.
-- Confirming a provider is reachable from the current environment.
+Validates the active provider without generating an image. The requested provider must match the active provider.
 
 #### Input Schema
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `provider` | string | ✅ Yes | — | Provider name to validate. Currently supported: `openai` |
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `provider` | string | Yes | `openai` or `azure` |
 
-#### Output Schema
-
-**`response_format: markdown`:**
-
-```markdown
-## Provider Validation: openai
-
-✅ **Valid** — Provider is correctly configured and reachable.
-
-- **API Key:** Configured (sk-pro…REDACTED)
-- **Connectivity:** OK
-- **Models available:** gpt-image-2, gpt-image-1.5, gpt-image-1-mini, gpt-image-1, dall-e-2 (variations only)
-```
-
-**On failure:**
-
-```markdown
-## Provider Validation: openai
-
-❌ **Invalid** — Provider validation failed.
-
-- **Error:** `invalid_api_key` — Incorrect API key provided.
-- **Resolution:** Check that IMAGE_API_KEY is set correctly in your environment.
-```
-
-**`response_format: json`:**
+The result contains a short text status and provider-specific `structuredContent`. Basic OpenAI example:
 
 ```json
-{
-  "provider": "openai",
-  "valid": true,
-  "error": null,
-  "details": {
-    "connectivity": "ok",
-    "apiKeyPrefix": "sk-pro…REDACTED",
-    "modelsAccessible": ["gpt-image-2", "gpt-image-1.5", "gpt-image-1-mini", "gpt-image-1", "dall-e-2"]
-  }
-}
+{"valid":true,"provider":"openai"}
 ```
 
-**On failure:**
-
-```json
-{
-  "provider": "openai",
-  "valid": false,
-  "error": "invalid_api_key: Incorrect API key provided.",
-  "details": {
-    "connectivity": "failed",
-    "apiKeyPrefix": "sk-pro…REDACTED",
-    "modelsAccessible": []
-  }
-}
-```
-
-#### Error Cases
-
-| Error Code | Condition |
-|------------|-----------|
-| `MISSING_REQUIRED_PARAM` | `provider` not provided |
-| `UNKNOWN_PROVIDER` | Provider name not recognised |
-| `PROVIDER_NOT_CONFIGURED` | Named provider has no API key configured |
-| `OPENAI_ERROR` | OpenAI returned an error during validation (e.g., invalid key) |
-| `NETWORK_ERROR` | Could not reach the provider API endpoint |
+With Azure Foundry discovery, validation can additionally report the default deployment and discovered deployment metadata (`deployment`, `modelName`, `publisher`, `modelVersion`, and adapter).
 
 #### Example MCP Call
 
 ```json
-{
-  "jsonrpc": "2.0",
-  "id": "req-005",
-  "method": "tools/call",
-  "params": {
-    "name": "provider_validate",
-    "arguments": {
-      "provider": "openai"
-    }
-  }
-}
+{"jsonrpc":"2.0","id":"req-005","method":"tools/call","params":{"name":"provider_validate","arguments":{"provider":"azure"}}}
 ```
 
 ---
@@ -765,7 +469,6 @@ Elicitation is used when a required parameter is missing from a tool call and ca
 |-------------------|------|-----------------|
 | `prompt` is missing or empty | `image_generate`, `image_edit` | `prompt` (required text) |
 | `image` is missing | `image_edit`, `image_variation` | `image` (base64 or URL) |
-| `save_to_workspace` confirmation | Any generation tool | `save_path` (optional text), `confirm` (boolean) |
 
 #### Example `elicitation/create` Request
 
@@ -802,7 +505,7 @@ The server sends this to the MCP host when `prompt` is missing from an `image_ge
   "jsonrpc": "2.0",
   "id": "elicit-001",
   "result": {
-    "action": "submit",
+    "action": "accept",
     "content": {
       "prompt": "A serene Japanese garden with a koi pond, cherry blossom trees, and a wooden bridge at sunset"
     }
@@ -922,7 +625,7 @@ The server requests the list of workspace roots when:
 }
 ```
 
-The server uses these roots to validate `save_to_workspace` paths. All save paths must resolve to within one of these roots. If no roots are returned and `save_to_workspace` is requested, the tool returns an error.
+The server uses MCP roots to choose a safe `generated/` workspace directory for additional copies.
 
 **Security note:** All paths are validated against roots before any file I/O. See SECURITY.md §6.3.
 
@@ -938,7 +641,6 @@ The following error codes appear in tool result `content[0].text` when `isError:
 |------------|-------------|---------------|
 | `MISSING_REQUIRED_PARAM` | A required parameter was not provided | `prompt` or `image` omitted |
 | `INVALID_PARAM` | A parameter value is invalid or out of range | Wrong `size` for model, `n` out of range, invalid URL scheme |
-| `PATH_TRAVERSAL` | `save_to_workspace` path escapes workspace root | `../` sequences, absolute paths outside root |
 | `INVALID_FILE_EXTENSION` | File extension not in allowlist | Trying to save as `.exe`, `.sh`, etc. |
 | `NULL_BYTE_IN_PATH` | Path contains a null byte character | Potential injection attempt |
 | `IMAGE_TOO_LARGE` | Image payload exceeds 20 MB limit | Large base64 input |
@@ -1019,7 +721,7 @@ These errors are returned at the JSON-RPC level (not inside tool results) and in
 
 ---
 
-*This document is auto-generated from tool schemas and maintained alongside the source code. For discrepancies between this document and actual tool behaviour, the source code is authoritative.*
+*This reference is maintained alongside the schemas and protected by documentation contract tests. For discrepancies, the published tool schema remains authoritative.*
 
 ## Azure Foundry deployment discovery
 

@@ -1,0 +1,10 @@
+# Start gpt-image-mcp once in HTTP mode with IMAGE_MCP_API_KEY configured.
+extensions:
+  gptimagemcp:
+    enabled: true
+    type: streamable_http
+    name: GPT Image MCP (HTTP)
+    uri: http://localhost:3000/mcp
+    headers:
+      Authorization: "Bearer REPLACE_WITH_IMAGE_MCP_API_KEY"
+    timeout: 300

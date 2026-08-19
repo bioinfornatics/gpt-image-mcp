@@ -25,7 +25,7 @@
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.1 **or** Node.js ≥ 18 **or** Docker
+- [Bun](https://bun.sh) ≥ 1.1 **or** Node.js ≥ 20 **or** Docker
 - An OpenAI API key **or** Azure OpenAI resource
 
 ---
@@ -36,15 +36,17 @@
 # stdio transport (Claude Desktop, Goose, Cursor)
 IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio bunx @bioinfornatics/gpt-image-mcp
 
-# HTTP transport on port 3000
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=http IMAGE_PORT=3000 bunx @bioinfornatics/gpt-image-mcp
-
-# Azure AI Foundry
-IMAGE_PROVIDER=azure \
-  IMAGE_BASE_URL=https://my-resource.openai.azure.com \
-  IMAGE_API_KEY=... \
-  IMAGE_DEPLOYMENT=gpt-image-2 \
+# HTTP transport on port 3000 (network-facing: MCP bearer token required)
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=http IMAGE_PORT=3000 \
+  IMAGE_MCP_API_KEY=replace-with-at-least-16-characters \
   bunx @bioinfornatics/gpt-image-mcp
+
+# Microsoft Foundry (local stdio; provider inferred from the canonical base URL)
+IMAGE_API_KEY=... bunx @bioinfornatics/gpt-image-mcp \
+  --base-url https://YOUR-RESOURCE.services.ai.azure.com \
+  --foundry-project-endpoint https://YOUR-RESOURCE.services.ai.azure.com/api/projects/YOUR-PROJECT \
+  --deployment MAI-Image-2.5 \
+  --transport stdio
 ```
 
 **With `npx` (Node.js users):**
@@ -64,7 +66,7 @@ IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio npx @bioinf
 
 ```bash
 bun add -g @bioinfornatics/gpt-image-mcp
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... gpt-image-mcp
+IMAGE_API_KEY=sk-... gpt-image-mcp --provider openai --transport stdio
 ```
 
 ---
@@ -91,6 +93,8 @@ docker build -t gpt-image-mcp .
 docker run -p 3000:3000 \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY=sk-... \
+  -e IMAGE_MCP_TRANSPORT=http \
+  -e IMAGE_MCP_API_KEY=replace-with-at-least-16-characters \
   gpt-image-mcp
 ```
 
@@ -178,7 +182,7 @@ extensions:
     enabled: true
     type: stdio
     name: GPT Image MCP
-    description: AI image generation — gpt-image-1 via OpenAI
+    description: AI image generation via OpenAI
     cmd: npx
     args:
       - "--yes"
@@ -306,7 +310,7 @@ Authorization: Bearer <IMAGE_MCP_API_KEY>   # only if IMAGE_MCP_API_KEY is set
   "prompt": "A serene Japanese garden at dawn, photorealistic",
   "model": "gpt-image-2",
   "n": 1,
-  "size": "1536×1024",
+  "size": "1536x1024",
   "quality": "high",
   "background": "transparent",
   "output_format": "webp",
@@ -333,7 +337,7 @@ Authorization: Bearer <IMAGE_MCP_API_KEY>   # only if IMAGE_MCP_API_KEY is set
 {
   "image": "<base64-encoded-square-png>",
   "n": 3,
-  "size": "1024×1024"
+  "size": "1024x1024"
 }
 ```
 

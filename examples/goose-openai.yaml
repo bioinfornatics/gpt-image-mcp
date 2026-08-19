@@ -1,0 +1,16 @@
+extensions:
+  gptimagemcp:
+    enabled: true
+    type: stdio
+    name: GPT Image MCP
+    cmd: npx
+    args:
+      - --yes
+      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - --provider
+      - openai
+      - --transport
+      - stdio
+    env_keys:
+      - IMAGE_API_KEY
+    timeout: 300
