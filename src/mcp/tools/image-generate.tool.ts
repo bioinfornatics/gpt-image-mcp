@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { Server } from '@modelcontextprotocol/server';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
+import { ImageProviderError } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { ElicitationService } from '../features/elicitation.service';
 import { SamplingService } from '../features/sampling.service';
@@ -217,6 +218,26 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_generate failed: ${message}`);
+      if (err instanceof ImageProviderError) {
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: `[${err.code}] ${message}` }],
+          structuredContent: {
+            error: {
+              code: err.code,
+              provider: err.provider,
+              model: err.model,
+              retryable: err.retryable,
+              stage: err.stage,
+              image_created: false,
+              ...(err.status !== undefined ? { http_status: err.status } : {}),
+              ...(err.providerCode ? { provider_code: err.providerCode } : {}),
+              ...(err.label ? { provider_label: err.label } : {}),
+              ...(err.requestId ? { request_id: err.requestId } : {}),
+            },
+          },
+        };
+      }
       return {
         isError: true,
         content: [{ type: 'text' as const, text: `Error: ${message}` }],

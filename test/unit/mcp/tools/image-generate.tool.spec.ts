@@ -7,6 +7,7 @@ import { RootsService } from '../../../../src/mcp/features/roots.service';
 import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
 import { LATEST_MODEL } from '../../../../src/config/models';
+import { ImageProviderError } from '../../../../src/providers/provider.interface';
 
 const mockImageResult: ImageResult = {
   b64_json: 'ZmFrZWJhc2U2NA==',
@@ -222,6 +223,28 @@ describe('ImageGenerateTool', () => {
       const result = await tool.execute({ prompt: 'a cat' });
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Rate limit exceeded');
+    });
+
+    it('returns structured provider safety evidence in the MCP error result', async () => {
+      mockProvider.generate.mockRejectedValue(new ImageProviderError({
+        code: 'CONTENT_SAFETY_BLOCK',
+        message: 'MAI output filtering blocked a generated candidate; the prompt is not proven unsafe.',
+        provider: 'azure',
+        model: 'MAI-Image-2.5',
+        retryable: true,
+        stage: 'output',
+        status: 400,
+        providerCode: 'content_safety_violation',
+        label: 'MultiSeverity_SexualScore',
+        requestId: 'request-123',
+      }));
+      const result = await tool.execute({ prompt: 'a safe prompt' });
+      expect(result.isError).toBe(true);
+      expect(result.structuredContent).toEqual({ error: expect.objectContaining({
+        code: 'CONTENT_SAFETY_BLOCK', model: 'MAI-Image-2.5', stage: 'output',
+        retryable: true, image_created: false, request_id: 'request-123',
+      }) });
+      expect(result.content[0].text).not.toContain('the prompt violated');
     });
 
     it('should not expose raw error internals', async () => {

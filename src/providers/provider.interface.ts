@@ -40,6 +40,48 @@ export interface ImageResult {
   created: number;
 }
 
+export type ProviderErrorStage = 'prompt' | 'output' | 'unknown';
+
+export interface ImageProviderErrorOptions {
+  code: string;
+  message: string;
+  provider: string;
+  model: string;
+  retryable: boolean;
+  stage?: ProviderErrorStage;
+  status?: number;
+  providerCode?: string;
+  label?: string;
+  requestId?: string;
+}
+
+/** A safe, structured provider failure that MCP tools can expose without parsing text. */
+export class ImageProviderError extends Error {
+  readonly code: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly retryable: boolean;
+  readonly stage: ProviderErrorStage;
+  readonly status?: number;
+  readonly providerCode?: string;
+  readonly label?: string;
+  readonly requestId?: string;
+
+  constructor(options: ImageProviderErrorOptions) {
+    super(options.message);
+    this.name = 'ImageProviderError';
+    this.code = options.code;
+    this.provider = options.provider;
+    this.model = options.model;
+    this.retryable = options.retryable;
+    this.stage = options.stage ?? 'unknown';
+    this.status = options.status;
+    this.providerCode = options.providerCode;
+    this.label = options.label;
+    this.requestId = options.requestId;
+  }
+}
+
 export interface ValidationResult {
   [key: string]: unknown;
   valid: boolean;

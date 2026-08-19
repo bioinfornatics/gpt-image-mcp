@@ -7,6 +7,7 @@ import {
   parseMaiSize,
 } from '../../../src/providers/mai-image.provider';
 import { isMaiImageDeployment } from '../../../src/providers/azure-deployment-registry';
+import { ImageProviderError } from '../../../src/providers/provider.interface';
 
 const VALID_PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
@@ -114,13 +115,41 @@ describe('MaiImageProvider.generate', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('turns DallEBlockList content-safety responses into actionable retry guidance', async () => {
+  it('classifies explicit response filtering without claiming the prompt is unsafe', async () => {
+    const fetchImpl = mock(async () => ({
+      ...jsonResponse({
+        error: { code: 'content_safety_violation', message: "Response content blocked by label 'DallEBlockList'." },
+      }, 400),
+      headers: new Headers({ 'x-request-id': '2d8b8b15-af0c-4a63-b79b-2c28022709e4' }),
+    } as Response));
+    const provider = makeProvider(fetchImpl as unknown as typeof fetch);
+    let caught: unknown;
+    try {
+      await provider.generate({ prompt: 'pharmaceutical laboratory', model: 'MAI-Image-2.5' });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ImageProviderError);
+    const error = caught as ImageProviderError;
+    expect(error.code).toBe('CONTENT_SAFETY_BLOCK');
+    expect(error.stage).toBe('output');
+    expect(error.label).toBe('DallEBlockList');
+    expect(error.requestId).toBe('2d8b8b15-af0c-4a63-b79b-2c28022709e4');
+    expect(error.message).toContain('does not establish that the input prompt itself was unsafe');
+  });
+
+  it('uses an unknown safety stage when the provider does not identify prompt or response', async () => {
     const fetchImpl = mock(async () => jsonResponse({
-      error: { code: 'content_safety_violation', message: "Response content blocked by label 'DallEBlockList'." },
+      error: { code: 'content_safety_violation', message: 'Content was filtered.' },
     }, 400));
     const provider = makeProvider(fetchImpl as unknown as typeof fetch);
-    await expect(provider.generate({ prompt: 'pharmaceutical laboratory', model: 'MAI-Image-2.5' }))
-      .rejects.toThrow(/Content safety blocked the generated response.*rephrase.*retry/i);
+    let caught: unknown;
+    try {
+      await provider.generate({ prompt: 'x', model: 'MAI-Image-2.5' });
+    } catch (error) {
+      caught = error;
+    }
+    expect((caught as ImageProviderError).stage).toBe('unknown');
   });
 
   it('maps HTTP error statuses to a descriptive, masked error', async () => {

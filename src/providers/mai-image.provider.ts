@@ -30,6 +30,7 @@ import type {
   ImageResult,
   ValidationResult,
 } from './provider.interface';
+import { ImageProviderError, type ProviderErrorStage } from './provider.interface';
 import type { AzureAuthHeaderProvider } from './azure-deployment-catalog';
 import { decodeImageData, imageMimeType } from './image-media';
 import { maskSecret } from '../security/sanitise';
@@ -89,6 +90,28 @@ function rejectUnsupportedQuality(quality: string | undefined): void {
 interface MaiImageApiResponse {
   data?: Array<{ b64_json?: string; image?: string }>;
   created?: number;
+}
+
+interface MaiImageApiError {
+  error?: { code?: unknown; message?: unknown; details?: unknown };
+}
+
+function safetyStage(message: string): ProviderErrorStage {
+  if (/\b(response|output|generated (?:image|content|candidate))\b/i.test(message)) return 'output';
+  if (/\b(prompt|input)\b/i.test(message)) return 'prompt';
+  return 'unknown';
+}
+
+function safetyLabel(message: string): string | undefined {
+  const match = /label\s+['"]([^'"]+)['"]/i.exec(message);
+  return match?.[1];
+}
+
+function safeRequestId(response: Response): string | undefined {
+  return response.headers?.get('x-request-id')
+    ?? response.headers?.get('apim-request-id')
+    ?? response.headers?.get('x-ms-request-id')
+    ?? undefined;
 }
 
 export class MaiImageProvider implements IImageProvider {
@@ -164,19 +187,37 @@ export class MaiImageProvider implements IImageProvider {
       let errorCode = '';
       let errorMessage = '';
       try {
-        const payload = JSON.parse(text) as { error?: { code?: unknown; message?: unknown } };
+        const payload = JSON.parse(text) as MaiImageApiError;
         errorCode = typeof payload.error?.code === 'string' ? payload.error.code : '';
         errorMessage = typeof payload.error?.message === 'string' ? payload.error.message : '';
       } catch {
         // Non-JSON provider errors use the generic status mapping below.
       }
+      const stage = safetyStage(errorMessage);
+      const label = safetyLabel(errorMessage);
       if (response.status === 400 &&
-          (errorCode === 'content_safety_violation' || errorMessage.includes('DallEBlockList'))) {
-        throw new Error(
-          `${MAI_MODEL_NAME} Content safety blocked the generated response. ` +
-          'Rephrase the prompt with neutral, concrete visual language, remove potentially ambiguous terms, and retry. ' +
-          'The safety policy cannot be disabled by this server.',
-        );
+          (errorCode === 'content_safety_violation' || label !== undefined)) {
+        const stageText = stage === 'output'
+          ? 'The provider explicitly reported that a generated response/candidate was blocked.'
+          : stage === 'prompt'
+            ? 'The provider explicitly reported that the input prompt was blocked.'
+            : 'The provider did not identify whether filtering occurred on the prompt or generated output.';
+        throw new ImageProviderError({
+          code: 'CONTENT_SAFETY_BLOCK',
+          message:
+            `${MAI_MODEL_NAME} did not create an image because its provider-side content filtering blocked the request. ` +
+            `${stageText} This result does not establish that the input prompt itself was unsafe. ` +
+            'A different image model can legitimately produce a different result because model-level filters and generated candidates differ. ' +
+            'Retry once with an equivalent concrete description, then use another approved deployed model or contact Azure Support if the block persists.',
+          provider: this.name,
+          model: this.deployment,
+          retryable: true,
+          stage,
+          status: response.status,
+          providerCode: errorCode || undefined,
+          label,
+          requestId: safeRequestId(response),
+        });
       }
       const category =
         response.status === 401
