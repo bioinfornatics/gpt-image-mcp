@@ -1,6 +1,6 @@
 using './main.bicep'
-param appName = 'replace-gpt-image-mcp'
-param containerImage = 'ghcr.io/bioinfornatics/gpt-image-mcp:latest'
+param appName = 'replace-image-mcp'
+param containerImage = 'ghcr.io/bioinfornatics/image-mcp:latest'
 param entraTenantId = '00000000-0000-0000-0000-000000000000'
 param entraClientId = '00000000-0000-0000-0000-000000000000'
 param entraAudience = 'api://00000000-0000-0000-0000-000000000000'

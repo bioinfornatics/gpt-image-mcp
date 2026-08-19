@@ -7,7 +7,7 @@ version: '3.9'
 #   echo "your-mcp-key"     | docker secret create mcp_api_key -
 #
 # Then deploy with:
-#   docker stack deploy -c docker-compose.yml gpt-image-mcp
+#   docker stack deploy -c docker-compose.yml image-mcp
 #
 # Plain IMAGE_API_KEY env var still works for dev (no _FILE needed).
 # ─────────────────────────────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ secrets:
     external: true
 
 services:
-  gpt-image-mcp:
+  image-mcp:
     build: .
     ports:
       - "3000:3000"
@@ -60,6 +60,6 @@ services:
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
-      - gpt-image-mcp
+      - image-mcp
     profiles:
       - monitoring

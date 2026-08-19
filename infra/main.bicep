@@ -2,7 +2,7 @@
 param location string = resourceGroup().location
 @description('Globally unique Container App name')
 param appName string
-@description('Published gpt-image-mcp container image')
+@description('Published image-mcp container image')
 param containerImage string
 @secure()
 @description('Microsoft Entra confidential client secret; prefer a Key Vault reference in production')
@@ -44,7 +44,7 @@ resource app 'Microsoft.App/containerApps@2025-02-02-preview' = {
     }
     template: {
       containers: [{
-        name: 'gpt-image-mcp'
+        name: 'image-mcp'
         image: containerImage
         env: [
           { name: 'IMAGE_PROVIDER', value: 'azure' }

@@ -17,12 +17,12 @@ Goose configuration:
 
 ```yaml
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     cmd: npx
-    args: ["--yes", "@bioinfornatics/gpt-image-mcp"]
+    args: ["--yes", "@bioinfornatics/image-mcp"]
     envs:
       IMAGE_PROVIDER: azure
       IMAGE_AZURE_AUTH_MODE: azure_cli

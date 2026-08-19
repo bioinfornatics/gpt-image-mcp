@@ -30,7 +30,7 @@ describe('ImageVariationTool', () => {
         ImageVariationTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
         { provide: RootsService, useValue: mockRoots },
-        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/image-mcp/image.${format}`)) } },
       ],
     }).compile();
     tool = module.get(ImageVariationTool);

@@ -1,4 +1,4 @@
-# Goose configuration for gpt-image-mcp
+# Goose configuration for image-mcp
 # Merge the relevant extension block into: ~/.config/goose/config.yaml
 #
 # Documentation: https://goose-docs.ai/docs/guides/config-files/
@@ -23,15 +23,15 @@
 extensions:
 
   # ─── Option A: OpenAI — npx (RECOMMENDED FOR END USERS) ───────────────────────────────
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     description: AI image generation — gpt-image-1 via OpenAI
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
     envs:
       IMAGE_PROVIDER: openai
       IMAGE_MCP_TRANSPORT: stdio
@@ -43,15 +43,15 @@ extensions:
     available_tools: []
 
   # ─── Option B: Azure AI Foundry ───────────────────────────────────────────
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: stdio
-  #   name: GPT Image MCP
+  #   name: Image MCP
   #   description: AI image generation — gpt-image-2 via Azure AI Foundry
   #   cmd: npx
   #   args:
   #     - "--yes"
-  #     - "@bioinfornatics/gpt-image-mcp@0.1.7"
+  #     - "@bioinfornatics/image-mcp@0.1.7"
   #     - --provider
   #     - azure
   #     - --base-url
@@ -69,15 +69,15 @@ extensions:
   #   available_tools: []
 
   # ─── Option C: Together AI ────────────────────────────────────────────────
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: stdio
-  #   name: GPT Image MCP (Together)
+  #   name: Image MCP (Together)
   #   description: AI image generation — FLUX models via Together AI
   #   cmd: npx
   #   args:
   #     - "--yes"
-  #     - "@bioinfornatics/gpt-image-mcp@0.1.7"
+  #     - "@bioinfornatics/image-mcp@0.1.7"
   #   envs:
   #     IMAGE_PROVIDER: together
   #     IMAGE_MCP_TRANSPORT: stdio
@@ -87,15 +87,15 @@ extensions:
   #   timeout: 300
 
   # ─── Option D: Custom / OpenRouter ───────────────────────────────────────
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: stdio
-  #   name: GPT Image MCP (Custom)
+  #   name: Image MCP (Custom)
   #   description: AI image generation via any OpenAI-compatible endpoint
   #   cmd: npx
   #   args:
   #     - "--yes"
-  #     - "@bioinfornatics/gpt-image-mcp@0.1.7"
+  #     - "@bioinfornatics/image-mcp@0.1.7"
   #   envs:
   #     IMAGE_PROVIDER: custom
   #     IMAGE_BASE_URL: https://openrouter.ai/api/v1
@@ -107,14 +107,14 @@ extensions:
   #   timeout: 300
 
   # ─── Option E: pin a specific version ─────────────────────────────────────
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: stdio
-  #   name: GPT Image MCP
+  #   name: Image MCP
   #   cmd: npx
   #   args:
   #     - "--yes"
-  #     - "@bioinfornatics/gpt-image-mcp@0.1.7"
+  #     - "@bioinfornatics/image-mcp@0.1.7"
   #   envs:
   #     IMAGE_PROVIDER: openai
   #     IMAGE_MCP_TRANSPORT: stdio
@@ -125,10 +125,10 @@ extensions:
   # ─── Option F: HTTP transport (remote / Docker server) ────────────────────
   # Start the HTTP server once; Goose sessions reuse this URI. Re-running the
   # same server command detects and reuses a compatible listener on the port.
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: streamable_http
-  #   name: GPT Image MCP (HTTP)
+  #   name: Image MCP (HTTP)
   #   uri: http://localhost:3000/mcp
   #   # If IMAGE_MCP_API_KEY is set on the server, add the Authorization header:
   #   # headers:
@@ -136,11 +136,11 @@ extensions:
   #   timeout: 300
 
   # ─── Option G: local clone (development) ──────────────────────────────────
-  # gptimagemcp:
+  # imagemcp:
   #   enabled: true
   #   type: stdio
-  #   name: GPT Image MCP (dev)
-  #   cmd: /absolute/path/to/gpt-image-mcp/bin/start.sh
+  #   name: Image MCP (dev)
+  #   cmd: /absolute/path/to/image-mcp/bin/start.sh
   #   envs:
   #     IMAGE_PROVIDER: openai
   #     IMAGE_MCP_TRANSPORT: stdio

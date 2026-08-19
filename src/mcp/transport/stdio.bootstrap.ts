@@ -13,6 +13,6 @@ export class McpStdioBootstrap {
     const transport = new StdioServerTransport();
     await this.mcpService.server.connect(transport);
     // In stdio mode, only log to stderr
-    process.stderr.write('[gpt-image-mcp] Connected via stdio\n');
+    process.stderr.write('[image-mcp] Connected via stdio\n');
   }
 }

@@ -1,4 +1,4 @@
-# Milestones & User Stories — gpt-image-mcp
+# Milestones & User Stories — image-mcp
 
 > Managed via Beads issue tracker. This document is the human-readable companion.  
 > All stories follow TDD: tests MUST exist before implementation begins.

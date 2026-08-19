@@ -56,7 +56,7 @@ jobs:
           IMAGE_MCP_TRANSPORT: http
           IMAGE_PORT: 3001
           IMAGE_LOG_LEVEL: error
-          IMAGE_OUTPUT_DIR: /tmp/gpt-image-mcp-test-output
+          IMAGE_OUTPUT_DIR: /tmp/image-mcp-test-output
           IMAGE_USE_ELICITATION: "false"
           IMAGE_USE_SAMPLING: "false"
           IMAGE_MAX_REQUESTS_PER_MINUTE: "1000"
@@ -197,7 +197,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: gpt-image-mcp:ci
+          tags: image-mcp:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
           load: true
@@ -210,7 +210,7 @@ jobs:
             -e IMAGE_REQUIRE_MCP_AUTH=false \
             -e IMAGE_HTTP_HOST=0.0.0.0 \
             -p 3002:3000 \
-            gpt-image-mcp:ci
+            image-mcp:ci
           for i in $(seq 1 12); do
             if curl -sf http://localhost:3002/health/live; then
               echo "Container healthy after ${i}×5s"
@@ -225,7 +225,7 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: gpt-image-mcp:ci
+          image-ref: image-mcp:ci
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
@@ -246,9 +246,9 @@ jobs:
   # ─── GitHub Packages (npm.pkg.github.com) ────────────────────────────────
   # Triggered only on semver tags (v*.*.*).
   # Uses the built-in GITHUB_TOKEN — no extra secret required.
-  # Package name must be scoped: @bioinfornatics/gpt-image-mcp (set in package.json).
+  # Package name must be scoped: @bioinfornatics/image-mcp (set in package.json).
   # Auth: bun publish reads BUN_AUTH_TOKEN (not NODE_AUTH_TOKEN).
-  # Install: bun add @bioinfornatics/gpt-image-mcp --registry https://npm.pkg.github.com
+  # Install: bun add @bioinfornatics/image-mcp --registry https://npm.pkg.github.com
   # ────────────────────────────────────────────────────────────────────────────
   publish-gpr:
     name: Publish to GitHub Packages
@@ -311,8 +311,8 @@ jobs:
       - name: Confirm published version
         run: |
           VERSION=$(bun -e "console.log(require('./package.json').version)")
-          echo "✅ Published: https://github.com/bioinfornatics/gpt-image-mcp/pkgs/npm/gpt-image-mcp"
-          echo "   Install: bun add @bioinfornatics/gpt-image-mcp@$VERSION --registry https://npm.pkg.github.com"
+          echo "✅ Published: https://github.com/bioinfornatics/image-mcp/pkgs/npm/image-mcp"
+          echo "   Install: bun add @bioinfornatics/image-mcp@$VERSION --registry https://npm.pkg.github.com"
 
   # ─── npmjs.com Publish ────────────────────────────────────────────────────
   # Triggered only on semver tags (v*.*.*).
@@ -381,8 +381,8 @@ jobs:
       - name: Confirm published version
         run: |
           VERSION=$(bun -e "console.log(require('./package.json').version)")
-          echo "✅ Published: https://www.npmjs.com/package/@bioinfornatics/gpt-image-mcp/v/$VERSION"
-          echo "   Install: bun add @bioinfornatics/gpt-image-mcp@$VERSION"
+          echo "✅ Published: https://www.npmjs.com/package/@bioinfornatics/image-mcp/v/$VERSION"
+          echo "   Install: bun add @bioinfornatics/image-mcp@$VERSION"
 
   # ─── GitHub Release Notes ──────────────────────────────────────────────────
   release:
@@ -412,16 +412,16 @@ jobs:
               ``,
               `### GitHub Packages`,
               `\`\`\`bash`,
-              `bun add @bioinfornatics/gpt-image-mcp@${version} --registry https://npm.pkg.github.com`,
+              `bun add @bioinfornatics/image-mcp@${version} --registry https://npm.pkg.github.com`,
               `\`\`\``,
               ``,
               `### npmjs.com`,
               `\`\`\`bash`,
               `# Zero-install (Claude Desktop / Goose / Cursor):`,
-              `bun x --bun @bioinfornatics/gpt-image-mcp@${version}`,
+              `bun x --bun @bioinfornatics/image-mcp@${version}`,
               ``,
               `# Global install:`,
-              `bun add -g @bioinfornatics/gpt-image-mcp@${version}`,
+              `bun add -g @bioinfornatics/image-mcp@${version}`,
               `\`\`\``,
               ``,
               `## Docker`,

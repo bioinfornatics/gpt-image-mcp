@@ -1,4 +1,4 @@
-# Use gpt-image-mcp with Goose (npx)
+# Use image-mcp with Goose (npx)
 
 This guide targets an end-user computer; no repository clone or Bun installation is required.
 
@@ -24,14 +24,14 @@ Merge one of the following entries under the existing `extensions:` map.
 
 ```yaml
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
       - --provider
       - openai
       - --transport
@@ -52,14 +52,14 @@ Before copying the YAML, collect these values from Foundry:
 
 ```yaml
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
       - --provider
       - azure
       - --base-url
@@ -106,9 +106,9 @@ Expected result:
 
 | System | Default image directory |
 |---|---|
-| Linux | Freedesktop `XDG_PICTURES_DIR/gpt-image-mcp`, otherwise `~/Images/gpt-image-mcp` |
-| macOS | `~/Pictures/gpt-image-mcp` |
-| Windows | `%USERPROFILE%\Pictures\gpt-image-mcp` |
+| Linux | Freedesktop `XDG_PICTURES_DIR/image-mcp`, otherwise `~/Images/image-mcp` |
+| macOS | `~/Pictures/image-mcp` |
+| Windows | `%USERPROFILE%\Pictures\image-mcp` |
 
 Set `IMAGE_OUTPUT_DIR` under `envs` to override the final directory.
 

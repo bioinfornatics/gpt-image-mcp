@@ -6,7 +6,7 @@
 
 ## Context
 
-`gpt-image-mcp` currently supports Azure OpenAI with `IMAGE_API_KEY`, while HTTP MCP access is independently protected by the static `IMAGE_MCP_API_KEY`. Enterprise and local keyless usage require two additional outbound Azure modes without breaking existing users:
+`image-mcp` currently supports Azure OpenAI with `IMAGE_API_KEY`, while HTTP MCP access is independently protected by the static `IMAGE_MCP_API_KEY`. Enterprise and local keyless usage require two additional outbound Azure modes without breaking existing users:
 
 1. `api_key` — current behavior;
 2. `azure_cli` — local developer identity acquired from Azure CLI;
@@ -55,7 +55,7 @@ Compatibility rule: when `IMAGE_PROVIDER=azure`, the mode is absent, and `IMAGE_
 ```mermaid
 sequenceDiagram
   participant G as Local MCP client
-  participant M as gpt-image-mcp
+  participant M as image-mcp
   participant A as Azure OpenAI
   G->>M: stdio tool call
   M->>A: API key or Azure CLI access token
@@ -66,7 +66,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant U as User / OAuth client
-  participant M as Remote gpt-image-mcp
+  participant M as Remote image-mcp
   participant E as Microsoft Entra ID
   participant A as Azure OpenAI
   U->>M: HTTPS + bearer token for MCP audience

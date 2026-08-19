@@ -41,7 +41,7 @@ describe('ImageStorageService', () => {
     process.env['XDG_CONFIG_HOME'] = tmpDir;
     await fs.writeFile(path.join(tmpDir, 'user-dirs.dirs'), 'XDG_PICTURES_DIR="$HOME/Images"\n');
     const service = new ImageStorageService();
-    expect(await service.getOutputDirectory()).toBe(path.join(os.homedir(), 'Images', 'gpt-image-mcp'));
+    expect(await service.getOutputDirectory()).toBe(path.join(os.homedir(), 'Images', 'image-mcp'));
   });
 
   it('encodes file paths as file URIs', () => {

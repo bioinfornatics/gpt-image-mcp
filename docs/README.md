@@ -1,4 +1,4 @@
-# gpt-image-mcp
+# image-mcp
 
 > **A production-grade MCP (Model Context Protocol) service for AI image generation**, built on **Bun + NestJS**, supporting OpenAI and Azure OpenAI `gpt-image-*` models.
 
@@ -28,7 +28,7 @@
 
 ## Overview
 
-`gpt-image-mcp` exposes an **MCP server** that lets any MCP-compatible LLM client (Claude Desktop, Goose, Cursor, …) generate and edit images through a standardised protocol layer. It supports:
+`image-mcp` exposes an **MCP server** that lets any MCP-compatible LLM client (Claude Desktop, Goose, Cursor, …) generate and edit images through a standardised protocol layer. It supports:
 
 - **OpenAI** (`/v1/images/generations` — `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`; `dall-e-2` for variations only; ~~`dall-e-3`~~ retired 2026-03-04)
 - **Azure OpenAI** (Azure AI Foundry endpoint + deployment-based routing)
@@ -124,8 +124,8 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full detail.
 ### Install & run (stdio)
 
 ```bash
-git clone https://github.com/your-org/gpt-image-mcp.git
-cd gpt-image-mcp
+git clone https://github.com/your-org/image-mcp.git
+cd image-mcp
 bun install
 
 # Copy and fill in your provider credentials
@@ -147,7 +147,7 @@ bun run start:http
 docker run -p 3000:3000 \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY=sk-... \
-  ghcr.io/your-org/gpt-image-mcp:latest
+  ghcr.io/your-org/image-mcp:latest
 ```
 
 ### Connect to Claude Desktop
@@ -157,9 +157,9 @@ Add to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "gpt-image-mcp": {
+    "image-mcp": {
       "command": "bun",
-      "args": ["run", "/path/to/gpt-image-mcp/src/main.ts", "--transport=stdio"],
+      "args": ["run", "/path/to/image-mcp/src/main.ts", "--transport=stdio"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-..."
@@ -339,8 +339,8 @@ referencing a secret file path — never a raw key — for authentication:
 
 ```yaml
 extensions:
-  gpt-image-mcp:
-    cmd: /abs/path/to/gpt-image-mcp/bin/start.sh
+  image-mcp:
+    cmd: /abs/path/to/image-mcp/bin/start.sh
     args:
       - --provider
       - azure
@@ -373,21 +373,21 @@ bin/start.sh --transport http --port 3000 --provider openai \
 ### Docker
 
 ```bash
-docker build -t gpt-image-mcp .
+docker build -t image-mcp .
 
 # Local/dev only — env-var injection leaks the key into `docker inspect` / process listings
 docker run -p 3000:3000 \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY_FILE=/run/secrets/image_api_key \
   -v /host/path/to/image_api_key:/run/secrets/image_api_key:ro \
-  gpt-image-mcp
+  image-mcp
 
 # Docker/Swarm/Compose secrets (preferred): mount under /run/secrets/ and reference by path
 docker run -p 3000:3000 \
   --secret image_api_key \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY_FILE=/run/secrets/image_api_key \
-  gpt-image-mcp
+  image-mcp
 ```
 
 ### Docker secret guidance
@@ -407,4 +407,4 @@ See Azure deployment troubleshooting in authentication/TROUBLESHOOTING.md.
 
 ---
 
-*Generated: 2026-04-22 — gpt-image-mcp project bootstrap*
+*Generated: 2026-04-22 — image-mcp project bootstrap*

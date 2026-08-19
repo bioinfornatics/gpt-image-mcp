@@ -29,7 +29,7 @@ IMAGE_ENTRA_CLIENT_ID=<server-client-id>
 IMAGE_ENTRA_AUDIENCE=api://<server-client-id>
 IMAGE_ENTRA_SCOPE=mcp.access
 IMAGE_ENTRA_ALLOWED_CLIENT_IDS=<client-app-id>
-IMAGE_ENTRA_CLIENT_SECRET_FILE=/run/secrets/gpt-image-mcp-entra-client-secret
+IMAGE_ENTRA_CLIENT_SECRET_FILE=/run/secrets/image-mcp-entra-client-secret
 IMAGE_HTTP_HOST=0.0.0.0
 ```
 

@@ -1,4 +1,6 @@
-# gpt-image-mcp
+# image-mcp
+
+> Formerly **gpt-image-mcp**. The npm package is now `@bioinfornatics/image-mcp`; the legacy `gpt-image-mcp` executable remains as a temporary alias. Existing `IMAGE_*` environment variables are unchanged.
 
 > **MCP server** for AI image generation via **OpenAI** and **Azure OpenAI** gpt-image-* models.  
 > Built with **Bun + NestJS** · **Streamable HTTP + stdio** transports · **305 tests, 92 % coverage**
@@ -34,15 +36,15 @@
 
 ```bash
 # stdio transport (Claude Desktop, Goose, Cursor)
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio bunx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio bunx @bioinfornatics/image-mcp
 
 # HTTP transport on port 3000 (network-facing: MCP bearer token required)
 IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=http IMAGE_PORT=3000 \
   IMAGE_MCP_API_KEY=replace-with-at-least-16-characters \
-  bunx @bioinfornatics/gpt-image-mcp
+  bunx @bioinfornatics/image-mcp
 
 # Microsoft Foundry (local stdio; provider inferred from the canonical base URL)
-IMAGE_API_KEY=... bunx @bioinfornatics/gpt-image-mcp \
+IMAGE_API_KEY=... bunx @bioinfornatics/image-mcp \
   --base-url https://YOUR-RESOURCE.services.ai.azure.com \
   --foundry-project-endpoint https://YOUR-RESOURCE.services.ai.azure.com/api/projects/YOUR-PROJECT \
   --deployment MAI-Image-2.5 \
@@ -52,21 +54,21 @@ IMAGE_API_KEY=... bunx @bioinfornatics/gpt-image-mcp \
 **With `npx` (Node.js users):**
 
 ```bash
-IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio npx @bioinfornatics/gpt-image-mcp
+IMAGE_PROVIDER=openai IMAGE_API_KEY=sk-... IMAGE_MCP_TRANSPORT=stdio npx @bioinfornatics/image-mcp
 ```
 
 ### Repeated launches and port reuse
 
 - **Goose and other local MCP hosts should use `stdio`.** Each host launch gets its own pipe-backed process and never binds the shared HTTP port. The packaged command should set `IMAGE_MCP_TRANSPORT=stdio`; the local `bin/start.sh` also defaults to `stdio` when it is omitted.
-- **HTTP is a persistent, multi-client server.** Start it once and configure Goose with a `streamable_http` URI. If the HTTP command is run again with the same host and port, it probes `/health/live`: a compatible `gpt-image-mcp` listener is reused and the duplicate process exits successfully. An unrelated listener still produces a port conflict rather than being mistaken for this server.
+- **HTTP is a persistent, multi-client server.** Start it once and configure Goose with a `streamable_http` URI. If the HTTP command is run again with the same host and port, it probes `/health/live`: a compatible `image-mcp` listener is reused and the duplicate process exits successfully. An unrelated listener still produces a port conflict rather than being mistaken for this server.
 
 ---
 
 ### Option B — Install globally
 
 ```bash
-bun add -g @bioinfornatics/gpt-image-mcp
-IMAGE_API_KEY=sk-... gpt-image-mcp --provider openai --transport stdio
+bun add -g @bioinfornatics/image-mcp
+IMAGE_API_KEY=sk-... image-mcp --provider openai --transport stdio
 ```
 
 ---
@@ -74,8 +76,8 @@ IMAGE_API_KEY=sk-... gpt-image-mcp --provider openai --transport stdio
 ### Option C — Clone & run from source
 
 ```bash
-git clone https://github.com/bioinfornatics/gpt-image-mcp
-cd gpt-image-mcp
+git clone https://github.com/bioinfornatics/image-mcp
+cd image-mcp
 bun install
 cp .env.example .env   # then edit with your keys
 
@@ -88,14 +90,14 @@ bun run start:stdio    # stdio
 ### Option D — Docker
 
 ```bash
-docker build -t gpt-image-mcp .
+docker build -t image-mcp .
 
 docker run -p 3000:3000 \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY=sk-... \
   -e IMAGE_MCP_TRANSPORT=http \
   -e IMAGE_MCP_API_KEY=replace-with-at-least-16-characters \
-  gpt-image-mcp
+  image-mcp
 ```
 
 ---
@@ -134,7 +136,7 @@ Azure users can choose among **API key**, **Azure CLI**, and **Microsoft Entra O
 | `IMAGE_OUTPUT_DIR` | ❌ | OS Pictures directory | Override the directory where every generated image is persisted |
 | `IMAGE_LOG_LEVEL` | ❌ | `info` | `debug`/`info`/`warn`/`error` |
 
-Every generated, edited, or variation image is returned as native MCP image content and persisted automatically. The default directory is the freedesktop `XDG_PICTURES_DIR/gpt-image-mcp` on Linux (falling back to `~/Images/gpt-image-mcp`), `~/Pictures/gpt-image-mcp` on macOS, and `%USERPROFILE%\\Pictures\\gpt-image-mcp` on Windows. `save_to_workspace: true` additionally creates a copy in the MCP workspace.
+Every generated, edited, or variation image is returned as native MCP image content and persisted automatically. The default directory is the freedesktop `XDG_PICTURES_DIR/image-mcp` on Linux (falling back to `~/Images/image-mcp`), `~/Pictures/image-mcp` on macOS, and `%USERPROFILE%\\Pictures\\image-mcp` on Windows. `save_to_workspace: true` additionally creates a copy in the MCP workspace.
 
 ---
 
@@ -155,9 +157,9 @@ requires an override. `IMAGE_LOG_LEVEL` defaults to `info` and may be omitted.
 ```json
 {
   "mcpServers": {
-    "gpt-image-mcp": {
+    "image-mcp": {
       "command": "bunx",
-      "args": ["@bioinfornatics/gpt-image-mcp"],
+      "args": ["@bioinfornatics/image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-...",
@@ -171,22 +173,22 @@ requires an override. `IMAGE_LOG_LEVEL` defaults to `info` and may be omitted.
 
 ### Goose
 
-For a copy-paste `npx` setup on Linux, macOS, or Windows, including secrets, Azure, first-run verification, output paths, and troubleshooting, see **[Use gpt-image-mcp with Goose](docs/HOWTO_GOOSE.md)**.
+For a copy-paste `npx` setup on Linux, macOS, or Windows, including secrets, Azure, first-run verification, output paths, and troubleshooting, see **[Use image-mcp with Goose](docs/HOWTO_GOOSE.md)**.
 
 Add to `~/.config/goose/config.yaml` under `extensions:`:
 
 **OpenAI:**
 ```yaml
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     description: AI image generation via OpenAI
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
       - --provider
       - openai
       - --transport
@@ -199,15 +201,15 @@ extensions:
 **Azure AI Foundry:**
 ```yaml
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     description: AI image generation — gpt-image-2 via Azure AI Foundry
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
       - --provider
       - azure
       - --base-url
@@ -448,7 +450,7 @@ See [`docs/TDD_STRATEGY.md`](docs/TDD_STRATEGY.md) for the full TDD workflow.
 OpenRouter is inferred from `https://openrouter.ai/api/v1`. Configure its key as `IMAGE_API_KEY`:
 
 ```bash
-IMAGE_API_KEY=... npx --yes @bioinfornatics/gpt-image-mcp \
+IMAGE_API_KEY=... npx --yes @bioinfornatics/image-mcp \
   --base-url https://openrouter.ai/api/v1 \
   --model google/gemini-3.1-flash-image \
   --transport stdio

@@ -1,14 +1,14 @@
 # Replace YOUR-RESOURCE, YOUR-PROJECT, and MAI-Image-2.5 with values from Foundry.
 # The deployment is the customer-chosen deployment name, which may differ from the model name.
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP
+    name: Image MCP
     cmd: npx
     args:
       - --yes
-      - "@bioinfornatics/gpt-image-mcp@0.1.7"
+      - "@bioinfornatics/image-mcp@0.1.7"
       - --base-url
       - https://YOUR-RESOURCE.services.ai.azure.com
       - --foundry-project-endpoint

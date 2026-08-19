@@ -23,6 +23,7 @@
 import { describe, expect, it } from 'bun:test';
 import { spawnSync } from 'child_process';
 import { resolve } from 'path';
+import pkg from '../../../package.json';
 
 const PROJECT_ROOT = resolve(import.meta.dir, '..', '..', '..');
 const MAIN = resolve(PROJECT_ROOT, 'src/main.ts');
@@ -53,14 +54,14 @@ describe('installation smoke: src/main.ts', () => {
   it('--help exits 0 with no provider/secret configuration at all', () => {
     const result = runMain(['--help']);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain('gpt-image-mcp');
+    expect(result.stdout).toContain('image-mcp');
     expect(result.stdout).toContain('Usage:');
   });
 
   it('--version exits 0 with no provider/secret configuration at all', () => {
     const result = runMain(['--version']);
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toMatch(/^gpt-image-mcp \d+\.\d+\.\d+/);
+    expect(result.stdout.trim()).toMatch(/^image-mcp \d+\.\d+\.\d+/);
   });
 
   it('rejects a raw --api-key argument (non-zero exit, flag itself never echoed as accepted)', () => {
@@ -113,7 +114,7 @@ describe('installation smoke: bin/start.sh (Goose launcher, argument passthrough
   it('passes --version through to main.ts and exits 0', () => {
     const result = runStartSh(['--version']);
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toMatch(/^gpt-image-mcp \d+\.\d+\.\d+/);
+    expect(result.stdout.trim()).toMatch(/^image-mcp \d+\.\d+\.\d+/);
   });
 
   it('defaults IMAGE_MCP_TRANSPORT to stdio when the caller (e.g. Goose) omits it', () => {
@@ -142,5 +143,16 @@ describe('installation smoke: bin/start.sh (Goose launcher, argument passthrough
     expect(result.stderr).toContain('--mcp-api-key-file');
     expect(result.stderr).toContain('Option "--mcp-api-key" is not allowed');
     expect(result.stdout).toBe('');
+  });
+});
+
+
+describe('package rename compatibility', () => {
+  it('package exposes image-mcp as primary binary and gpt-image-mcp as temporary alias', () => {
+    expect(pkg.name).toBe('@bioinfornatics/image-mcp');
+    expect(pkg.bin).toEqual({
+      'image-mcp': './dist/main.js',
+      'gpt-image-mcp': './dist/main.js',
+    });
   });
 });

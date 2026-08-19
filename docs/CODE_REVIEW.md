@@ -1,4 +1,4 @@
-# Code Review Report — gpt-image-mcp
+# Code Review Report — image-mcp
 
 **Date:** 2026-04-23  
 **Reviewers:** Software Architect · Backend Engineer · QA Automation · Security Champion · Container & DevOps  
@@ -22,7 +22,7 @@ The project has a solid foundation — clean module graph, no circular dependenc
 > **Status: RESOLVED / SUPERSEDED.** `register()` now closes over the live `McpServer` instance
 > and passes it directly to `execute()` instead of reading the non-existent `extra.server`. Verified
 > in the current codebase (see `src/mcp/tools/image-generate.tool.ts`). Tracked/verified under
-> task **gpt-image-mcp-593.1**. This finding no longer reflects the current code and is kept here
+> task **image-mcp-593.1**. This finding no longer reflects the current code and is kept here
 > only for historical context.
 
 **Files:** `src/mcp/tools/image-generate.tool.ts` L56–58  
@@ -55,7 +55,7 @@ register(server: McpServer) {
 
 > **Status: RESOLVED / SUPERSEDED.** `docker-compose.yml` now sets `IMAGE_MCP_SECRET_BACKEND`
 > (not the reserved `SECRET_BACKEND`), so `*_FILE` secrets resolve correctly. Verified in the
-> current file. Tracked/verified under task **gpt-image-mcp-593.2**. Kept for historical context
+> current file. Tracked/verified under task **image-mcp-593.2**. Kept for historical context
 > only.
 
 **File:** `docker-compose.yml` L30  
@@ -78,7 +78,7 @@ register(server: McpServer) {
 
 > **Status: RESOLVED / SUPERSEDED.** `auth.guard.ts` now compares tokens using
 > `crypto.timingSafeEqual` (with a length check first), removing the timing side-channel.
-> Verified in the current codebase. Tracked/verified under task **gpt-image-mcp-593.3**. Kept
+> Verified in the current codebase. Tracked/verified under task **image-mcp-593.3**. Kept
 > for historical context only.
 
 **File:** `src/security/auth.guard.ts`  
@@ -127,7 +127,7 @@ prompt = sanitisePrompt(prompt, PROMPT_MAX_LENGTH_GPT);
 > GPT-image vs. legacy/DALL-E behavior and sets `response_format: 'b64_json'` where required,
 > without unsafe implicit URL downloads. The original file paths referenced below have since
 > been reorganized (see `src/providers/*` strategy/provider files) as part of the same effort.
-> Tracked/verified under task **gpt-image-mcp-593.4**. Kept for historical context only.
+> Tracked/verified under task **image-mcp-593.4**. Kept for historical context only.
 
 **File:** `src/providers/openai/openai.provider.ts` · `src/providers/azure/azure.provider.ts`  
 **Reviewer:** Backend

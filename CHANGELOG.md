@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@bioinfornatics/gpt-image-mcp` are documented here.  
+All notable changes to `@bioinfornatics/image-mcp` are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -166,7 +166,7 @@ Migrate before upgrading to v0.3.0.
 
 - `docs/API.md`: updated all model tables, size/quality reference tables, and appendix feature matrix to reflect `gpt-image-2` as primary model and DALL-E 3 retirement.
 - `docs/README.md`, `docs/SPECIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/MILESTONES.md`, `docs/TDD_STRATEGY.md`: DALL-E 3 references replaced with retirement notices or removed.
-- `examples/goose-config.yaml`: corrected to use `bunx`, scoped package name `@bioinfornatics/gpt-image-mcp`, proper `envs:`/`env_keys:` schema, Azure as primary example.
+- `examples/goose-config.yaml`: corrected to use `bunx`, scoped package name `@bioinfornatics/image-mcp`, proper `envs:`/`env_keys:` schema, Azure as primary example.
 - `README.md`: all install commands updated to scoped package name; Goose config section expanded with OpenAI and Azure variants.
 
 ### Tests
@@ -210,9 +210,9 @@ Migrate before upgrading to v0.3.0.
 
 ---
 
-[Unreleased]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.2...HEAD
-[0.1.2]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.2...v0.1.0
-[0.0.2]: https://github.com/bioinfornatics/gpt-image-mcp/compare/v0.0.1...v0.0.2
-[0.0.1]: https://github.com/bioinfornatics/gpt-image-mcp/releases/tag/v0.0.1
+[Unreleased]: https://github.com/bioinfornatics/image-mcp/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/bioinfornatics/image-mcp/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/bioinfornatics/image-mcp/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/bioinfornatics/image-mcp/compare/v0.0.2...v0.1.0
+[0.0.2]: https://github.com/bioinfornatics/image-mcp/compare/v0.0.1...v0.0.2
+[0.0.1]: https://github.com/bioinfornatics/image-mcp/releases/tag/v0.0.1

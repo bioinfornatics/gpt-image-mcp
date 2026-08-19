@@ -71,7 +71,7 @@ export function readSecretFile(filePath: string): string {
     const mode = stat.mode & 0o777;
     if (mode & 0o004) {
       process.stderr.write(
-        `[gpt-image-mcp] WARNING: Secret file "${resolved}" is world-readable ` +
+        `[image-mcp] WARNING: Secret file "${resolved}" is world-readable ` +
         `(mode ${mode.toString(8)}). Consider chmod 0400.\n`,
       );
     }
@@ -108,7 +108,7 @@ export function resolveFileSecrets(): void {
     if (process.env[varName]) {
       // Both VAR and VAR_FILE set — _FILE takes priority, warn about conflict
       process.stderr.write(
-        `[gpt-image-mcp] WARNING: Both ${varName} and ${fileEnvVar} are set. ` +
+        `[image-mcp] WARNING: Both ${varName} and ${fileEnvVar} are set. ` +
         `${fileEnvVar} takes priority.\n`,
       );
     }
@@ -123,7 +123,8 @@ export function resolveFileSecrets(): void {
 
 // ─── keytar backend ───────────────────────────────────────────────────────────
 
-const KEYTAR_SERVICE = 'gpt-image-mcp';
+const KEYTAR_SERVICE = 'image-mcp';
+const LEGACY_KEYTAR_SERVICE = 'gpt-image-mcp';
 
 /**
  * Map from env var name → keytar account name.
@@ -155,7 +156,7 @@ export async function resolveKeytarSecrets(): Promise<void> {
     keytar = await import('keytar' as string); // cast avoids TS2307 when not installed
   } catch {
     process.stderr.write(
-      `[gpt-image-mcp] WARNING: IMAGE_MCP_SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
+      `[image-mcp] WARNING: IMAGE_MCP_SECRET_BACKEND=keytar requested but keytar is not installed.\n` +
       `  Install with: bun add keytar\n` +
       `  Falling back to _FILE and plain env var resolution.\n`,
     );
@@ -168,16 +169,17 @@ export async function resolveKeytarSecrets(): Promise<void> {
 
     const account = KEYTAR_ACCOUNT_MAP[varName];
     try {
-      const secret = await keytar.getPassword(KEYTAR_SERVICE, account);
+      let secret = await keytar.getPassword(KEYTAR_SERVICE, account);
+      if (!secret) secret = await keytar.getPassword(LEGACY_KEYTAR_SERVICE, account);
       if (secret) {
         process.env[varName] = secret;
         process.stderr.write(
-          `[gpt-image-mcp] Loaded ${varName} from OS keychain (account: ${account}).\n`,
+          `[image-mcp] Loaded ${varName} from OS keychain (account: ${account}).\n`,
         );
       }
     } catch (err) {
       process.stderr.write(
-        `[gpt-image-mcp] WARNING: Could not read ${varName} from keychain: ${String(err)}\n`,
+        `[image-mcp] WARNING: Could not read ${varName} from keychain: ${String(err)}\n`,
       );
     }
   }
@@ -244,10 +246,10 @@ export function resolveImageEnvAliases(): void {
   function copyAlias(from: string, to: string): void {
     if (!process.env[to] && process.env[from]) {
       process.stderr.write(
-        `[gpt-image-mcp] DEPRECATED (removed in ${REMOVAL_VERSION}): ` +
+        `[image-mcp] DEPRECATED (removed in ${REMOVAL_VERSION}): ` +
         `"${from}" has been renamed to "${to}".\n` +
         `  → Replace ${from}=<value>  with  ${to}=<value>  in your config.\n` +
-        `  → See: https://github.com/bioinfornatics/gpt-image-mcp/blob/main/CHANGELOG.md\n`,
+        `  → See: https://github.com/bioinfornatics/image-mcp/blob/main/CHANGELOG.md\n`,
       );
       process.env[to] = process.env[from];
     }

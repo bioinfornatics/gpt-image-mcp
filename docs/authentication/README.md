@@ -16,7 +16,7 @@ The two authentication boundaries are independent:
 Run diagnostics without exposing credential values:
 
 ```bash
-npx --yes @bioinfornatics/gpt-image-mcp auth doctor
+npx --yes @bioinfornatics/image-mcp auth doctor
 ```
 
 The npm executable dispatches this subcommand before starting NestJS. From a clone, `bun run auth:doctor` provides the same diagnostic.

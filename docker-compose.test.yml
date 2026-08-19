@@ -2,7 +2,7 @@ version: '3.9'
 
 # Overrides for integration testing with a fake API key
 services:
-  gpt-image-mcp:
+  image-mcp:
     build: .
     ports:
       - "3001:3000"

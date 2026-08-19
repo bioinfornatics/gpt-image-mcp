@@ -77,7 +77,7 @@ describe('ImageGenerateTool — with M4 features', () => {
         { provide: ElicitationService, useValue: mockElicitation },
         { provide: SamplingService, useValue: mockSampling },
         { provide: RootsService, useValue: mockRoots },
-        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/image-mcp/image.${format}`)) } },
       ],
     }).compile();
 
@@ -367,7 +367,7 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const text: string = result.content[0].text;
-      expect(text).toContain('/tmp/gpt-image-mcp/image.png');
+      expect(text).toContain('/tmp/image-mcp/image.png');
       expect(text).not.toContain('Workspace copy:');
     });
   });
@@ -431,7 +431,7 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].saved_to).toBe('/tmp/gpt-image-mcp/image.png');
+      expect(parsed.images[0].saved_to).toBe('/tmp/image-mcp/image.png');
       expect(parsed.images[0].workspace_copy).toBe(savedPath);
     });
 
@@ -443,7 +443,7 @@ describe('ImageGenerateTool — with M4 features', () => {
 
       expect(result.isError).toBeFalsy();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].saved_to).toBe('/tmp/gpt-image-mcp/image.png');
+      expect(parsed.images[0].saved_to).toBe('/tmp/image-mcp/image.png');
       expect(parsed.images[0]).not.toHaveProperty('workspace_copy');
     });
   });

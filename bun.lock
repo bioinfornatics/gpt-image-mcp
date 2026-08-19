@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@bioinfornatics/gpt-image-mcp",
+      "name": "@bioinfornatics/image-mcp",
       "dependencies": {
         "@azure/identity": "^4.13.1",
         "@azure/msal-node": "^5.5.0",

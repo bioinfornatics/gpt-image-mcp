@@ -1,4 +1,4 @@
-# TDD Strategy — gpt-image-mcp
+# TDD Strategy — image-mcp
 
 **Owner:** QA Automation Engineer  
 **Date:** 2026-04-22
@@ -7,7 +7,7 @@
 
 ## 1. Philosophy
 
-`gpt-image-mcp` follows **strict Test-Driven Development**:
+`image-mcp` follows **strict Test-Driven Development**:
 
 > **Red → Green → Refactor**  
 > Every line of production code is preceded by a failing test.

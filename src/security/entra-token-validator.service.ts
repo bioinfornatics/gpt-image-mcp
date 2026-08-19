@@ -9,7 +9,7 @@ export class EntraAuthenticationError extends Error {
 }
 interface EntraClaims extends JWTPayload { ver?: string; tid?: string; oid?: string; scp?: string; azp?: string; appid?: string; }
 export interface ValidatedEntraAuth { readonly identity: Omit<RequestIdentity, 'correlationId'>; readonly assertion: string; }
-export const ENTRA_AUTH = Symbol('gpt-image-mcp.entra-auth');
+export const ENTRA_AUTH = Symbol('image-mcp.entra-auth');
 
 @Injectable()
 export class EntraTokenValidatorService {

@@ -31,7 +31,7 @@ export class ImageStorageService {
       : process.platform === 'darwin'
         ? path.join(os.homedir(), 'Pictures')
         : this.getWindowsPicturesDirectory();
-    return path.join(pictures, 'gpt-image-mcp');
+    return path.join(pictures, 'image-mcp');
   }
 
   private async getLinuxPicturesDirectory(): Promise<string> {

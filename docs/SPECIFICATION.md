@@ -1,4 +1,4 @@
-# Project Specification — gpt-image-mcp
+# Project Specification — image-mcp
 
 **Version:** 1.0.0-draft  
 **Date:** 2026-04-22  
@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-`gpt-image-mcp` is a production-grade **Model Context Protocol (MCP) server** that exposes AI image generation capabilities to any MCP-compatible LLM client. It wraps the OpenAI and Azure OpenAI `gpt-image-*` API families and implements advanced MCP protocol features — Elicitation, Sampling, and Roots — to enable interactive, context-aware image generation workflows.
+`image-mcp` is a production-grade **Model Context Protocol (MCP) server** that exposes AI image generation capabilities to any MCP-compatible LLM client. It wraps the OpenAI and Azure OpenAI `gpt-image-*` API families and implements advanced MCP protocol features — Elicitation, Sampling, and Roots — to enable interactive, context-aware image generation workflows.
 
 **Stack:** Bun (runtime) + NestJS (framework) + TypeScript (language)  
 **Protocol:** MCP draft specification (2025-11)  
@@ -24,7 +24,7 @@ LLM clients (Claude Desktop, Goose, Cursor, etc.) lack a standardised, secure, a
 - Missing interactive refinement (the model must guess missing parameters)
 - Unable to save outputs into the user's workspace
 
-`gpt-image-mcp` solves all four problems.
+`image-mcp` solves all four problems.
 
 ---
 
@@ -65,7 +65,7 @@ LLM clients (Claude Desktop, Goose, Cursor, etc.) lack a standardised, secure, a
 The server acts as a **protocol bridge**:
 
 ```
-MCP Client → [JSON-RPC 2.0 over HTTP/stdio] → gpt-image-mcp → [HTTPS REST] → OpenAI/Azure
+MCP Client → [JSON-RPC 2.0 over HTTP/stdio] → image-mcp → [HTTPS REST] → OpenAI/Azure
 ```
 
 Key integration points:

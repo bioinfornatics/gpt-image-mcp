@@ -99,7 +99,7 @@ describe('MCP HTTP Transport — Integration', () => {
       expect(res.status).toBe(200);
       expect(res.body.jsonrpc).toBe('2.0');
       expect(res.body.result).toBeDefined();
-      expect(res.body.result.serverInfo.name).toBe('gpt-image-mcp');
+      expect(res.body.result.serverInfo.name).toBe('image-mcp');
       expect(res.body.result.capabilities.tools).toBeDefined();
     });
 

@@ -35,7 +35,7 @@ describe('ImageEditTool', () => {
         ImageEditTool,
         { provide: PROVIDER_TOKEN, useValue: mockProvider },
         { provide: RootsService, useValue: mockRoots },
-        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/image-mcp/image.${format}`)) } },
       ],
     }).compile();
     tool = module.get(ImageEditTool);
@@ -116,7 +116,7 @@ describe('ImageEditTool', () => {
     it('should return JSON when response_format=json', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', response_format: 'json' });
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].saved_to).toContain('/tmp/gpt-image-mcp/');
+      expect(parsed.images[0].saved_to).toContain('/tmp/image-mcp/');
     });
 
     it('should pass model through to provider', async () => {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Renovate dependency automation — gpt-image-mcp (Bun · NestJS 10 · TypeScript)",
+  "description": "Renovate dependency automation — image-mcp (Bun · NestJS 10 · TypeScript)",
 
   "extends": [
     "config:recommended",

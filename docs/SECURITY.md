@@ -1,6 +1,6 @@
 # Security Guide
 
-**Project:** gpt-image-mcp  
+**Project:** image-mcp  
 **Version:** 1.0  
 **Date:** 2026-04-22  
 **Status:** Active
@@ -27,7 +27,7 @@
 
 ### What This Server Does
 
-`gpt-image-mcp` is a Model Context Protocol (MCP) server that exposes OpenAI image generation, editing, and variation APIs as structured MCP tools. It can be operated in two transport modes:
+`image-mcp` is a Model Context Protocol (MCP) server that exposes OpenAI image generation, editing, and variation APIs as structured MCP tools. It can be operated in two transport modes:
 
 | Mode | Transport | Typical Caller |
 |------|-----------|----------------|
@@ -65,7 +65,7 @@
                      │ MCP JSON-RPC (stdio or HTTPS)
                      ▼
 ┌──────────────────────────────────────────────────────────┐
-│  gpt-image-mcp                                           │
+│  image-mcp                                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
 │  │ Auth Guard   │  │ Input Validator│  │ Rate Limiter │  │
 │  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘  │
@@ -529,7 +529,7 @@ If a Docker image is built, scan it with [Trivy](https://github.com/aquasecurity
 - name: Trivy vulnerability scan
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: gpt-image-mcp:${{ github.sha }}
+    image-ref: image-mcp:${{ github.sha }}
     format: table
     exit-code: 1
     severity: CRITICAL,HIGH
@@ -595,14 +595,14 @@ kubectl create secret generic mcp-secrets \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Rolling restart (zero-downtime)
-kubectl rollout restart deployment/gpt-image-mcp
-kubectl rollout status deployment/gpt-image-mcp
+kubectl rollout restart deployment/image-mcp
+kubectl rollout status deployment/image-mcp
 ```
 
 For `.env`-based deployment:
 ```bash
-sed -i "s/^IMAGE_MCP_API_KEY=.*/IMAGE_MCP_API_KEY=$NEW_KEY/" /etc/gpt-image-mcp/.env
-systemctl reload gpt-image-mcp  # or restart
+sed -i "s/^IMAGE_MCP_API_KEY=.*/IMAGE_MCP_API_KEY=$NEW_KEY/" /etc/image-mcp/.env
+systemctl reload image-mcp  # or restart
 ```
 
 **Step 4: Update all clients** with the new key.
@@ -728,7 +728,7 @@ npm audit --audit-level=high
 
 The following table maps relevant [OWASP Top 10 (2021)](https://owasp.org/www-project-top-ten/) categories to this project.
 
-| # | OWASP Category | Applicable? | How Mitigated in gpt-image-mcp |
+| # | OWASP Category | Applicable? | How Mitigated in image-mcp |
 |---|---------------|-------------|-------------------------------|
 | A01 | Broken Access Control | ✅ Yes | `IMAGE_MCP_API_KEY` bearer token; path traversal checks; workspace root enforcement |
 | A02 | Cryptographic Failures | ✅ Yes | TLS required for HTTP; `timingSafeEqual` for key comparison; secrets never in plaintext logs |
@@ -754,4 +754,4 @@ The following table maps relevant [OWASP Top 10 (2021)](https://owasp.org/www-pr
 
 *This document is maintained alongside the source code. When security controls change, update this document in the same PR.*
 
-*For vulnerability reports, open a [GitHub Security Advisory](https://github.com/YOUR_ORG/gpt-image-mcp/security/advisories/new) — do not file public issues for security vulnerabilities.*
+*For vulnerability reports, open a [GitHub Security Advisory](https://github.com/YOUR_ORG/image-mcp/security/advisories/new) — do not file public issues for security vulnerabilities.*

@@ -16,21 +16,21 @@ describe('MetricsController', () => {
     expect(typeof output).toBe('string');
     // Prometheus text format starts with # HELP or contains metric names
     expect(output.length).toBeGreaterThan(0);
-    expect(output).toMatch(/gpt_image_mcp_|nodejs_/);
+    expect(output).toMatch(/image_mcp_|nodejs_/);
   });
 
   it('should include custom image generation counter metric', async () => {
     const output = await controller.getMetrics();
-    expect(output).toContain('gpt_image_mcp_image_generations_total');
+    expect(output).toContain('image_mcp_image_generations_total');
   });
 
   it('should include privacy-safe model fallback counter metric', async () => {
     const output = await controller.getMetrics();
-    expect(output).toContain('gpt_image_mcp_image_model_fallbacks_total');
+    expect(output).toContain('image_mcp_image_model_fallbacks_total');
   });
 
   it('should include custom MCP request counter metric', async () => {
     const output = await controller.getMetrics();
-    expect(output).toContain('gpt_image_mcp_mcp_requests_total');
+    expect(output).toContain('image_mcp_mcp_requests_total');
   });
 });

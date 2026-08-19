@@ -1,6 +1,6 @@
 # Team Roles & Responsibilities
 
-> This document defines the team roles required to successfully deliver the `gpt-image-mcp` project, their responsibilities, and how they interact.
+> This document defines the team roles required to successfully deliver the `image-mcp` project, their responsibilities, and how they interact.
 
 ---
 
@@ -149,7 +149,7 @@
 - `Dockerfile` (multi-stage, Bun-based)
 - `.github/workflows/ci.yml`
 - `docker-compose.yml` and `docker-compose.test.yml`
-- `charts/gpt-image-mcp/` Helm chart
+- `charts/image-mcp/` Helm chart
 - Observability stack configuration
 
 ### TDD Touchpoint

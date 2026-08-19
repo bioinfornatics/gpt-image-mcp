@@ -38,7 +38,7 @@ describe('ImageGenerateTool', () => {
         { provide: ElicitationService, useValue: { isEnabled: false, requestImageParams: jest.fn().mockResolvedValue(null) } },
         { provide: SamplingService, useValue: { isEnabled: false, enhancePrompt: jest.fn().mockImplementation((_s, p, _ctx) => Promise.resolve(p)) } },
         { provide: RootsService, useValue: { getRoots: jest.fn().mockResolvedValue([]), saveImageToWorkspace: jest.fn().mockResolvedValue(null) } },
-        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/gpt-image-mcp/image.${format}`)) } },
+        { provide: ImageStorageService, useValue: { saveImage: jest.fn().mockImplementation((_b64: string, format: string) => Promise.resolve(`/tmp/image-mcp/image.${format}`)) } },
       ],
     }).compile();
 
@@ -114,7 +114,7 @@ describe('ImageGenerateTool', () => {
       const result = await tool.execute({ prompt: 'a cat', response_format: 'json' });
       expect(result.isError).toBeUndefined();
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.images[0].saved_to).toContain('/tmp/gpt-image-mcp/');
+      expect(parsed.images[0].saved_to).toContain('/tmp/image-mcp/');
       expect(parsed.model).toBe(mockImageResult.model);
     });
 

@@ -13,7 +13,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-export const CLI_BIN_NAME = 'gpt-image-mcp';
+export const CLI_BIN_NAME = 'image-mcp';
 
 export const HELP_TEXT = `${CLI_BIN_NAME} — MCP server for gpt-image-1 / gpt-image-2 image generation
 

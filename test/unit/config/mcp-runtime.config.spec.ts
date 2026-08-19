@@ -20,6 +20,19 @@ describe('MCP runtime config', () => {
     const server = Bun.serve({
       port: 0,
       hostname: '127.0.0.1',
+      fetch: () => Response.json({ status: 'ok', service: 'image-mcp' }),
+    });
+    try {
+      await expect(isCompatibleHttpServerRunning('127.0.0.1', server.port)).resolves.toBe(true);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  it('recognizes the legacy gpt-image-mcp identity during migration', async () => {
+    const server = Bun.serve({
+      port: 0,
+      hostname: '127.0.0.1',
       fetch: () => Response.json({ status: 'ok', service: 'gpt-image-mcp' }),
     });
     try {

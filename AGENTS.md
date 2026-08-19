@@ -1,6 +1,6 @@
-# Agent Instructions — gpt-image-mcp
+# Agent Instructions — image-mcp
 
-AI coding agent reference for the **gpt-image-mcp** project.  
+AI coding agent reference for the **image-mcp** project.  
 Stack: **Bun ≥ 1.1 · NestJS 10 · TypeScript strict · MCP SDK v1.x**
 
 ---
@@ -32,11 +32,11 @@ bun run secret:store IMAGE_API_KEY      # store in OS keychain
 bun run secret:store IMAGE_MCP_API_KEY
 
 # Docker
-docker build -t gpt-image-mcp .
+docker build -t image-mcp .
 docker run -p 3000:3000 \
   -e IMAGE_PROVIDER=openai \
   -e IMAGE_API_KEY=sk-... \
-  gpt-image-mcp
+  image-mcp
 ```
 
 **Quality gate — all three must pass before any commit:**
@@ -277,7 +277,7 @@ string (`'2025-03-26'`) in new tests to avoid confusion.
 
 When an MCP host (Goose, Claude Desktop) spawns the server from its own working directory:
 ```
-bun run /abs/path/gpt-image-mcp/src/main.ts
+bun run /abs/path/image-mcp/src/main.ts
 ```
 Bun searches for `bunfig.toml` in the **current working directory** — which is the host's
 directory, not the project root. `reflect-metadata` is never preloaded. NestJS decorators

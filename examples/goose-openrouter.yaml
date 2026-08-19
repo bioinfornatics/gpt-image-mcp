@@ -1,13 +1,13 @@
 # Store the OpenRouter key as IMAGE_API_KEY with `goose configure`.
 extensions:
-  gptimagemcp:
+  imagemcp:
     enabled: true
     type: stdio
-    name: GPT Image MCP — OpenRouter
+    name: Image MCP — OpenRouter
     cmd: npx
     args:
       - --yes
-      - "@bioinfornatics/gpt-image-mcp@NEXT_VERSION"
+      - "@bioinfornatics/image-mcp@NEXT_VERSION"
       - --base-url
       - https://openrouter.ai/api/v1
       - --model

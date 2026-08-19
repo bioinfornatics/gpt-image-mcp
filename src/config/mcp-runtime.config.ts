@@ -33,7 +33,7 @@ export async function isCompatibleHttpServerRunning(
     });
     if (!response.ok) return false;
     const body = await response.json() as { status?: unknown; service?: unknown };
-    return body.status === 'ok' && body.service === 'gpt-image-mcp';
+    return body.status === 'ok' && (body.service === 'image-mcp' || body.service === 'gpt-image-mcp');
   } catch {
     return false;
   }

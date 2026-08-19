@@ -1,6 +1,6 @@
 # MCP Tools API Reference
 
-**Project:** gpt-image-mcp  
+**Project:** image-mcp  
 **Protocol:** Model Context Protocol (MCP) — JSON-RPC 2.0  
 **Package version:** 0.1.7  
 **Reference revision:** 0.1.7  
@@ -29,7 +29,7 @@
 
 ## 1. Overview
 
-`gpt-image-mcp` exposes **5 MCP tools** that provide structured access to OpenAI's image generation, editing, and variation APIs, as well as provider introspection utilities.
+`image-mcp` exposes **5 MCP tools** that provide structured access to OpenAI's image generation, editing, and variation APIs, as well as provider introspection utilities.
 
 ### Exposed Tools
 
@@ -192,8 +192,8 @@ With `response_format: json`, the text block contains:
   "count": 1,
   "images": [{
     "index": 0,
-    "saved_to": "/home/user/Images/gpt-image-mcp/img.png",
-    "file_uri": "file:///home/user/Images/gpt-image-mcp/img.png",
+    "saved_to": "/home/user/Images/image-mcp/img.png",
+    "file_uri": "file:///home/user/Images/image-mcp/img.png",
     "created": 1700000000
   }]
 }

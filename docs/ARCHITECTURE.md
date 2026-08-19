@@ -1,4 +1,4 @@
-# Architecture — gpt-image-mcp
+# Architecture — image-mcp
 
 **Version:** 1.0.0  
 **Author:** Software Architect  
@@ -22,7 +22,7 @@
                  │ HTTPS + API key              │ HTTPS + API key
                  │                              │
 ┌────────────────┴──────────────────────────────┴──────────────────────┐
-│                        gpt-image-mcp Service                         │
+│                        image-mcp Service                         │
 │                    (Bun + NestJS + MCP SDK)                          │
 └───────────────────────────────────────────────────────────────────────┘
                  ▲
@@ -41,7 +41,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  gpt-image-mcp Container (OCI image: oven/bun + NestJS)             │
+│  image-mcp Container (OCI image: oven/bun + NestJS)             │
 │                                                                     │
 │  ┌──────────────────┐  ┌─────────────────────┐  ┌───────────────┐  │
 │  │  Transport Layer │  │   NestJS Core        │  │ Provider Layer│  │
@@ -406,17 +406,17 @@ await mcpServer.connect(transport);
 
 ### Local Dev (stdio)
 ```
-Claude Desktop ──stdio──▶ gpt-image-mcp (bun process)
+Claude Desktop ──stdio──▶ image-mcp (bun process)
 ```
 
 ### Standard (HTTP Server)
 ```
-MCP Client ──HTTPS──▶ Reverse Proxy (nginx/Caddy) ──HTTP:3000──▶ gpt-image-mcp container
+MCP Client ──HTTPS──▶ Reverse Proxy (nginx/Caddy) ──HTTP:3000──▶ image-mcp container
 ```
 
 ### Scaled (Kubernetes)
 ```
-MCP Clients ──▶ Load Balancer ──▶ N × gpt-image-mcp pods (stateless)
+MCP Clients ──▶ Load Balancer ──▶ N × image-mcp pods (stateless)
                                         │
                                         ├── Prometheus scrapes /metrics
                                         └── Liveness/readiness → /health/*

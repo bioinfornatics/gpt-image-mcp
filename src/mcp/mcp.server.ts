@@ -23,7 +23,7 @@ export class McpServerService {
   /** Create an isolated MCP server for one stateless HTTP request. */
   createServer(): McpServer {
     const server = new McpServer(
-      { name: 'gpt-image-mcp', version: '0.1.0' },
+      { name: 'image-mcp', version: '0.1.0' },
       { capabilities: this.capabilities },
     );
     this.registerTools(server);

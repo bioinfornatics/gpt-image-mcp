@@ -4,7 +4,7 @@ import { Counter } from 'prom-client';
 import type { RequestIdentity } from './request-identity-context.service';
 
 export const authenticationCounter = new Counter({
-  name: 'gpt_image_mcp_authentication_events_total',
+  name: 'image_mcp_authentication_events_total',
   help: 'Authentication outcomes without credentials or PII',
   labelNames: ['mode', 'outcome', 'reason'],
 });
