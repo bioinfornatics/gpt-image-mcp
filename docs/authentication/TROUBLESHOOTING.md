@@ -13,3 +13,11 @@
 | OBO unavailable | Verify tenant, server app ID, confidential credential and Entra availability. |
 
 Never paste access tokens or client secrets into bug reports. Use correlation IDs and sanitized logs.
+
+## Azure image deployments and runtime routing
+
+IMAGE_DEPLOYMENT selects the default Azure image deployment. The router uses that default when model is omitted, the Microsoft MAI /mai/v1 adapter for MAI-Image-2.5, and the Azure OpenAI-compatible image endpoint for gpt-image-2. Unknown models are rejected before inference.
+
+Both deployments must exist in the configured Foundry resource. provider_list shows the effective default and selectable models. MAI uses its own dimensions and PNG output without an explicit quality level; GPT Image 2 uses its documented quality and resolution options.
+
+If a request fails, verify the exact deployment names, endpoint, authentication mode and access to the selected deployment.

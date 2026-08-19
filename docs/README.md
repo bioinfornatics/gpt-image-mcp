@@ -224,7 +224,7 @@ The server requests `roots/list` to discover the client's workspace directories.
 | Provider | Models | Notes |
 |----------|--------|-------|
 | OpenAI | `gpt-image-2`, `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1`, `dall-e-2` (variations only) | Direct API |
-| Azure OpenAI | `gpt-image-2` (Public Preview), `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1` (Limited Access) | Via AI Foundry deployment |
+| Azure OpenAI | `gpt-image-2` (available, no access application needed), `gpt-image-1.5`, `gpt-image-1-mini`, `gpt-image-1` (Limited Access) | Via AI Foundry deployment (`IMAGE_DEPLOYMENT`) — see [Azure deployments and troubleshooting](./authentication/TROUBLESHOOTING.md#azure-deployments-gpt-image-2-and-mai-image-25) |
 
 ---
 
@@ -262,6 +262,146 @@ See [TEAM_ROLES.md](./TEAM_ROLES.md) for full role descriptions.
 2. PRs require passing CI (lint + unit + integration)
 3. Security-sensitive PRs require Security Champion review
 4. See [SPECIFICATION.md](./SPECIFICATION.md) for acceptance criteria per feature
+
+---
+
+## CLI configuration workflows
+
+Configuration is resolved with the following **precedence** (highest wins):
+
+```
+CLI flags  >  canonical IMAGE_* env vars  >  legacy aliases  >  built-in defaults
+```
+
+### Flags
+
+Every supported flag maps to exactly one canonical `IMAGE_*` configuration key (see
+`src/config/config-resolver.ts` field registry and `src/cli/cli-options.ts`):
+
+| Flag | Canonical env key | Purpose |
+|------|--------------------|---------|
+| `-h`, `--help` | — | Print usage and exit (before any Nest/secret init) |
+| `-V`, `--version` | — | Print package version and exit |
+| `--check-config` | — | Validate resolved configuration and exit non-zero on error, without starting the server |
+| `--show-config-sources` | — | Print each resolved config key alongside the source that provided it (`cli`, `env:IMAGE_*`, `env:<legacy-alias>`, or `default`) |
+| `--provider <name>` | `IMAGE_PROVIDER` | `openai` \| `azure` \| `together` \| `custom` |
+| `--deployment <name>` | `IMAGE_DEPLOYMENT` | Azure deployment name |
+| `--transport <mode>` | `IMAGE_MCP_TRANSPORT` | `http` \| `stdio` |
+| `--port <number>` | `IMAGE_PORT` | HTTP listen port |
+| `--log-level <level>` | `IMAGE_LOG_LEVEL` | `debug` \| `info` \| `warn` \| `error` |
+| `--api-key-file <path>` | `IMAGE_API_KEY_FILE` | Path to a file containing the provider API key |
+| `--mcp-api-key-file <path>` | `IMAGE_MCP_API_KEY_FILE` | Path to a file containing the MCP bearer token |
+| `--no-elicitation` | `IMAGE_USE_ELICITATION=false` | Disable MCP Elicitation |
+| `--no-sampling` | `IMAGE_USE_SAMPLING=false` | Disable MCP Sampling |
+
+**Rejected — secrets are never accepted as raw CLI values:**
+
+| Flag | Result |
+|------|--------|
+| `--api-key <value>` | Parse error; exits 1 with guidance to use `--api-key-file <path>` or `IMAGE_API_KEY_FILE` |
+| `--mcp-api-key <value>` | Parse error; exits 1 with guidance to use `--mcp-api-key-file <path>` or `IMAGE_MCP_API_KEY_FILE` |
+
+This keeps API keys and bearer tokens out of shell history, `ps`/`/proc` process listings, and
+Docker/`docker inspect` argv dumps. Only a file **path** is ever accepted on the command line —
+never the secret value itself.
+
+### Safe secret file examples
+
+`--api-key-file` / `--mcp-api-key-file` (and their `IMAGE_API_KEY_FILE` /
+`IMAGE_MCP_API_KEY_FILE` env equivalents) only ever take a filesystem **path** — the file
+contents (the actual secret) are read by the server at startup, never echoed, and never placed
+on argv:
+
+```bash
+# Create a secret file with owner-only permissions — do this once, out of shell history
+# by using a heredoc or an editor, not `echo "sk-..." > file` in an interactive shell.
+install -m 600 /dev/stdin /run/secrets/image_api_key <<'EOF'
+sk-REPLACE_WITH_YOUR_REAL_KEY
+EOF
+
+# The CLI/env only ever reference the path:
+bin/start.sh --provider openai --api-key-file /run/secrets/image_api_key
+# or equivalently:
+IMAGE_API_KEY_FILE=/run/secrets/image_api_key bin/start.sh --provider openai
+```
+
+Never pass `--api-key sk-...` or `IMAGE_API_KEY=sk-...` on a command line you don't fully
+control (shared shells, CI logs, `docker run -e`) — prefer the `_FILE` variants everywhere
+above local/dev experimentation.
+
+### Goose configuration
+
+Goose must invoke the **absolute path** to `bin/start.sh` (see §4.10 — required so
+`reflect-metadata`/`bunfig.toml` resolve correctly), passing provider flags as args and
+referencing a secret file path — never a raw key — for authentication:
+
+```yaml
+extensions:
+  gpt-image-mcp:
+    cmd: /abs/path/to/gpt-image-mcp/bin/start.sh
+    args:
+      - --provider
+      - azure
+      - --deployment
+      - gpt-image-2
+      - --api-key-file
+      - /abs/path/to/secrets/image_api_key
+      - --transport
+      - stdio
+```
+
+`bin/start.sh` forwards all `args` verbatim to `bun run src/main.ts "$@"` after `cd`-ing to the
+project root, and defaults `IMAGE_MCP_TRANSPORT=stdio` if the host omits it — see
+[`examples/goose-config.yaml`](../examples/goose-config.yaml) for complete variants.
+
+### stdio example
+
+```bash
+bin/start.sh --transport stdio --provider azure --deployment gpt-image-2 \
+  --api-key-file /run/secrets/image_api_key
+```
+
+### HTTP example
+
+```bash
+bin/start.sh --transport http --port 3000 --provider openai \
+  --api-key-file /run/secrets/image_api_key
+```
+
+### Docker
+
+```bash
+docker build -t gpt-image-mcp .
+
+# Local/dev only — env-var injection leaks the key into `docker inspect` / process listings
+docker run -p 3000:3000 \
+  -e IMAGE_PROVIDER=openai \
+  -e IMAGE_API_KEY_FILE=/run/secrets/image_api_key \
+  -v /host/path/to/image_api_key:/run/secrets/image_api_key:ro \
+  gpt-image-mcp
+
+# Docker/Swarm/Compose secrets (preferred): mount under /run/secrets/ and reference by path
+docker run -p 3000:3000 \
+  --secret image_api_key \
+  -e IMAGE_PROVIDER=openai \
+  -e IMAGE_API_KEY_FILE=/run/secrets/image_api_key \
+  gpt-image-mcp
+```
+
+### Docker secret guidance
+
+- Prefer mounting a secret file and pointing `IMAGE_API_KEY_FILE` (or `--api-key-file`) at it —
+  e.g. Docker/Swarm/Compose secrets mounted under `/run/secrets/`.
+- Plain env-var injection (`-e IMAGE_API_KEY=sk-...`) works but leaks the key into
+  `docker inspect` and process listings — acceptable for local/dev only.
+- `IMAGE_MCP_SECRET_BACKEND=keytar` is **not** usable in most containers (no OS keychain) —
+  stick to `file` (default) in Docker.
+
+### Azure image deployment routing
+
+IMAGE_DEPLOYMENT (or --deployment) selects the default Azure deployment. The server routes omitted model requests to that default, model MAI-Image-2.5 to the Microsoft MAI /mai/v1 adapter, and model gpt-image-2 to the Azure OpenAI-compatible endpoint. Unknown values fail before inference. provider_list reports the effective default and selectable models. MAI and GPT contracts are validated before network I/O.
+
+See Azure deployment troubleshooting in authentication/TROUBLESHOOTING.md.
 
 ---
 

@@ -18,6 +18,13 @@ The project has a solid foundation — clean module graph, no circular dependenc
 ## 🔴 Critical Issues (production broken or exploitable)
 
 ### C1 — M4 features are completely dead code in production
+
+> **Status: RESOLVED / SUPERSEDED.** `register()` now closes over the live `McpServer` instance
+> and passes it directly to `execute()` instead of reading the non-existent `extra.server`. Verified
+> in the current codebase (see `src/mcp/tools/image-generate.tool.ts`). Tracked/verified under
+> task **gpt-image-mcp-593.1**. This finding no longer reflects the current code and is kept here
+> only for historical context.
+
 **Files:** `src/mcp/tools/image-generate.tool.ts` L56–58  
 **Reviewers:** Architect · Backend · QA
 
@@ -45,6 +52,12 @@ register(server: McpServer) {
 ---
 
 ### C2 — `IMAGE_MCP_SECRET_BACKEND` typo in `docker-compose.yml`
+
+> **Status: RESOLVED / SUPERSEDED.** `docker-compose.yml` now sets `IMAGE_MCP_SECRET_BACKEND`
+> (not the reserved `SECRET_BACKEND`), so `*_FILE` secrets resolve correctly. Verified in the
+> current file. Tracked/verified under task **gpt-image-mcp-593.2**. Kept for historical context
+> only.
+
 **File:** `docker-compose.yml` L30  
 **Reviewers:** Security · DevOps · Architect
 
@@ -62,6 +75,12 @@ register(server: McpServer) {
 ---
 
 ### C3 — Non-constant-time token comparison (timing attack)
+
+> **Status: RESOLVED / SUPERSEDED.** `auth.guard.ts` now compares tokens using
+> `crypto.timingSafeEqual` (with a length check first), removing the timing side-channel.
+> Verified in the current codebase. Tracked/verified under task **gpt-image-mcp-593.3**. Kept
+> for historical context only.
+
 **File:** `src/security/auth.guard.ts`  
 **Reviewers:** Security · Architect · QA  
 **CWE:** CWE-208
@@ -103,6 +122,13 @@ prompt = sanitisePrompt(prompt, PROMPT_MAX_LENGTH_GPT);
 ---
 
 ### C5 — `response_format: 'b64_json'` missing for DALL-E models
+
+> **Status: RESOLVED / SUPERSEDED.** Response-format negotiation now explicitly classifies
+> GPT-image vs. legacy/DALL-E behavior and sets `response_format: 'b64_json'` where required,
+> without unsafe implicit URL downloads. The original file paths referenced below have since
+> been reorganized (see `src/providers/*` strategy/provider files) as part of the same effort.
+> Tracked/verified under task **gpt-image-mcp-593.4**. Kept for historical context only.
+
 **File:** `src/providers/openai/openai.provider.ts` · `src/providers/azure/azure.provider.ts`  
 **Reviewer:** Backend
 

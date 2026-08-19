@@ -146,12 +146,32 @@ Generates one or more images from a text prompt using OpenAI or Azure OpenAI `gp
 
 | Model | Supported Sizes |
 |-------|----------------|
-| `gpt-image-2` | `1024x1024`, `1536x1024`, `1024x1536`, up to `4096x4096`, `auto` |
+| `gpt-image-2` | `auto`, presets (`1024x1024`, `1536x1024`, `1024x1536`), or **arbitrary `WxH`** — see constraints below |
 | `gpt-image-1.5` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `gpt-image-1-mini` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `gpt-image-1` | `1024x1024`, `1536x1024`, `1024x1536`, `auto` |
 | `dall-e-2` | `256x256`, `512x512`, `1024x1024` — variations only |
 | ~~`dall-e-3`~~ | ⛔ Retired 2026-03-04 |
+
+**gpt-image-2 arbitrary resolution (`image_generate` and `image_edit`):** the `size` field
+accepts any `WxH` string (e.g. `"2048x1152"`) in addition to `auto` and the three fixed presets,
+validated against 4 constraints:
+
+- Both edges must be multiples of **16**
+- Max edge must be **< 3840**
+- Aspect ratio must be **≤ 3:1**
+- Total pixel count must be between **655,360** and **8,294,400**
+
+Requests are rejected with a descriptive Zod validation error identifying which constraint failed
+(e.g. `"Width 1025 is not a multiple of 16."`, `"Aspect ratio 3.02:1 exceeds the maximum of 3:1..."`).
+
+Sizes with a pixel count **above 2,560×1,440** (3,686,400 px) are valid but trigger an
+**experimental resolution warning**: a markdown blockquote in the tool's text response
+(`response_format: markdown`), or a top-level `"warning"` field in the JSON response
+(`response_format: json`). This threshold is exactly at `2560x1440` inclusive (not experimental)
+and exceeded starting at the next multiple-of-16 step. Output quality/reliability for gpt-image-2
+is documented as more variable above this boundary; the warning is advisory only and does not
+block the request.
 
 #### Output Schema
 
@@ -283,7 +303,8 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `image` | string | ✅ Yes | — | Base64-encoded image data or HTTPS URL of the image to edit. PNG, JPEG, or WebP. Max 20 MB. |
+| `image` | string | No¹ | — | Base64-encoded image data or HTTPS URL of the image to edit. PNG, JPEG, or WebP. Max 20 MB. |
+| `images` | string[] | No¹ | — | Array of base64-encoded images for multi-image compositing (e.g. virtual try-on, person-in-scene, style transfer). Use instead of `image`. Max 16 images, 10 MB aggregate payload cap (enforced regardless of image count). Provider-independent — supported identically on OpenAI and Azure. |
 | `mask` | string | No | — | Base64-encoded mask image or HTTPS URL. Transparent areas indicate regions to edit. Must be same dimensions as `image`. PNG only. |
 | `prompt` | string | ✅ Yes | — | Description of the desired edit. Max 32 000 chars. |
 | `model` | string | No | `gpt-image-2` | Model to use. Any `gpt-image-*` model or `dall-e-2` (limited). |
@@ -294,6 +315,8 @@ Edits an existing image based on a text prompt. Optionally accepts a mask image 
 | `output_compression` | integer | No | `100` | Compression level 0–100 for `jpeg`/`webp` |
 | `save_to_workspace` | string | No | — | Relative path within workspace root to save the result |
 | `response_format` | string | No | `markdown` | Tool response format. `markdown`\|`json` |
+
+¹ Exactly one of `image` or `images` must be provided (mutually exclusive; both-provided and neither-provided are rejected at the schema layer).
 
 #### Output Schema
 
@@ -988,9 +1011,11 @@ These errors are returned at the JSON-RPC level (not inside tool results) and in
 | Usage token reporting | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Auto prompt revision | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `n` up to 10 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Azure availability | ✅ Public Preview | ⚠️ Limited Access | ⚠️ Limited Access | ⚠️ Limited Access | ❌ |
+| Azure availability | ✅ Available (no access application needed) | ⚠️ Limited Access | ⚠️ Limited Access | ⚠️ Limited Access | ❌ |
 
 > ~~`dall-e-3`~~ was **retired 2026-03-04** and is no longer available on any provider.
+
+> For Azure, IMAGE_DEPLOYMENT selects the default. Explicit model selection routes the same server between the confirmed MAI-Image-2.5 and gpt-image-2 adapters.
 
 ---
 
