@@ -1,11 +1,24 @@
 # Goose configuration for gpt-image-mcp
 # Merge the relevant extension block into: ~/.config/goose/config.yaml
 #
-# Documentation: https://goose-docs.ai/docs/guides/config-files
+# Documentation: https://goose-docs.ai/docs/guides/config-files/
 #
 # NOTE: Goose uses a map under `extensions:` (not a list).
 #       env_keys:  variables Goose reads from your host environment and forwards.
 #       envs:      inline key/value overrides (use for non-secret config only).
+#
+# NOTE: `env_keys` entries are resolved by Goose's own secret store (keyring or
+#       config env_keys backend), NOT by a plain shell `export`. Exporting a
+#       variable in your shell/.zshrc does not, by itself, populate it for
+#       Goose — you must also set it via `goose configure` (or the equivalent
+#       secret-store command for your OS) so Goose can read it at launch time.
+#       Run `goose configure` (or `goose auth:doctor` where available) to
+#       verify a listed env_key actually resolves before reporting a bug.
+#
+# NOTE: Goose may silently add extra fields to a saved extension entry
+#       (e.g. `cwd`, `bundled`, `available_tools`) when it writes/normalizes
+#       config.yaml. These are managed by Goose itself — leave them as Goose
+#       sets them; you do not need to author them by hand.
 
 extensions:
 
@@ -24,7 +37,7 @@ extensions:
       IMAGE_MCP_TRANSPORT: stdio
       IMAGE_LOG_LEVEL: error
     env_keys:
-      - IMAGE_API_KEY       # export IMAGE_API_KEY=sk-... in your shell / .zshrc
+      - IMAGE_API_KEY       # set via `goose configure`, not just shell `export` (see NOTE above)
     timeout: 300
     bundled: null
     available_tools: []

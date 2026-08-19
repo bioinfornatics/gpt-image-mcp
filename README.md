@@ -179,7 +179,7 @@ extensions:
       IMAGE_PROVIDER: openai
       IMAGE_MCP_TRANSPORT: stdio
     env_keys:
-      - IMAGE_API_KEY        # export IMAGE_API_KEY=sk-... in your shell
+      - IMAGE_API_KEY        # set via `goose configure`; a plain shell `export` alone does not populate Goose's keyring/env_keys
     timeout: 300
 ```
 
@@ -239,14 +239,16 @@ Authorization: Bearer <IMAGE_MCP_API_KEY>   # only if IMAGE_MCP_API_KEY is set
 
 | Model | Status | Notes |
 |-------|--------|-------|
-| `gpt-image-2` | ✅ **Public Preview** | No access application needed. Arbitrary resolution up to 4K. |
+| `gpt-image-2` | ✅ **Available · No access application needed** | Arbitrary resolution up to 4K. |
 | `gpt-image-1.5` | ⚠️ Limited Access | Apply at [aka.ms/oai/gptimage1.5access](https://aka.ms/oai/gptimage1.5access) |
 | `gpt-image-1-mini` | ⚠️ Limited Access | Apply at [aka.ms/oai/gptimage1access](https://aka.ms/oai/gptimage1access) |
 | `gpt-image-1` | ⚠️ Limited Access | Apply at [aka.ms/oai/gptimage1access](https://aka.ms/oai/gptimage1access) |
 | ~~`dall-e-3`~~ | ⛔ **Retired 2026-03-04** | Existing deployments are non-functional |
 
-> 💡 **Azure users:** `gpt-image-2` is the easiest to start with — Public Preview requires no prior approval.  
+> 💡 **Azure users:** `gpt-image-2` is the easiest to start with — it requires no prior access approval today.  
 > A 403 for gpt-image-1.x means you need to register at the links above.
+>
+> ℹ️ IMAGE_DEPLOYMENT selects the Azure default. The same server routes explicit MAI-Image-2.5 and gpt-image-2 requests to their respective adapters. See docs/authentication/TROUBLESHOOTING.md.
 
 ---
 
