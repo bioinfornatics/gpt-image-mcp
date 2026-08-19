@@ -19,7 +19,9 @@ import type { IImageProvider, ImageResult } from '../../../src/providers/provide
 const MCP_ACCEPT = 'application/json, text/event-stream';
 
 const FAKE_IMAGE: ImageResult = {
-  b64_json: 'aW50ZWdyYXRpb25pbWFnZQ==',
+  b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  format: 'png',
+  mimeType: 'image/png',
   model: 'gpt-image-1',
   created: 1_700_000_000,
 };

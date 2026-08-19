@@ -18,10 +18,10 @@ class FakeAPIError extends Error {
 }
 
 const mockGenerate = mock(() =>
-  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'bm9ja0ltYWdl' }] }),
+  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }] }),
 );
 const mockEdit = mock(() =>
-  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'ZWRpdA==' }] }),
+  Promise.resolve({ created: 1_700_000_000, data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }] }),
 );
 const mockModelsList = mock(() => Promise.resolve({ object: 'list', data: [] }));
 
@@ -45,7 +45,7 @@ describe('OpenAICompatibleProvider (OpenAI) — HTTP Integration', () => {
       const provider = makeProvider();
       const results = await provider.generate({ prompt: 'a cat', model: 'gpt-image-1' });
       expect(results).toHaveLength(1);
-      expect(results[0].b64_json).toBe('bm9ja0ltYWdl');
+      expect(results[0].b64_json).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
       expect(results[0].model).toBe('gpt-image-1');
       expect(results[0].created).toBe(1_700_000_000);
     });
@@ -53,7 +53,7 @@ describe('OpenAICompatibleProvider (OpenAI) — HTTP Integration', () => {
     it('should return multiple images when n > 1', async () => {
       mockGenerate.mockResolvedValueOnce({
         created: 1_700_000_000,
-        data: [{ b64_json: 'aW1nMQ==' }, { b64_json: 'aW1nMg==' }],
+        data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }, { b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }],
       });
       const results = await makeProvider().generate({ prompt: 'a cat', model: 'gpt-image-1', n: 2 });
       expect(results).toHaveLength(2);
@@ -74,7 +74,7 @@ describe('OpenAICompatibleProvider (OpenAI) — HTTP Integration', () => {
     it('should include revised_prompt from dall-e-3 response', async () => {
       mockGenerate.mockResolvedValueOnce({
         created: 1_700_000_000,
-        data: [{ b64_json: 'ZGFsbGUz', revised_prompt: 'A fluffy tabby cat' }],
+        data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', revised_prompt: 'A fluffy tabby cat' }],
       });
       const results = await makeProvider().generate({ prompt: 'cat', model: 'dall-e-3' });
       expect(results[0].revised_prompt).toBe('A fluffy tabby cat');

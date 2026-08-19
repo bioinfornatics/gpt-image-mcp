@@ -21,6 +21,7 @@ export interface EditParams {
   quality?: string;
   output_format?: 'png' | 'jpeg' | 'webp';
   output_compression?: number;
+  background?: 'transparent' | 'opaque' | 'auto';
   input_fidelity?: 'low' | 'high';  // gpt-image-1.x identity preservation; MUST NOT be sent for gpt-image-2
 }
 
@@ -32,6 +33,8 @@ export interface VariationParams {
 
 export interface ImageResult {
   b64_json: string;
+  format: 'png' | 'jpeg' | 'webp';
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
   revised_prompt?: string;
   model: string;
   created: number;
@@ -47,6 +50,12 @@ export interface ValidationResult {
 
 export interface IImageProvider {
   readonly name: 'openai' | 'azure' | 'together' | 'custom';
+  /** Fixed model/deployment selected by provider configuration, when callers cannot switch models per request. */
+  readonly configuredModel?: string;
+  /** Model selected when a caller omits model. */
+  readonly defaultModel?: string;
+  /** Models this provider can route within the running server instance. */
+  readonly availableModels?: readonly string[];
   generate(params: GenerateParams): Promise<ImageResult[]>;
   edit(params: EditParams): Promise<ImageResult[]>;
   variation(params: VariationParams): Promise<ImageResult[]>;

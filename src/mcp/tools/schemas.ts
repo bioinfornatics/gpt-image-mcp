@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { LATEST_MODEL, OPENAI_MODELS, AZURE_MODELS } from '../../config/models';
+import { MAI_MODEL_NAME, MAI_MIN_EDGE, MAI_MAX_PIXELS } from '../../providers/mai-image.constants';
 
 export enum ResponseFormat {
   MARKDOWN = 'markdown',
@@ -75,6 +76,86 @@ export function isExperimentalResolution(size: string | undefined): boolean {
   return (w * h) > 2560 * 1440; // 3,686,400 pixels
 }
 
+/**
+ * Zod superRefine callback enforcing gpt-image-2 arbitrary WxH resolution rules
+ * while preserving the fixed allowlist for 'auto' + presets. Shared between
+ * ImageGenerateSchema and ImageEditSchema so both tools accept identical size
+ * grammar and error messages.
+ */
+function validateSizeField(val: string | undefined, ctx: z.RefinementCtx): void {
+  if (!val || val === 'auto') return; // auto: always valid
+  if (FIXED_SIZES.includes(val as FixedSize)) return; // preset: always valid
+  // Must match WxH format
+  if (!/^\d+x\d+$/.test(val)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid size "${val}". Must be 'auto', a preset (1024x1024, 1536x1024, 1024x1536), or a WxH string (e.g. "2048x1152").`,
+    });
+    return;
+  }
+  // Apply 4 constraints
+  try {
+    validateArbitrarySize(val);
+  } catch (e) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: (e as Error).message });
+  }
+}
+
+/**
+ * Model-aware size validation for Microsoft MAI Image (MAI-Image-2.5).
+ *
+ * MAI Image is routed through a dedicated, non-OpenAI-compatible adapter
+ * (`MaiImageProvider`) with a *different* size contract than the generic
+ * gpt-image-* presets: width/height must each be >= `MAI_MIN_EDGE` (768) and
+ * total pixels must be <= `MAI_MAX_PIXELS` (1,048,576 — i.e. up to
+ * 1024x1024). Critically, the generic `1536x1024` preset (1,572,864 pixels)
+ * — valid for gpt-image-2/1.x — EXCEEDS the MAI Image pixel budget and would
+ * previously only fail at network-call time inside `MaiImageProvider`.
+ *
+ * This function rejects any MAI-incompatible size *before* the network call,
+ * at schema-validation time, with an actionable error that lists MAI's
+ * concrete constraints and suggests the safe `1024x1024` default — rather
+ * than weakening `MaiImageProvider`'s own validation (which remains the
+ * final authority and is unchanged).
+ */
+function validateModelSizeCompat(
+  data: { model?: string; size?: string },
+  ctx: z.RefinementCtx,
+): void {
+  const model = (data.model ?? LATEST_MODEL).trim();
+  if (model.toLowerCase() !== MAI_MODEL_NAME.toLowerCase()) {
+    validateSizeField(data.size, ctx);
+    return;
+  }
+
+  const size = data.size;
+  if (!size || size === 'auto') return; // provider defaults 'auto' to the always-valid 1024x1024
+
+  const match = /^(\d+)x(\d+)$/.exec(size);
+  if (!match) return; // malformed strings are already rejected by validateSizeField
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  const pixels = width * height;
+  const withinBounds = width >= MAI_MIN_EDGE && height >= MAI_MIN_EDGE && pixels <= MAI_MAX_PIXELS;
+  if (withinBounds) return;
+
+  const reason =
+    width < MAI_MIN_EDGE || height < MAI_MIN_EDGE
+      ? `both edges must be >= ${MAI_MIN_EDGE} (got ${width}x${height})`
+      : `total pixels must be <= ${MAI_MAX_PIXELS.toLocaleString()} (got ${pixels.toLocaleString()} for ${width}x${height})`;
+
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['size'],
+    message:
+      `${MAI_MODEL_NAME} does not support size "${size}": ${reason}. ` +
+      `Valid ${MAI_MODEL_NAME} sizes: any WxH where both edges are >= ${MAI_MIN_EDGE} and total pixels are ` +
+      `<= ${MAI_MAX_PIXELS.toLocaleString()} (e.g. 768x768, 896x896, 1024x1024). ` +
+      `Use "1024x1024" (the recommended MAI Image default) instead of "${size}".`,
+  });
+}
+
 export const ImageGenerateSchema = z.object({
   prompt: z
     .string()
@@ -84,9 +165,8 @@ export const ImageGenerateSchema = z.object({
   model: z
     .string()
     .optional()
-    .default(LATEST_MODEL)
     .describe(
-      `Model to use. Default: ${LATEST_MODEL}. ` +
+      'Model to use. If omitted, the active provider default is used. ' +
       `OpenAI: ${OPENAI_MODELS.filter(m => !m.startsWith('dall-e')).join(', ')} (+ dall-e-2 for variations only). ` +
       `Azure: ${AZURE_MODELS.join(', ')}.`,
     ),
@@ -102,24 +182,6 @@ export const ImageGenerateSchema = z.object({
     .string()
     .optional()
     .default('auto')
-    .superRefine((val, ctx) => {
-      if (!val || val === 'auto') return; // auto: always valid
-      if (FIXED_SIZES.includes(val as FixedSize)) return; // preset: always valid
-      // Must match WxH format
-      if (!/^\d+x\d+$/.test(val)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Invalid size "${val}". Must be 'auto', a preset (1024x1024, 1536x1024, 1024x1536), or a WxH string (e.g. "2048x1152").`,
-        });
-        return;
-      }
-      // Apply 4 constraints
-      try {
-        validateArbitrarySize(val);
-      } catch (e) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: (e as Error).message });
-      }
-    })
     .describe(
       'Image dimensions. Accepts presets (auto, 1024x1024, 1536x1024, 1024x1536) or arbitrary WxH for gpt-image-2 ' +
       '(e.g. "2048x1152"). Both edges must be multiples of 16, max edge < 3840, ratio ≤ 3:1, pixels 655360–8294400.',
@@ -166,7 +228,7 @@ export const ImageGenerateSchema = z.object({
     .optional()
     .default(ResponseFormat.MARKDOWN)
     .describe('Output format: markdown (default) or json'),
-});
+}).superRefine(validateModelSizeCompat);
 
 export const ImageEditSchema = z
   .object({
@@ -179,11 +241,12 @@ export const ImageEditSchema = z
     images: z
       .array(z.string().min(1))
       .min(1, 'At least one image is required in images[]')
-      .max(5, 'Maximum 5 images for multi-image compositing')
+      .max(16, 'Maximum 16 images for multi-image compositing')
       .optional()
       .describe(
         'Array of base64-encoded images for multi-image compositing (e.g. virtual try-on). ' +
-          'Use instead of image for compositing. Max 5 images, max 10MB aggregate.',
+          'Use instead of image for compositing. Max 16 images, max 10MB aggregate ' +
+          '(the 10MB aggregate cap applies regardless of image count).',
       ),
     mask: z
       .string()
@@ -197,13 +260,16 @@ export const ImageEditSchema = z
     model: z
       .string()
       .optional()
-      .default(LATEST_MODEL)
-      .describe('Model to use for editing'),
+      .describe('Model to use for editing. If omitted, the active provider default is used.'),
     n: z.number().int().min(1).max(10).optional().default(1),
     size: z
-      .enum(['auto', '1024x1024', '1536x1024', '1024x1536'])
+      .string()
       .optional()
-      .default('auto'),
+      .default('auto')
+      .describe(
+        'Image dimensions. Accepts presets (auto, 1024x1024, 1536x1024, 1024x1536) or arbitrary WxH for gpt-image-2 ' +
+        '(e.g. "2048x1152"). Both edges must be multiples of 16, max edge < 3840, ratio ≤ 3:1, pixels 655360–8294400.',
+      ),
     quality: z.enum(['auto', 'high', 'medium', 'low']).optional().default('auto'),
     output_format: z.enum(['png', 'jpeg', 'webp']).optional(),
     output_compression: z.number().int().min(0).max(100).optional(),
@@ -217,6 +283,7 @@ export const ImageEditSchema = z
     save_to_workspace: z.boolean().optional().default(false),
     response_format: z.nativeEnum(ResponseFormat).optional().default(ResponseFormat.MARKDOWN),
   })
+  .superRefine(validateModelSizeCompat)
   .refine(
     (d) =>
       !!(d.image) !== !!(d.images && d.images.length > 0) ||

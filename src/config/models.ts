@@ -39,6 +39,7 @@ export const AZURE_MODELS = [
   'gpt-image-1.5',        // Limited Access
   'gpt-image-1-mini',     // Limited Access
   'gpt-image-1',          // Limited Access
+  'MAI-Image-2.5',        // Public Preview — Microsoft MAI Image, served via dedicated /mai/v1 endpoint
 ] as const;
 
 export type ModelName = (typeof OPENAI_MODELS)[number] | (typeof AZURE_MODELS)[number];

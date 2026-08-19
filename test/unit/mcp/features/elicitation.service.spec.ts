@@ -161,6 +161,51 @@ describe('ElicitationService', () => {
       expect(sizeEnum).not.toContain('4096x4096');
     });
 
+    it('should exclude 1536x1024 and include 1024x1024 for MAI-Image-2.5 (BUG fix)', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ model: 'MAI-Image-2.5' }));
+      const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
+      // 1536x1024 exceeds MAI's 1,048,576-pixel budget and is rejected by
+      // validateModelSizeCompat — must never be offered to MAI users.
+      expect(sizeEnum).not.toContain('1536x1024');
+      expect(sizeEnum).not.toContain('1024x1536');
+      // 1024x1024 is within budget (768 <= edge, 1,048,576 total pixels) and
+      // is the recommended MAI default — must be offered.
+      expect(sizeEnum).toContain('auto');
+      expect(sizeEnum).toContain('1024x1024');
+      expect(captured.requestedSchema.properties.quality).toBeUndefined();
+      // Every offered size must satisfy MAI's contract.
+      for (const s of sizeEnum) {
+        if (s === 'auto') continue;
+        const [w, h] = s.split('x').map(Number);
+        expect(w).toBeGreaterThanOrEqual(768);
+        expect(h).toBeGreaterThanOrEqual(768);
+        expect(w * h).toBeLessThanOrEqual(1_048_576);
+      }
+    });
+
+    it('should match MAI model name case-insensitively', async () => {
+      const svc = await makeService(true);
+      let captured: any;
+      const mockServer = {
+        elicitInput: jest.fn().mockImplementation((params: any) => {
+          captured = params;
+          return Promise.resolve({ action: 'decline' });
+        }),
+      };
+      await svc.requestImageParams(mockServer as any, p({ model: 'mai-image-2.5' }));
+      const sizeEnum = captured.requestedSchema.properties.size.enum as string[];
+      expect(sizeEnum).not.toContain('1536x1024');
+      expect(sizeEnum).toContain('1024x1024');
+    });
+
     // ── field ordering: size first (UX improvement) ───────────────────────
 
     it('should list size before quality in the schema properties', async () => {

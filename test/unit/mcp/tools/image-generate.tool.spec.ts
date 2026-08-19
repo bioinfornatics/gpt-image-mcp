@@ -10,17 +10,20 @@ import { LATEST_MODEL } from '../../../../src/config/models';
 
 const mockImageResult: ImageResult = {
   b64_json: 'ZmFrZWJhc2U2NA==',
+  format: 'png',
+  mimeType: 'image/png',
   model: 'gpt-image-1',
   created: 1_700_000_000,
 };
 
 describe('ImageGenerateTool', () => {
   let tool: ImageGenerateTool;
-  let mockProvider: jest.Mocked<Pick<IImageProvider, 'generate' | 'edit' | 'variation' | 'validate' | 'name'>>;
+  let mockProvider: jest.Mocked<Pick<IImageProvider, 'generate' | 'edit' | 'variation' | 'validate' | 'name' | 'configuredModel'>>;
 
   beforeEach(async () => {
     mockProvider = {
       name: 'openai',
+      configuredModel: undefined,
       generate: jest.fn(),
       edit: jest.fn(),
       variation: jest.fn(),
@@ -72,6 +75,26 @@ describe('ImageGenerateTool', () => {
         expect.objectContaining({ prompt: 'a cat', model: LATEST_MODEL, n: 1 }),
       );
     });
+
+
+    it('uses the configured fixed deployment when model is omitted', async () => {
+      mockProvider.configuredModel = 'MAI-Image-2.5';
+      mockProvider.generate.mockResolvedValue([{ ...mockImageResult, model: 'MAI-Image-2.5' }]);
+      const result = await tool.execute({ prompt: 'a cat' });
+      expect(result.isError).toBeUndefined();
+      expect(mockProvider.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'MAI-Image-2.5', quality: 'auto' }),
+      );
+    });
+
+    it('rejects an explicit model that conflicts with the configured fixed deployment', async () => {
+      mockProvider.configuredModel = 'MAI-Image-2.5';
+      const result = await tool.execute({ prompt: 'a cat', model: 'gpt-image-2' });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('configured deployment is "MAI-Image-2.5"');
+      expect(result.content[0].text.toLowerCase()).toContain('omit "model"');
+      expect(mockProvider.generate).not.toHaveBeenCalled();
+    });
   });
 
   describe('Successful Generation', () => {
@@ -91,6 +114,38 @@ describe('ImageGenerateTool', () => {
       expect(result.isError).toBeUndefined();
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.images[0].saved_to).toContain('/tmp/gpt-image-mcp/');
+      expect(parsed.model).toBe(mockImageResult.model);
+    });
+
+    it('should not include an experimental warning for a preset size', async () => {
+      const result = await tool.execute({ prompt: 'a cat', size: '1024x1024' });
+      expect(result.content[0].text).not.toContain('Experimental');
+    });
+
+    it('should include a markdown experimental warning for arbitrary sizes above 2560x1440', async () => {
+      const result = await tool.execute({ prompt: 'a cat', size: '2880x2880' });
+      expect(result.isError).toBeUndefined();
+      expect(result.content[0].text).toContain('Experimental resolution');
+    });
+
+    it('should not warn at the 2560x1440 boundary itself', async () => {
+      const result = await tool.execute({ prompt: 'a cat', size: '2560x1440' });
+      expect(result.isError).toBeUndefined();
+      expect(result.content[0].text).not.toContain('Experimental');
+    });
+
+    it('should include a "warning" field in JSON output for arbitrary sizes above 2560x1440', async () => {
+      const result = await tool.execute({ prompt: 'a cat', size: '2880x2880', response_format: 'json' });
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.warning).toContain('Experimental resolution');
+    });
+
+    it('should omit the JSON "warning" field for sizes at/below the threshold', async () => {
+      const result = await tool.execute({ prompt: 'a cat', size: '1024x1024', response_format: 'json' });
+      expect(result.isError).toBeUndefined();
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.warning).toBeUndefined();
     });
 
     it('should pass all parameters through to the provider (moderation gated to auto without IMAGE_ALLOW_LOW_MODERATION)', async () => {

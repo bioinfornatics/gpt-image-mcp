@@ -7,8 +7,8 @@ import type { IImageProvider } from '../../../../src/providers/provider.interfac
 describe('ProviderListTool', () => {
   let tool: ProviderListTool;
 
-  const makeModule = async (providerName: 'openai' | 'azure') => {
-    const mockProvider: Partial<IImageProvider> = { name: providerName };
+  const makeModule = async (providerName: 'openai' | 'azure', providerOverrides: Partial<IImageProvider> = {}) => {
+    const mockProvider: Partial<IImageProvider> = { name: providerName, ...providerOverrides };
     const module = await Test.createTestingModule({
       providers: [
         ProviderListTool,
@@ -59,6 +59,16 @@ describe('ProviderListTool', () => {
     it('should list azure-specific models including gpt-image-2', async () => {
       const result = await tool.execute();
       expect(result.content[0].text).toContain('gpt-image-2');
+    });
+
+    it('reports the router default and only its selectable models', async () => {
+      await makeModule('azure', {
+        defaultModel: 'MAI-Image-2.5',
+        availableModels: ['MAI-Image-2.5', 'gpt-image-2'],
+      });
+      const result = await tool.execute();
+      expect(result.structuredContent.default_model).toBe('MAI-Image-2.5');
+      expect(result.structuredContent.providers[0].available_models).toEqual(['MAI-Image-2.5', 'gpt-image-2']);
     });
   });
 });

@@ -5,7 +5,9 @@ import type { IImageProvider, ImageResult } from '../../../../src/providers/prov
 import { RootsService } from '../../../../src/mcp/features/roots.service';
 import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
 
-const mockResult: ImageResult = { b64_json: 'dmFyaWF0aW9u', model: 'dall-e-2', created: 0 };
+const mockResult: ImageResult = { b64_json: 'dmFyaWF0aW9u',
+  format: 'png',
+  mimeType: 'image/png', model: 'dall-e-2', created: 0 };
 
 const VALID_B64 = 'ZmFrZQ==';
 

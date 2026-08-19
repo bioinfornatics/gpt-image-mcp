@@ -1,5 +1,10 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import { CustomStrategy } from '../../../src/providers/strategies/custom.strategy';
+import { OpenAICompatibleProvider } from '../../../src/providers/openai-compatible.provider';
+import type OpenAI from 'openai';
+
+const VALID_B64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
 describe('CustomStrategy', () => {
   let strategy: CustomStrategy;
@@ -48,27 +53,28 @@ describe('CustomStrategy', () => {
       expect(extras).toEqual({ response_format: 'b64_json' });
     });
 
-    it('should return response_format and extras for non-dall-e models', () => {
+    it('should omit response_format for GPT-image-compatible custom models', () => {
       const params = {
         prompt: 'a cat',
-        model: 'custom',
+        model: 'gpt-image-2',
         background: 'transparent' as const,
         output_format: 'webp' as const,
         output_compression: 80,
       };
-      const extras = strategy.buildGenerateExtras(params, 'custom');
+      const extras = strategy.buildGenerateExtras(params, 'gpt-image-2');
       expect(extras).toEqual({
-        response_format: 'b64_json',
         background: 'transparent',
         output_format: 'webp',
         output_compression: 80,
       });
+      expect(extras).not.toHaveProperty('response_format');
     });
 
-    it('should omit undefined optional fields', () => {
-      const params = { prompt: 'a cat', model: 'custom' };
-      const extras = strategy.buildGenerateExtras(params, 'custom');
-      expect(extras).toEqual({ response_format: 'b64_json' });
+    it('should omit undefined optional fields and response_format', () => {
+      const params = { prompt: 'a cat', model: 'gpt-image-2' };
+      const extras = strategy.buildGenerateExtras(params, 'gpt-image-2');
+      expect(extras).toEqual({});
+      expect(extras).not.toHaveProperty('response_format');
       expect(extras).not.toHaveProperty('background');
       expect(extras).not.toHaveProperty('output_format');
       expect(extras).not.toHaveProperty('output_compression');
@@ -76,8 +82,20 @@ describe('CustomStrategy', () => {
   });
 
   describe('buildEditExtras()', () => {
-    it('should return response_format: b64_json by default', () => {
+    it('should omit response_format for GPT-image-compatible custom models', () => {
       const params = { image: 'base64', prompt: 'edit this', model: 'custom' };
+      const extras = strategy.buildEditExtras(params);
+      expect(extras).not.toHaveProperty('response_format');
+    });
+
+    it('should omit response_format for a GPT image model name too', () => {
+      const params = { image: 'base64', prompt: 'edit this', model: 'gpt-image-2' };
+      const extras = strategy.buildEditExtras(params);
+      expect(extras).not.toHaveProperty('response_format');
+    });
+
+    it('should request response_format: b64_json for dall-e edit models', () => {
+      const params = { image: 'base64', prompt: 'edit this', model: 'dall-e-2' };
       const extras = strategy.buildEditExtras(params);
       expect(extras['response_format']).toBe('b64_json');
     });
@@ -154,6 +172,92 @@ describe('CustomStrategy', () => {
       const err = new Error('sk-my-secret-custom-key-that-is-long-enough-to-mask failed');
       const result = strategy.normalizeError(err);
       expect(result.message).not.toContain('sk-my-secret-custom-key');
+    });
+  });
+});
+
+describe('OpenAICompatibleProvider (Custom strategy) — response format negotiation & payload safety', () => {
+  const mockGenerate = mock(() => Promise.resolve({ data: [{ b64_json: VALID_B64 }], created: 1000 }));
+  const mockEdit = mock(() => Promise.resolve({ data: [{ b64_json: VALID_B64 }], created: 1000 }));
+
+  function makeProvider() {
+    const mockClient = {
+      images: { generate: mockGenerate, edit: mockEdit },
+      models: { list: mock(() => Promise.resolve({ data: [] })) },
+    } as unknown as OpenAI;
+    return new OpenAICompatibleProvider(mockClient, new CustomStrategy());
+  }
+
+  beforeEach(() => {
+    mockGenerate.mockClear();
+    mockEdit.mockClear();
+  });
+
+  describe('generate() — response_format negotiation', () => {
+    it('omits response_format for a GPT Image-compatible custom endpoint', async () => {
+      await makeProvider().generate({ prompt: 'a cat', model: 'gpt-image-2', n: 1 });
+      const call = mockGenerate.mock.calls[0][0] as Record<string, unknown>;
+      expect(call['response_format']).toBeUndefined();
+    });
+
+    it('requests b64_json for a legacy/DALL-E-compatible custom endpoint', async () => {
+      await makeProvider().generate({ prompt: 'a cat', model: 'dall-e-3', n: 1 });
+      const call = mockGenerate.mock.calls[0][0] as Record<string, unknown>;
+      expect(call['response_format']).toBe('b64_json');
+    });
+  });
+
+  describe('edit() — response_format negotiation', () => {
+    it('omits response_format for a GPT Image-compatible custom endpoint', async () => {
+      await makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'gpt-image-2' });
+      const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+      expect(call['response_format']).toBeUndefined();
+    });
+
+    it('requests b64_json for a legacy/DALL-E-compatible custom endpoint', async () => {
+      await makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'dall-e-2' });
+      const call = mockEdit.mock.calls[0][0] as Record<string, unknown>;
+      expect(call['response_format']).toBe('b64_json');
+    });
+  });
+
+  describe('response payload safety — no implicit downloads / SSRF', () => {
+    it('fails explicitly on a URL-only generate response instead of downloading it', async () => {
+      mockGenerate.mockResolvedValueOnce({ data: [{ url: 'http://169.254.169.254/latest/meta-data/' }], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-2' })).rejects.toThrow(
+        /URL instead of inline image data/,
+      );
+    });
+
+    it('fails explicitly on a missing/empty generate payload', async () => {
+      mockGenerate.mockResolvedValueOnce({ data: [{}], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-2' })).rejects.toThrow(
+        /empty image payload/,
+      );
+    });
+
+    it('fails explicitly on a corrupt (non-image) base64 generate payload', async () => {
+      mockGenerate.mockResolvedValueOnce({
+        data: [{ b64_json: Buffer.from('not an image').toString('base64') }],
+        created: 1000,
+      });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-2' })).rejects.toThrow(
+        /unsupported or corrupt image data/i,
+      );
+    });
+
+    it('fails explicitly on a URL-only edit response instead of downloading it', async () => {
+      mockEdit.mockResolvedValueOnce({ data: [{ url: 'https://example.test/image.png' }], created: 1000 });
+      await expect(
+        makeProvider().edit({ image: VALID_B64, prompt: 'edit', model: 'gpt-image-2' }),
+      ).rejects.toThrow(/URL instead of inline image data/);
+    });
+
+    it('fails explicitly when the generate response has no data at all', async () => {
+      mockGenerate.mockResolvedValueOnce({ data: [], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-2' })).rejects.toThrow(
+        /no image data/i,
+      );
     });
   });
 });

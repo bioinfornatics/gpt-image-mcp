@@ -24,7 +24,9 @@ import type {
 const MCP_ACCEPT = 'application/json, text/event-stream';
 
 const FAKE_IMAGE: ImageResult = {
-  b64_json: 'dG9vbHNJbnRlZ3JhdGlvbg==',
+  b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  format: 'png',
+  mimeType: 'image/png',
   model: 'gpt-image-1',
   created: 1_700_000_000,
 };
@@ -116,7 +118,7 @@ describe('MCP Tools — Integration (all 5 tools)', () => {
     });
 
     it('n=2 returns 2 images', async () => {
-      const second: ImageResult = { ...FAKE_IMAGE, b64_json: 'c2Vjb25kSW1hZ2U=' };
+      const second: ImageResult = { ...FAKE_IMAGE, b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' };
       mockProvider.generate.mockResolvedValueOnce([FAKE_IMAGE, second]);
 
       const res = await mcpPost(

@@ -14,8 +14,9 @@ export class CustomStrategy implements ProviderStrategy {
   buildGenerateExtras(params: GenerateParams, model: string): Record<string, unknown> {
     const isDallE = model.startsWith('dall-e');
     if (isDallE) return { response_format: 'b64_json' as const };
+    // GPT image-compatible endpoints return base64 image data by default and may
+    // reject the legacy DALL-E response_format parameter.
     return {
-      response_format: 'b64_json' as const,
       ...(params.background ? { background: params.background } : {}),
       ...(params.output_format ? { output_format: params.output_format } : {}),
       ...(params.output_compression !== undefined ? { output_compression: params.output_compression } : {}),
@@ -23,8 +24,13 @@ export class CustomStrategy implements ProviderStrategy {
   }
 
   buildEditExtras(params: EditParams): Record<string, unknown> {
+    const isDallE = params.model.startsWith('dall-e');
     return {
-      response_format: 'b64_json' as const,
+      // Legacy/DALL-E-compatible custom endpoints default to URL responses
+      // and must be told explicitly to return base64. GPT image-compatible
+      // custom endpoints always return base64 and may reject the legacy
+      // response_format parameter outright.
+      ...(isDallE ? { response_format: 'b64_json' as const } : {}),
       ...(params.quality && params.quality !== 'auto' ? { quality: params.quality } : {}),
       ...(params.output_format ? { output_format: params.output_format } : {}),
     };

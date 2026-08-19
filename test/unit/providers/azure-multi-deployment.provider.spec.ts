@@ -1,0 +1,58 @@
+import { describe, it, expect, mock } from 'bun:test';
+import { AzureMultiDeploymentProvider } from '../../../src/providers/azure-multi-deployment.provider';
+import type { AppConfig } from '../../../src/config/app.config';
+
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+const config: AppConfig['imageProvider'] = {
+  name: 'azure', apiKey: 'secret', baseUrl: 'https://unit.services.ai.azure.com',
+  deployment: 'MAI-Image-2.5', apiVersion: '2025-04-01-preview', models: [], azureAuthMode: 'api_key',
+};
+function response(body: unknown): Response {
+  return { ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) } as Response;
+}
+
+describe('AzureMultiDeploymentProvider', () => {
+  it('uses MAI-Image-2.5 when model is omitted', async () => {
+    const fetchImpl = mock(async () => response({ data: [{ b64_json: PNG }] }));
+    const provider = new AzureMultiDeploymentProvider({
+      config,
+      clients: {
+        createForDeployment: mock(() => { throw new Error('GPT client should not be created'); }),
+        createAuthHeaderProvider: mock(() => async () => ({ name: 'api-key', value: 'secret' })),
+      },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    const result = await provider.generate({ prompt: 'x', model: '' });
+    expect(result[0].model).toBe('MAI-Image-2.5');
+    expect((fetchImpl.mock.calls[0] as unknown as [string])[0]).toEndWith('/mai/v1/images/generations');
+  });
+
+  it('routes explicit gpt-image-2 to the Azure OpenAI client', async () => {
+    const generate = mock(async () => ({ data: [{ b64_json: PNG }] }));
+    const createForDeployment = mock(() => ({ images: { generate } }));
+    const provider = new AzureMultiDeploymentProvider({
+      config,
+      clients: {
+        createForDeployment: createForDeployment as never,
+        createAuthHeaderProvider: mock(() => async () => ({ name: 'api-key', value: 'secret' })),
+      },
+    });
+    const result = await provider.generate({ prompt: 'x', model: 'gpt-image-2', quality: 'high', size: '1024x1024' });
+    expect(createForDeployment).toHaveBeenCalledWith(config, 'gpt-image-2');
+    expect(generate).toHaveBeenCalled();
+    expect(result[0].model).toBe('gpt-image-2');
+  });
+
+  it('rejects unknown models before creating an inference client', async () => {
+    const createForDeployment = mock(() => ({}));
+    const provider = new AzureMultiDeploymentProvider({
+      config,
+      clients: {
+        createForDeployment: createForDeployment as never,
+        createAuthHeaderProvider: mock(() => async () => ({ name: 'api-key', value: 'secret' })),
+      },
+    });
+    await expect(provider.generate({ prompt: 'x', model: 'unknown' })).rejects.toThrow(/Available deployed models/);
+    expect(createForDeployment).not.toHaveBeenCalled();
+  });
+});

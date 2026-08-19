@@ -74,12 +74,28 @@ describe('ImageGenerateSchema', () => {
       expect(result.success).toBe(true);
       if (result.success) expect(result.data.size).toBe('auto');
     });
+
+
+    it('accepts 768x768 for MAI-Image-2.5 without applying GPT pixel constraints', () => {
+      const result = ImageGenerateSchema.safeParse({
+        prompt: 'test',
+        model: 'MAI-Image-2.5',
+        size: '768x768',
+      });
+      expect(result.success).toBe(true);
+    });
   });
 
   describe('defaults and required fields', () => {
     it('requires a non-empty prompt', () => {
       const result = ImageGenerateSchema.safeParse({ prompt: '' });
       expect(result.success).toBe(false);
+    });
+
+    it('preserves an omitted model so the runtime provider can choose its default', () => {
+      const result = ImageGenerateSchema.safeParse({ prompt: 'test' });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.model).toBeUndefined();
     });
 
     it('defaults n to 1', () => {
@@ -407,6 +423,96 @@ describe('ImageEditSchema', () => {
       const result = ImageEditSchema.safeParse({ image: 'base64data', prompt: 'edit this' });
       expect(result.success).toBe(true);
       if (result.success) expect(result.data.size).toBe('auto');
+    });
+  });
+
+  describe('size — gpt-image-2 arbitrary resolution', () => {
+    it('accepts arbitrary WxH "1920x1088" (both multiples of 16, pixels 2,088,960)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '1920x1088',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts "3072x1024" (ratio exactly 3:1)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '3072x1024',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects "3840x1024" (max edge = 3840, must be < 3840)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '3840x1024',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = result.error.issues.map(i => i.message).join(' ');
+        expect(msg).toContain('3840');
+      }
+    });
+
+    it('rejects "1025x1024" (not multiple of 16)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '1025x1024',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = result.error.issues.map(i => i.message).join(' ');
+        expect(msg).toContain('multiple of 16');
+      }
+    });
+
+    it('rejects "3088x1024" (ratio > 3:1)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '3088x1024',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects "640x1008" (below minimum pixel count)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: '640x1008',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects "wide" (bad format)', () => {
+      const result = ImageEditSchema.safeParse({
+        image: 'base64data', prompt: 'edit this', size: 'wide',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = result.error.issues.map(i => i.message).join(' ');
+        expect(msg).toContain('Invalid size');
+      }
+    });
+  });
+
+  describe('images[] array bounds', () => {
+    it('accepts up to 16 images', () => {
+      const result = ImageEditSchema.safeParse({
+        images: Array.from({ length: 16 }, () => 'base64data'),
+        prompt: 'compose',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects 17 images (exceeds max)', () => {
+      const result = ImageEditSchema.safeParse({
+        images: Array.from({ length: 17 }, () => 'base64data'),
+        prompt: 'compose',
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const msg = result.error.issues.map((i) => i.message).join(' ');
+        expect(msg).toContain('Maximum 16 images');
+      }
+    });
+
+    it('rejects an empty images[] array', () => {
+      const result = ImageEditSchema.safeParse({ images: [], prompt: 'compose' });
+      expect(result.success).toBe(false);
     });
   });
 });

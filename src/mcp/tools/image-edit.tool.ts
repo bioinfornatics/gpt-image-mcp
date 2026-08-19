@@ -4,9 +4,10 @@ import type { Server } from '@modelcontextprotocol/server';
 import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { RootsService } from '../features/roots.service';
-import { ImageStorageService, imageMimeType, pathToFileUri, type ImageFormat } from '../features/image-storage.service';
-import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT } from './schemas';
+import { ImageStorageService, pathToFileUri } from '../features/image-storage.service';
+import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT, isExperimentalResolution } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
+import { LATEST_MODEL } from '../../config/models';
 
 @Injectable()
 export class ImageEditTool {
@@ -19,6 +20,8 @@ export class ImageEditTool {
   ) {}
 
   register(server: McpServer) {
+    const defaultModel = this.provider.defaultModel ?? this.provider.configuredModel ?? LATEST_MODEL;
+    const availableModels = this.provider.availableModels;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (server as any).registerTool(
       'image_edit',
@@ -28,12 +31,12 @@ export class ImageEditTool {
 
 Args:
   - image (string, optional): Base64-encoded source image (PNG recommended). Use images[] for multi-image compositing.
-  - images (string[], optional): Array of base64 images for multi-image compositing (max 5). Use instead of image.
+  - images (string[], optional): Array of base64 images for multi-image compositing (max 16, 10MB aggregate cap). Use instead of image.
   - mask (string, optional): Base64-encoded mask (white=area to edit, black=keep)
   - prompt (string, required): Description of the desired edit
-  - model (string, optional): Model to use, default: gpt-image-2
+  - model (string, optional): ${availableModels?.length ? `omit for ${defaultModel}; selectable: ${availableModels.join(', ')}` : `Model to use, default: ${defaultModel}`}
   - n (integer 1–10, optional): Number of edited images to generate, default: 1
-  - size (string, optional): Output size, default: auto
+  - size (string, optional): auto|1024x1024|1536x1024|1024x1536|arbitrary WxH for gpt-image-2, default: auto
   - quality (string, optional): Quality level, default: auto
   - output_format (string, optional): png|jpeg|webp
   - output_compression (integer 0–100, optional): For webp/jpeg
@@ -55,7 +58,11 @@ Returns: Base64-encoded edited image(s).`,
   }
 
   async execute(rawParams: unknown, server?: Server) {
-    const parseResult = ImageEditSchema.safeParse(rawParams);
+    const rawObject = rawParams && typeof rawParams === 'object' ? rawParams as Record<string, unknown> : undefined;
+    const requestedModel = typeof rawObject?.['model'] === 'string' ? rawObject['model'].trim() : undefined;
+    const defaultModel = this.provider.defaultModel ?? this.provider.configuredModel ?? LATEST_MODEL;
+    const effectiveRawParams = rawObject && !requestedModel ? { ...rawObject, model: defaultModel } : rawParams;
+    const parseResult = ImageEditSchema.safeParse(effectiveRawParams);
     if (!parseResult.success) {
       return {
         isError: true,
@@ -68,7 +75,7 @@ Returns: Base64-encoded edited image(s).`,
       };
     }
 
-    const params = parseResult.data;
+    const params = { ...parseResult.data, model: parseResult.data.model ?? defaultModel };
 
     try {
       // Aggregate payload size guard (10MB = 10 * 1024 * 1024 bytes of raw b64-decoded data)
@@ -116,33 +123,39 @@ Returns: Base64-encoded edited image(s).`,
         input_fidelity: params.input_fidelity,
       });
 
-      const outputFormat = (params.output_format ?? 'png') as ImageFormat;
       const savedPaths = await Promise.all(
-        results.map((img) => this.storage.saveImage(img.b64_json, outputFormat)),
+        results.map((img) => this.storage.saveImage(img.b64_json, img.format)),
       );
       const workspacePaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, outputFormat);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, img.format);
           if (saved) workspacePaths.push(saved);
         }
       }
+      const experimental = isExperimentalResolution(params.size);
       const text = params.response_format === ResponseFormat.JSON
-        ? JSON.stringify({ count: results.length, images: results.map((img, i) => ({
-            model: img.model, created: img.created, saved_to: savedPaths[i],
-            file_uri: pathToFileUri(savedPaths[i]),
-            ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
-          })) }, null, 2)
-        : this.formatMarkdown(results, savedPaths, workspacePaths, params.prompt);
-      const mimeType = imageMimeType(outputFormat);
+        ? JSON.stringify({
+            count: results.length,
+            ...(experimental ? {
+              warning: 'Experimental resolution: requested size exceeds 2560×1440. ' +
+                'gpt-image-2 output quality/reliability is more variable above this boundary.',
+            } : {}),
+            images: results.map((img, i) => ({
+              model: img.model, created: img.created, saved_to: savedPaths[i],
+              file_uri: pathToFileUri(savedPaths[i]),
+              ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
+            })),
+          }, null, 2)
+        : this.formatMarkdown(results, savedPaths, workspacePaths, params.prompt, experimental);
       return {
         content: [
           { type: 'text' as const, text },
           ...results.flatMap((img, i) => [
-            { type: 'image' as const, data: img.b64_json, mimeType },
+            { type: 'image' as const, data: img.b64_json, mimeType: img.mimeType },
             { type: 'resource_link' as const, uri: pathToFileUri(savedPaths[i]),
-              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${outputFormat}`,
-              description: 'Persisted edit image', mimeType },
+              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${img.format}`,
+              description: 'Persisted edit image', mimeType: img.mimeType },
           ]),
         ],
       };
@@ -158,8 +171,16 @@ Returns: Base64-encoded edited image(s).`,
 
   private formatMarkdown(
     results: ImageResult[], savedPaths: string[], workspacePaths: string[] = [], prompt: string,
+    experimental = false,
   ): string {
     const lines = ['# Edited Image(s)', '', `**Prompt:** ${prompt}`, ''];
+    if (experimental) {
+      lines.push(
+        '> ⚠️ **Experimental resolution:** requested size exceeds 2560×1440. ' +
+        'gpt-image-2 output quality/reliability is more variable above this boundary.',
+        '',
+      );
+    }
     for (const [i, img] of results.entries()) {
       lines.push(`## Image ${i + 1}`, `**Model:** ${img.model}`, `**Saved to:** ${savedPaths[i]}`);
       if (workspacePaths[i]) lines.push(`**Workspace copy:** ${workspacePaths[i]}`);

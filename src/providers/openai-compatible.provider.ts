@@ -10,6 +10,7 @@ import type {
 } from './provider.interface';
 import type { ProviderStrategy } from './strategies/provider.strategy';
 import { maskSecret } from '../security/sanitise';
+import { decodeImageData, imageFile } from './image-media';
 
 /**
  * Single provider implementation for all OpenAI-compatible APIs.
@@ -41,10 +42,12 @@ export class OpenAICompatibleProvider implements IImageProvider {
   // ─── generate ────────────────────────────────────────────────────────────
 
   async generate(params: GenerateParams): Promise<ImageResult[]> {
-    const model = this.strategy.resolveModel(params);
+    const model = this.strategy.resolveModelAsync
+      ? await this.strategy.resolveModelAsync(params)
+      : this.strategy.resolveModel(params);
     this.logger.log(`${this.strategy.logPrefix} generate model=${model} n=${params.n ?? 1}`);
     try {
-      const extras = this.strategy.buildGenerateExtras(params, model);
+      const extras = await this.strategy.buildGenerateExtras(params, model);
       const response = await this.client.images.generate({
         prompt: params.prompt,
         model,
@@ -64,25 +67,25 @@ export class OpenAICompatibleProvider implements IImageProvider {
   // ─── edit ─────────────────────────────────────────────────────────────────
 
   async edit(params: EditParams): Promise<ImageResult[]> {
-    const model = this.strategy.resolveModel(params);
+    const model = this.strategy.resolveModelAsync
+      ? await this.strategy.resolveModelAsync(params)
+      : this.strategy.resolveModel(params);
     this.logger.log(`${this.strategy.logPrefix} edit model=${model} images=${params.images?.length ?? 1}`);
     try {
       let imageInput: File | File[];
       if (params.images && params.images.length > 0) {
         // Multi-image compositing
         imageInput = await Promise.all(
-          params.images.map((b64, i) => this.base64ToFile(b64, `image${i}.png`, 'image/png')),
+          params.images.map((b64, i) => Promise.resolve(imageFile(b64, `image${i}`))),
         );
       } else if (params.image) {
-        imageInput = await this.base64ToFile(params.image, 'image.png', 'image/png');
+        imageInput = imageFile(params.image, 'image');
       } else {
         throw new Error('Either image or images must be provided to edit()');
       }
 
-      const maskFile = params.mask
-        ? await this.base64ToFile(params.mask, 'mask.png', 'image/png')
-        : undefined;
-      const extras = this.strategy.buildEditExtras(params);
+      const maskFile = params.mask ? imageFile(params.mask, 'mask') : undefined;
+      const extras = await this.strategy.buildEditExtras(params);
 
       const response = await this.client.images.edit({
         image: imageInput,
@@ -111,9 +114,9 @@ export class OpenAICompatibleProvider implements IImageProvider {
     }
     this.logger.log(`variation n=${params.n ?? 1}`);
     try {
-      const imageFile = await this.base64ToFile(params.image, 'image.png', 'image/png');
+      const inputFile = imageFile(params.image, 'image');
       const response = await this.client.images.createVariation({
-        image: imageFile,
+        image: inputFile,
         n: params.n,
         size: params.size as Parameters<OpenAI['images']['createVariation']>[0]['size'],
         response_format: 'b64_json',
@@ -129,6 +132,7 @@ export class OpenAICompatibleProvider implements IImageProvider {
 
   async validate(): Promise<ValidationResult> {
     try {
+      if (this.strategy.validate) return await this.strategy.validate(this.client);
       await this.client.models.list();
       return { valid: true, provider: this.strategy.name };
     } catch (err) {
@@ -146,17 +150,22 @@ export class OpenAICompatibleProvider implements IImageProvider {
     response: { data?: Array<{ b64_json?: string | null; url?: string | null; revised_prompt?: string | null }>; created?: number },
     model: string,
   ): ImageResult[] {
-    return (response.data ?? []).map((img) => ({
-      b64_json: img.b64_json ?? '',
-      revised_prompt: img.revised_prompt ?? undefined,
-      model,
-      created: response.created ?? Date.now(),
-    }));
-  }
-
-  private async base64ToFile(b64: string, filename: string, mimeType: string): Promise<File> {
-    const base64Data = b64.replace(/^data:[^;]+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
-    return new File([buffer], filename, { type: mimeType });
+    if (!response.data?.length) throw new Error('Image provider returned no image data.');
+    return response.data.map((img) => {
+      if (!img.b64_json) {
+        throw new Error(img.url
+          ? 'Image provider returned a URL instead of inline image data; URL downloads are disabled.'
+          : 'Image provider returned an empty image payload.');
+      }
+      const decoded = decodeImageData(img.b64_json);
+      return {
+        b64_json: decoded.bytes.toString('base64'),
+        format: decoded.format,
+        mimeType: decoded.mimeType,
+        revised_prompt: img.revised_prompt ?? undefined,
+        model,
+        created: response.created ?? Date.now(),
+      };
+    });
   }
 }

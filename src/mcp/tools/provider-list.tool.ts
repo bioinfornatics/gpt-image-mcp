@@ -39,7 +39,8 @@ Use provider_validate to test connectivity before generating images.`,
   }
 
   async execute() {
-    const defaultModel = this.configService.get<AppConfig['defaults']>('defaults')!.model;
+    const configuredDefault = this.configService.get<AppConfig['defaults']>('defaults')!.model;
+    const defaultModel = this.provider.defaultModel ?? this.provider.configuredModel ?? configuredDefault;
     const providerName = this.provider.name;
 
     const modelsByProvider: Record<string, string[]> = {
@@ -60,6 +61,10 @@ Use provider_validate to test connectivity before generating images.`,
       custom: this.configService.get<AppConfig['imageProvider']>('imageProvider')?.models ?? ['custom'],
     };
 
+    const availableModels = this.provider.availableModels
+      ? [...this.provider.availableModels]
+      : modelsByProvider[providerName] ?? [];
+
     const output = {
       configured_provider: providerName,
       default_model: defaultModel,
@@ -67,7 +72,7 @@ Use provider_validate to test connectivity before generating images.`,
         {
           name: providerName,
           configured: true,
-          available_models: modelsByProvider[providerName] ?? [],
+          available_models: availableModels,
           status: 'configured',
         },
       ],
@@ -81,7 +86,7 @@ Use provider_validate to test connectivity before generating images.`,
       ``,
       `## ${providerName}`,
       `- Status: configured`,
-      `- Available models: ${(modelsByProvider[providerName] ?? []).join(', ')}`,
+      `- Available models: ${availableModels.join(', ')}`,
       ...(providerName === 'azure' ? [
         ``,
         `> ✅ **gpt-image-2** is Public Preview — no access application required.`,

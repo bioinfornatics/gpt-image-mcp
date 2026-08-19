@@ -17,6 +17,12 @@ describe('AzureOpenAIClientFactory', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it('creates a client for an explicitly selected deployment', () => {
+    const factory = new AzureOpenAIClientFactory();
+    const client = factory.createForDeployment(base, 'gpt-image-2') as unknown as { deploymentName: string };
+    expect(client.deploymentName).toBe('gpt-image-2');
+  });
+
   it('creates Azure CLI clients with tenant-aware refreshable token provider', () => {
     const tokenProvider = mock(() => Promise.resolve('refreshable-token'));
     const create = mock(() => tokenProvider);

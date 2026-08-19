@@ -3,7 +3,7 @@ import { OpenAICompatibleProvider } from '../../../src/providers/openai-compatib
 import { OpenAIStrategy } from '../../../src/providers/strategies/openai.strategy';
 import type OpenAI from 'openai';
 
-const mockGenerate = mock(() => Promise.resolve({ data: [{ b64_json: 'abc123', revised_prompt: undefined }], created: 1000 }));
+const mockGenerate = mock(() => Promise.resolve({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', revised_prompt: undefined }], created: 1000 }));
 const mockModelsList = mock(() => Promise.resolve({ data: [] }));
 
 function makeProvider() {
@@ -31,7 +31,7 @@ describe('OpenAICompatibleProvider (OpenAI strategy)', () => {
       const provider = makeProvider();
       const results = await provider.generate({ prompt: 'a cat', model: 'gpt-image-1', n: 1 });
       expect(results).toHaveLength(1);
-      expect(results[0].b64_json).toBe('abc123');
+      expect(results[0].b64_json).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
       expect(results[0].model).toBe('gpt-image-1');
     });
 
@@ -89,6 +89,20 @@ describe('OpenAICompatibleProvider (OpenAI strategy)', () => {
       } catch (err) {
         expect(String(err)).not.toContain(fakeKey);
       }
+    });
+  });
+
+  describe('response integrity', () => {
+    it('rejects URL-only image responses', async () => {
+      mockGenerate.mockResolvedValueOnce({ data: [{ url: 'https://example.test/image.png' }], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-1' })).rejects.toThrow(/URL instead of inline image data/);
+    });
+
+    it('rejects empty and corrupt image payloads', async () => {
+      mockGenerate.mockResolvedValueOnce({ data: [{ b64_json: '' }], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-1' })).rejects.toThrow(/empty image payload/);
+      mockGenerate.mockResolvedValueOnce({ data: [{ b64_json: Buffer.from('not image').toString('base64') }], created: 1000 });
+      await expect(makeProvider().generate({ prompt: 'cat', model: 'gpt-image-1' })).rejects.toThrow(/unsupported or corrupt image data/i);
     });
   });
 

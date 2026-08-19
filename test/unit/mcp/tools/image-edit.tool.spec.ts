@@ -7,6 +7,8 @@ import { ImageStorageService } from '../../../../src/mcp/features/image-storage.
 
 const mockResult: ImageResult = {
   b64_json: 'ZWRpdGVkaW1hZ2U=',
+  format: 'png',
+  mimeType: 'image/png',
   model: 'gpt-image-1',
   created: 1_700_000_000,
 };
@@ -64,6 +66,24 @@ describe('ImageEditTool', () => {
         expect.objectContaining({ mask: VALID_B64 }),
       );
     });
+
+    it('should accept an arbitrary gpt-image-2 WxH size (2048x1152)', async () => {
+      mockProvider.edit.mockResolvedValue([mockResult]);
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '2048x1152' });
+      expect(result.isError).toBeUndefined();
+      expect(mockProvider.edit).toHaveBeenCalledWith(expect.objectContaining({ size: '2048x1152' }));
+    });
+
+    it('should reject a non-multiple-of-16 arbitrary size', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '1025x1024' });
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('multiple of 16');
+    });
+
+    it('should reject an arbitrary size exceeding the 3:1 ratio', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '3088x1024' });
+      expect(result.isError).toBe(true);
+    });
   });
 
   describe('Successful Edit', () => {
@@ -73,6 +93,23 @@ describe('ImageEditTool', () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
       expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', data: mockResult.b64_json, mimeType: 'image/png' }));
       expect(result.content[0].text).toContain('# Edited Image');
+    });
+
+    it('should include a markdown experimental warning for arbitrary sizes above 2560x1440', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '2880x2880' });
+      expect(result.isError).toBeUndefined();
+      expect(result.content[0].text).toContain('Experimental resolution');
+    });
+
+    it('should not include an experimental warning for preset sizes', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '1024x1024' });
+      expect(result.content[0].text).not.toContain('Experimental');
+    });
+
+    it('should include a "warning" field in JSON output for arbitrary sizes above 2560x1440', async () => {
+      const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', size: '2880x2880', response_format: 'json' });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.warning).toContain('Experimental resolution');
     });
 
     it('should return JSON when response_format=json', async () => {
@@ -86,14 +123,14 @@ describe('ImageEditTool', () => {
       expect(mockProvider.edit).toHaveBeenCalledWith(expect.objectContaining({ model: 'dall-e-2' }));
     });
 
-    it('should use correct MIME type for output_format=jpeg in markdown', async () => {
+    it('should use verified response MIME even when output_format=jpeg was requested', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'jpeg' });
-      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/jpeg' }));
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
 
-    it('should use correct MIME type for output_format=webp in markdown', async () => {
+    it('should use verified response MIME even when output_format=webp was requested', async () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat', output_format: 'webp' });
-      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/webp' }));
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
 
     it('should default to png MIME type when output_format not set', async () => {
@@ -112,7 +149,9 @@ describe('ImageEditTool', () => {
   });
 
   describe('save_to_workspace (H3)', () => {
-    beforeEach(() => mockProvider.edit.mockResolvedValue([{ b64_json: 'ZWRpdA==', model: 'gpt-image-1', created: 0 }]));
+    beforeEach(() => mockProvider.edit.mockResolvedValue([{ b64_json: 'ZWRpdA==',
+  format: 'png',
+  mimeType: 'image/png', model: 'gpt-image-1', created: 0 }]));
 
     it('should call roots.saveImageToWorkspace when save_to_workspace=true and server provided', async () => {
       mockRoots.saveImageToWorkspace.mockResolvedValue('/workspace/generated/img.png');
@@ -180,6 +219,24 @@ describe('ImageEditTool', () => {
       const result = await tool.execute({ images: [bigB64, bigB64], prompt: 'compose' });
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toMatch(/exceeds 10MB aggregate limit/i);
+    });
+
+    it('SECURITY: should reject exactly 5 images x 2.5MB each (12.5MB aggregate) as isError', async () => {
+      // Exact reproduction of AC3 in gpt-image-mcp-xlh: "5 images × 2.5MB = 12.5MB → isError".
+      // base64 char count for N raw bytes ≈ ceil(N/3)*4; the tool's aggregate check
+      // approximates raw bytes as raw_b64_length * 0.75, so a 2.5MB-equivalent b64
+      // string is ceil(2.5MB / 0.75) characters.
+      const twoPointFiveMbRaw = 2.5 * 1024 * 1024;
+      const b64Len = Math.ceil(twoPointFiveMbRaw / 0.75);
+      const imageB64 = 'A'.repeat(b64Len);
+      const images = Array.from({ length: 5 }, () => imageB64);
+
+      const result = await tool.execute({ images, prompt: 'compose 5 images' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toMatch(/exceeds 10MB aggregate limit/i);
+      // Sanity: 5 * 2.5MB = 12.5MB, comfortably over the 10MB cap.
+      expect(images.length).toBe(5);
     });
 
     it('should pass input_fidelity to provider.edit when provided', async () => {

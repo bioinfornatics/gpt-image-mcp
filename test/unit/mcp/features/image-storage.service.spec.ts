@@ -19,17 +19,20 @@ describe('ImageStorageService', () => {
   });
 
   it('honors IMAGE_OUTPUT_DIR and persists decoded image bytes', async () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
     const service = new ImageStorageService();
-    const saved = await service.saveImage(Buffer.from('image-data').toString('base64'), 'png');
+    const saved = await service.saveImage(png, 'png');
     expect(path.dirname(saved)).toBe(tmpDir);
     expect(saved.endsWith('.png')).toBe(true);
-    expect(await fs.readFile(saved, 'utf8')).toBe('image-data');
+    expect(await fs.readFile(saved)).toEqual(Buffer.from(png, 'base64'));
   });
 
-  it('strips a data URI prefix', async () => {
+  it('strips a data URI prefix and derives the extension from verified bytes', async () => {
+    const webp = Buffer.from('RIFF\x04\x00\x00\x00WEBP', 'binary');
     const service = new ImageStorageService();
-    const saved = await service.saveImage(`data:image/webp;base64,${Buffer.from('webp').toString('base64')}`, 'webp');
-    expect(await fs.readFile(saved, 'utf8')).toBe('webp');
+    const saved = await service.saveImage(`data:image/webp;base64,${webp.toString('base64')}`, 'png');
+    expect(saved.endsWith('.webp')).toBe(true);
+    expect(await fs.readFile(saved)).toEqual(webp);
   });
 
   it('reads the freedesktop XDG_PICTURES_DIR and appends the application directory on Linux', async () => {

@@ -3,8 +3,8 @@ import { OpenAICompatibleProvider } from '../../../src/providers/openai-compatib
 import { OpenAIStrategy } from '../../../src/providers/strategies/openai.strategy';
 import type OpenAI from 'openai';
 
-const mockEdit = mock(() => Promise.resolve({ data: [{ b64_json: 'edit-b64' }], created: 1000 }));
-const mockCreateVariation = mock(() => Promise.resolve({ data: [{ b64_json: 'var-b64' }], created: 1000 }));
+const mockEdit = mock(() => Promise.resolve({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }], created: 1000 }));
+const mockCreateVariation = mock(() => Promise.resolve({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }], created: 1000 }));
 
 function makeProvider() {
   const mockClient = {
@@ -21,7 +21,7 @@ describe('OpenAICompatibleProvider — edit()', () => {
 
   it('should call images.edit and return ImageResult[]', async () => {
     const results = await makeProvider().edit({ image: VALID_B64, prompt: 'add rainbow', model: 'gpt-image-1' });
-    expect(results[0].b64_json).toBe('edit-b64');
+    expect(results[0].b64_json).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
     expect(mockEdit).toHaveBeenCalledTimes(1);
   });
 
@@ -143,7 +143,7 @@ describe('OpenAICompatibleProvider — variation()', () => {
 
   it('should call images.createVariation and return ImageResult[]', async () => {
     const results = await makeProvider().variation({ image: VALID_B64, n: 1, size: '1024x1024' });
-    expect(results[0].b64_json).toBe('var-b64');
+    expect(results[0].b64_json).toBe('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
     expect(results[0].model).toBe('dall-e-2');
   });
 
@@ -161,7 +161,7 @@ describe('OpenAICompatibleProvider — variation()', () => {
   });
 
   it('should return multiple variations when n > 1', async () => {
-    mockCreateVariation.mockResolvedValueOnce({ data: [{ b64_json: 'v1' }, { b64_json: 'v2' }], created: 1000 });
+    mockCreateVariation.mockResolvedValueOnce({ data: [{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }, { b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }], created: 1000 });
     const results = await makeProvider().variation({ image: VALID_B64, n: 2 });
     expect(results).toHaveLength(2);
   });

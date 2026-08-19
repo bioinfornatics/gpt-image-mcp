@@ -15,6 +15,8 @@ import { ImageStorageService } from '../../../../src/mcp/features/image-storage.
 
 const MOCK_RESULT: ImageResult = {
   b64_json: 'ZmVhdHVyZXNUZXN0',
+  format: 'png',
+  mimeType: 'image/png',
   model: 'gpt-image-1',
   created: 1_700_000_000,
 };
@@ -45,6 +47,7 @@ describe('ImageGenerateTool — with M4 features', () => {
   beforeEach(async () => {
     mockProvider = {
       name: 'openai',
+      configuredModel: undefined,
       generate: jest.fn().mockResolvedValue([MOCK_RESULT]),
       edit: jest.fn(),
       variation: jest.fn(),
@@ -108,6 +111,21 @@ describe('ImageGenerateTool — with M4 features', () => {
       // execute() must receive innerServer (the .server property), not the McpServer wrapper
       expect(capturedServer).toBe(innerServer);
       executeSpy.mockRestore();
+    });
+
+
+    it('advertises MAI-Image-2.5 as the active default with compatible parameters', () => {
+      mockProvider.configuredModel = 'MAI-Image-2.5';
+      const registered: Array<{ description: string }> = [];
+      const mockMcpServer = {
+        server: makeMockServer(),
+        registerTool: jest.fn((_name: string, meta: { description: string }) => registered.push(meta)),
+      };
+      tool.register(mockMcpServer as any);
+      expect(registered[0].description).toContain('Active configured model/deployment: MAI-Image-2.5');
+      expect(registered[0].description).toContain('omit model');
+      expect(registered[0].description).toContain('quality is not supported');
+      expect(registered[0].description).not.toContain('gpt-image-2 (default/recommended)');
     });
   });
 
@@ -362,14 +380,14 @@ describe('ImageGenerateTool — with M4 features', () => {
       expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
 
-    it('should use webp in data URI when output_format=webp', async () => {
+    it('should use verified PNG MIME when webp was requested', async () => {
       const result = await tool.execute({ prompt: 'a cat', output_format: 'webp' });
-      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/webp' }));
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
 
-    it('should use jpeg in data URI when output_format=jpeg', async () => {
+    it('should use verified PNG MIME when jpeg was requested', async () => {
       const result = await tool.execute({ prompt: 'a cat', output_format: 'jpeg' });
-      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/jpeg' }));
+      expect(result.content).toContainEqual(expect.objectContaining({ type: 'image', mimeType: 'image/png' }));
     });
   });
 

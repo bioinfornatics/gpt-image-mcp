@@ -55,7 +55,7 @@ describe('Input Sanitisation — Integration', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockProvider.generate.mockResolvedValue([{ b64_json: 'c2FuaXRpc2U=', model: 'gpt-image-1', created: 0 }]);
+    mockProvider.generate.mockResolvedValue([{ b64_json: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', format: 'png', mimeType: 'image/png', model: 'gpt-image-1', created: 0 }]);
   });
 
   describe('Prompt injection protection', () => {

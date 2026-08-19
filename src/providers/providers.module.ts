@@ -5,11 +5,10 @@ import OpenAI from 'openai';
 import { PROVIDER_TOKEN, type IImageProvider } from './provider.interface';
 import { OpenAICompatibleProvider } from './openai-compatible.provider';
 import { OpenAIStrategy } from './strategies/openai.strategy';
-import { AzureStrategy } from './strategies/azure.strategy';
 import { TogetherStrategy } from './strategies/together.strategy';
 import { CustomStrategy } from './strategies/custom.strategy';
 import { AzureOpenAIClientFactory, DefaultAzureCredentialProviderFactory } from './azure-openai-client.factory';
-import { RequestAwareAzureProvider } from './request-aware-azure.provider';
+import { AzureMultiDeploymentProvider } from './azure-multi-deployment.provider';
 import type { AppConfig } from '../config/app.config';
 
 @Module({
@@ -21,8 +20,7 @@ import type { AppConfig } from '../config/app.config';
       useFactory: (config: ConfigService, azureClients: AzureOpenAIClientFactory): IImageProvider => {
         const ip = config.get<AppConfig['imageProvider']>('imageProvider')!;
         if (ip.name === 'azure') {
-          if (ip.azureAuthMode === 'on_behalf_of') return new RequestAwareAzureProvider(azureClients, ip.deployment!, ip.azureAuthMode);
-          return new OpenAICompatibleProvider(azureClients.create(ip), new AzureStrategy(ip.deployment!, ip.azureAuthMode));
+          return new AzureMultiDeploymentProvider({ config: ip, clients: azureClients });
         }
         if (ip.name === 'together') return new OpenAICompatibleProvider(new OpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey: ip.apiKey! }), new TogetherStrategy());
         if (ip.name === 'custom') return new OpenAICompatibleProvider(new OpenAI({ baseURL: ip.baseUrl, apiKey: ip.apiKey || 'none' }), new CustomStrategy());

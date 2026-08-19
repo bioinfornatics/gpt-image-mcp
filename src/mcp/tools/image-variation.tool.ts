@@ -5,7 +5,7 @@ import { PROVIDER_TOKEN } from '../../providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../providers/provider.interface';
 import { maskSecret } from '../../security/sanitise';
 import { RootsService } from '../features/roots.service';
-import { ImageStorageService, imageMimeType, pathToFileUri, type ImageFormat } from '../features/image-storage.service';
+import { ImageStorageService, pathToFileUri } from '../features/image-storage.service';
 import { ImageVariationSchema, ResponseFormat } from './schemas';
 
 @Injectable()
@@ -84,14 +84,13 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
         size: params.size,
       });
 
-      const outputFormat = 'png' as ImageFormat;
       const savedPaths = await Promise.all(
-        results.map((img) => this.storage.saveImage(img.b64_json, outputFormat)),
+        results.map((img) => this.storage.saveImage(img.b64_json, img.format)),
       );
       const workspacePaths: string[] = [];
       if (params.save_to_workspace && server) {
         for (const img of results) {
-          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, outputFormat);
+          const saved = await this.roots.saveImageToWorkspace(server, img.b64_json, img.format);
           if (saved) workspacePaths.push(saved);
         }
       }
@@ -102,15 +101,14 @@ Note: Use dall-e-2 as model. Other models will return an error.`,
             ...(workspacePaths[i] ? { workspace_copy: workspacePaths[i] } : {}),
           })) }, null, 2)
         : this.formatMarkdown(results, savedPaths, workspacePaths);
-      const mimeType = imageMimeType(outputFormat);
       return {
         content: [
           { type: 'text' as const, text },
           ...results.flatMap((img, i) => [
-            { type: 'image' as const, data: img.b64_json, mimeType },
+            { type: 'image' as const, data: img.b64_json, mimeType: img.mimeType },
             { type: 'resource_link' as const, uri: pathToFileUri(savedPaths[i]),
-              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${outputFormat}`,
-              description: 'Persisted variation image', mimeType },
+              name: savedPaths[i].split(/[\\/]/).pop() ?? `image-${i + 1}.${img.format}`,
+              description: 'Persisted variation image', mimeType: img.mimeType },
           ]),
         ],
       };

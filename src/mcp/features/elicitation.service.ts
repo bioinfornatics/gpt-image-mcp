@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Server } from '@modelcontextprotocol/server';
 import type { AppConfig } from '../../config/app.config';
 import { maskSecret } from '../../security/sanitise';
+import { MAI_MODEL_NAME } from '../../providers/mai-image.constants';
 
 export interface ElicitationField {
   type: 'string' | 'number' | 'boolean';
@@ -30,7 +31,28 @@ const ELICITATION_SIZE_OPTIONS = [
   '1024x1536',   // Portrait · 2:3 — phone screens, posters, stories
 ] as const;
 
-function sizeOptionsForModel(_model: string): readonly string[] {
+/**
+ * MAI Image (MAI-Image-2.5) size options for the elicitation form.
+ *
+ * MAI Image is routed through a dedicated adapter with a stricter contract
+ * than gpt-image-*: both edges must be >= `MAI_MIN_EDGE` (768) and total
+ * pixels must be <= `MAI_MAX_PIXELS` (1,048,576). The generic
+ * `1536x1024` preset (1,572,864 pixels) EXCEEDS that budget and is rejected
+ * by `validateModelSizeCompat` at schema-validation time — offering it here
+ * would set the user up for a guaranteed validation error. All options below
+ * satisfy width/height >= 768 and width * height <= 1,048,576.
+ */
+const MAI_ELICITATION_SIZE_OPTIONS = [
+  'auto',
+  '768x768',
+  '896x896',
+  '1024x1024',
+] as const;
+
+function sizeOptionsForModel(model: string): readonly string[] {
+  if (model.toLowerCase() === MAI_MODEL_NAME.toLowerCase()) {
+    return MAI_ELICITATION_SIZE_OPTIONS;
+  }
   // All current gpt-image-* models share the same fixed sizes.
   // When gpt-image-2 arbitrary resolution lands, add model-branching here.
   return ELICITATION_SIZE_OPTIONS;
@@ -86,7 +108,7 @@ export class ElicitationService {
       };
     }
 
-    if (!params.hasQuality) {
+    if (!params.hasQuality && params.model.toLowerCase() !== MAI_MODEL_NAME.toLowerCase()) {
       properties['quality'] = {
         type: 'string',
         title: 'Image Quality',
