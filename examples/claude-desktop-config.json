@@ -21,7 +21,7 @@
     "gpt-image-mcp-pinned": {
       "_comment": "Pin a specific version for reproducibility.",
       "command": "bun",
-      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp@0.1.6"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp@0.1.7"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-replace-with-your-key",

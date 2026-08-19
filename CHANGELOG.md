@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.7] — 2026-08-19
+
+### Added
+- Strict Azure-provider inference for canonical `https://<resource>.services.ai.azure.com` base URLs.
+
+### Security
+- Reject deceptive hosts, non-HTTPS URLs, credentials, ports, query strings and non-root paths during inference.
+
+### Notes
+- The hostname identifies the Foundry resource/account, not the Azure resource group or project. Project endpoints remain explicit because they cannot be derived reliably from the resource URL.
+
 ## [0.1.6] — 2026-08-19
 
 ### Added

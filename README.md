@@ -182,7 +182,7 @@ extensions:
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.6"
+      - "@bioinfornatics/gpt-image-mcp@0.1.7"
       - --provider
       - openai
       - --transport
@@ -203,7 +203,7 @@ extensions:
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.6"
+      - "@bioinfornatics/gpt-image-mcp@0.1.7"
       - --provider
       - azure
       - --base-url
