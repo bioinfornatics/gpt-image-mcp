@@ -6,6 +6,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.1.6] — 2026-08-19
+
+### Added
+- Safe non-secret CLI flags `--base-url` and `--foundry-project-endpoint`.
+
+### Changed
+- Goose examples favor CLI arguments for non-secret runtime configuration and reserve `env_keys` for secrets.
+- Azure examples no longer duplicate the deployment with `IMAGE_DEFAULT_MODEL` or force a global API version/log level.
+
 ## [0.1.5] — 2026-08-19
 
 ### Added
