@@ -136,9 +136,11 @@ Every generated, edited, or variation image is returned as native MCP image cont
 
 ## MCP Client Setup
 
-Prefer CLI arguments for non-secret runtime settings (`--provider`, `--base-url`,
-`--foundry-project-endpoint`, `--deployment`, `--transport`). Keep only secrets in `env_keys` or
-`*_FILE` variables. For Azure, `--deployment` already defines the runtime default; do not duplicate
+Prefer CLI arguments for non-secret runtime settings (`--base-url`, `--foundry-project-endpoint`,
+`--deployment`, `--transport`). A canonical `https://<resource>.services.ai.azure.com` base URL
+infers `--provider azure` when no provider is explicitly configured. The hostname contains the
+Foundry resource/account name—not the Azure resource-group or project name—so the project endpoint
+cannot be derived and remains explicit. Keep only secrets in `env_keys` or `*_FILE` variables. For Azure, `--deployment` already defines the runtime default; do not duplicate
 it with `IMAGE_DEFAULT_MODEL`. API versions are adapter-owned unless a legacy endpoint explicitly
 requires an override. `IMAGE_LOG_LEVEL` defaults to `info` and may be omitted.
 

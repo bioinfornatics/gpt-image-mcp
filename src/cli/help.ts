@@ -30,6 +30,7 @@ Options:
                                  (which source supplied each value) and exit
 
   --provider <name>             Image provider: openai | azure | together | custom
+                                 (azure is inferred for an exact https://<resource>.services.ai.azure.com root)
   --base-url <url>               Provider inference endpoint (IMAGE_BASE_URL)
   --foundry-project-endpoint <url>
                                  Azure Foundry project endpoint used for deployment discovery

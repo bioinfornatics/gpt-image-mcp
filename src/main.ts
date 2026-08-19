@@ -9,6 +9,7 @@
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { parseCliArgs } from './cli/cli-options';
 import { printHelp, printVersion } from './cli/help';
+import { withFoundryDefaults } from './config/foundry-endpoint';
 
 /**
  * Dispatches pure, side-effect-free CLI subcommands (--help / --version /
@@ -39,10 +40,11 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
     return 0;
   }
 
+  const overrides = withFoundryDefaults(parsed.overrides, process.env);
+
   if (parsed.checkConfig || parsed.showConfigSources) {
     // Lazy-import to keep --help/--version free of any config-resolver cost.
     const { resolveConfig } = await import('./config/config-resolver');
-    const overrides = { ...parsed.overrides };
     const resolution = resolveConfig(overrides, process.env);
     const redacted: Record<string, string | undefined> = {};
     for (const [key, value] of Object.entries(resolution.values)) {
@@ -63,10 +65,10 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
   if (parsed.mcpApiKeyFile) {
     process.env['IMAGE_MCP_API_KEY_FILE'] = parsed.mcpApiKeyFile;
   }
-  if (parsed.overrides.provider) process.env['IMAGE_PROVIDER'] = parsed.overrides.provider;
-  if (parsed.overrides.baseUrl) process.env['IMAGE_BASE_URL'] = parsed.overrides.baseUrl;
-  if (parsed.overrides.foundryProjectEndpoint) process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'] = parsed.overrides.foundryProjectEndpoint;
-  if (parsed.overrides.deployment) process.env['IMAGE_DEPLOYMENT'] = parsed.overrides.deployment;
+  if (overrides.provider) process.env['IMAGE_PROVIDER'] = overrides.provider;
+  if (overrides.baseUrl) process.env['IMAGE_BASE_URL'] = overrides.baseUrl;
+  if (overrides.foundryProjectEndpoint) process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'] = overrides.foundryProjectEndpoint;
+  if (overrides.deployment) process.env['IMAGE_DEPLOYMENT'] = overrides.deployment;
   if (parsed.overrides.transport) process.env['IMAGE_MCP_TRANSPORT'] = parsed.overrides.transport;
   if (parsed.overrides.port) process.env['IMAGE_PORT'] = parsed.overrides.port;
   if (parsed.overrides.logLevel) process.env['IMAGE_LOG_LEVEL'] = parsed.overrides.logLevel;
