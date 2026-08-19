@@ -327,7 +327,10 @@ jobs:
     name: Publish to npmjs.com
     runs-on: ubuntu-latest
     needs: [quality, docker]
-    if: startsWith(github.ref, 'refs/tags/v')
+    # First publication of the renamed npm package requires npm scope
+    # authorization/trusted-publisher setup. Keep tag CI green until that is
+    # configured, then switch this repository variable to true.
+    if: startsWith(github.ref, 'refs/tags/v') && vars.NPMJS_PUBLISH_ENABLED == 'true'
 
     permissions:
       contents: read
