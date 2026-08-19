@@ -29,14 +29,15 @@ extensions:
     type: stdio
     name: GPT Image MCP
     cmd: npx
-    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.5"]
+    args:
+      - "--yes"
+      - "@bioinfornatics/gpt-image-mcp@0.1.5"
+      - --provider
+      - openai
+      - --transport
+      - stdio
     env_keys:
       - IMAGE_API_KEY
-    envs:
-      IMAGE_PROVIDER: openai
-      IMAGE_MCP_TRANSPORT: stdio
-      IMAGE_DEFAULT_MODEL: gpt-image-2
-      IMAGE_LOG_LEVEL: error
     timeout: 300
 ```
 
@@ -49,17 +50,21 @@ extensions:
     type: stdio
     name: GPT Image MCP
     cmd: npx
-    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.5"]
+    args:
+      - "--yes"
+      - "@bioinfornatics/gpt-image-mcp@0.1.5"
+      - --provider
+      - azure
+      - --base-url
+      - https://YOUR-RESOURCE.services.ai.azure.com
+      - --foundry-project-endpoint
+      - https://YOUR-RESOURCE.services.ai.azure.com/api/projects/YOUR-PROJECT
+      - --deployment
+      - MAI-Image-2.5
+      - --transport
+      - stdio
     env_keys:
       - IMAGE_API_KEY
-    envs:
-      IMAGE_PROVIDER: azure
-      IMAGE_MCP_TRANSPORT: stdio
-      IMAGE_BASE_URL: "https://YOUR-RESOURCE.openai.azure.com"
-      IMAGE_DEPLOYMENT: "YOUR-DEPLOYMENT"
-      IMAGE_API_VERSION: "2025-04-01-preview"
-      IMAGE_DEFAULT_MODEL: gpt-image-2
-      IMAGE_LOG_LEVEL: error
     timeout: 300
 ```
 

@@ -64,6 +64,8 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
     process.env['IMAGE_MCP_API_KEY_FILE'] = parsed.mcpApiKeyFile;
   }
   if (parsed.overrides.provider) process.env['IMAGE_PROVIDER'] = parsed.overrides.provider;
+  if (parsed.overrides.baseUrl) process.env['IMAGE_BASE_URL'] = parsed.overrides.baseUrl;
+  if (parsed.overrides.foundryProjectEndpoint) process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'] = parsed.overrides.foundryProjectEndpoint;
   if (parsed.overrides.deployment) process.env['IMAGE_DEPLOYMENT'] = parsed.overrides.deployment;
   if (parsed.overrides.transport) process.env['IMAGE_MCP_TRANSPORT'] = parsed.overrides.transport;
   if (parsed.overrides.port) process.env['IMAGE_PORT'] = parsed.overrides.port;

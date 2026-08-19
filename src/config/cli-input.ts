@@ -24,6 +24,7 @@ export interface CliInput {
   // ── Provider selection & non-secret provider settings ──────────────────
   provider?: ProviderName;
   baseUrl?: string;
+  foundryProjectEndpoint?: string;
   deployment?: string;
   apiVersion?: string;
   models?: string[];

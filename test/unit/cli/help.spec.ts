@@ -9,6 +9,8 @@ describe('help', () => {
       '--check-config',
       '--show-config-sources',
       '--provider',
+      '--base-url',
+      '--foundry-project-endpoint',
       '--deployment',
       '--transport',
       '--port',

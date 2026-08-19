@@ -136,6 +136,12 @@ Every generated, edited, or variation image is returned as native MCP image cont
 
 ## MCP Client Setup
 
+Prefer CLI arguments for non-secret runtime settings (`--provider`, `--base-url`,
+`--foundry-project-endpoint`, `--deployment`, `--transport`). Keep only secrets in `env_keys` or
+`*_FILE` variables. For Azure, `--deployment` already defines the runtime default; do not duplicate
+it with `IMAGE_DEFAULT_MODEL`. API versions are adapter-owned unless a legacy endpoint explicitly
+requires an override. `IMAGE_LOG_LEVEL` defaults to `info` and may be omitted.
+
 ### Claude Desktop
 
 `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) — `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
@@ -175,9 +181,10 @@ extensions:
     args:
       - "--yes"
       - "@bioinfornatics/gpt-image-mcp@0.1.5"
-    envs:
-      IMAGE_PROVIDER: openai
-      IMAGE_MCP_TRANSPORT: stdio
+      - --provider
+      - openai
+      - --transport
+      - stdio
     env_keys:
       - IMAGE_API_KEY        # set via `goose configure`; a plain shell `export` alone does not populate Goose's keyring/env_keys
     timeout: 300
@@ -195,11 +202,16 @@ extensions:
     args:
       - "--yes"
       - "@bioinfornatics/gpt-image-mcp@0.1.5"
-    envs:
-      IMAGE_PROVIDER: azure
-      IMAGE_BASE_URL: https://my-resource.openai.azure.com
-      IMAGE_DEPLOYMENT: my-gpt-image-deployment
-      IMAGE_MCP_TRANSPORT: stdio
+      - --provider
+      - azure
+      - --base-url
+      - https://my-resource.services.ai.azure.com
+      - --foundry-project-endpoint
+      - https://my-resource.services.ai.azure.com/api/projects/my-project
+      - --deployment
+      - MAI-Image-2.5
+      - --transport
+      - stdio
     env_keys:
       - IMAGE_API_KEY
     timeout: 300

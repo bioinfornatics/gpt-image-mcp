@@ -78,6 +78,7 @@ export interface CliConfigOverride {
   provider?: string;
   apiKey?: string;
   baseUrl?: string;
+  foundryProjectEndpoint?: string;
   deployment?: string;
   apiVersion?: string;
   models?: string;
@@ -128,6 +129,12 @@ export const CONFIG_FIELD_REGISTRY: readonly ConfigFieldSpec[] = [
     canonicalEnv: 'IMAGE_BASE_URL',
     legacyEnvs: ['AZURE_OPENAI_ENDPOINT', 'CUSTOM_OPENAI_BASE_URL', 'OPENAI_BASE_URL'],
     cliKey: 'baseUrl',
+  },
+  {
+    key: 'foundryProjectEndpoint',
+    canonicalEnv: 'IMAGE_FOUNDRY_PROJECT_ENDPOINT',
+    legacyEnvs: [],
+    cliKey: 'foundryProjectEndpoint',
   },
   { key: 'deployment', canonicalEnv: 'IMAGE_DEPLOYMENT', legacyEnvs: ['AZURE_OPENAI_DEPLOYMENT'], cliKey: 'deployment' },
   {

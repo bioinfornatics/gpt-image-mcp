@@ -30,6 +30,8 @@ const BOOLEAN_FLAGS = new Set([
 /** Flags that require exactly one value argument following them. */
 const VALUE_FLAGS = new Set([
   '--provider',
+  '--base-url',
+  '--foundry-project-endpoint',
   '--deployment',
   '--transport',
   '--port',
@@ -128,6 +130,12 @@ export function parseCliArgs(argv: readonly string[]): CliParseResult {
       switch (arg) {
         case '--provider':
           overrides.provider = value;
+          break;
+        case '--base-url':
+          overrides.baseUrl = value;
+          break;
+        case '--foundry-project-endpoint':
+          overrides.foundryProjectEndpoint = value;
           break;
         case '--deployment':
           overrides.deployment = value;

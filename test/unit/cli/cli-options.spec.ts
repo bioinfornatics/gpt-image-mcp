@@ -49,6 +49,22 @@ describe('parseCliArgs', () => {
     expect(result.overrides.provider).toBe('azure');
   });
 
+  it('parses --base-url into overrides.baseUrl', () => {
+    const result = parseCliArgs(['--base-url', 'https://example.services.ai.azure.com']);
+    expect(result.valid).toBe(true);
+    expect(result.overrides.baseUrl).toBe('https://example.services.ai.azure.com');
+  });
+
+  it('parses --foundry-project-endpoint into overrides.foundryProjectEndpoint', () => {
+    const result = parseCliArgs([
+      '--foundry-project-endpoint',
+      'https://example.services.ai.azure.com/api/projects/project-a',
+    ]);
+    expect(result.valid).toBe(true);
+    expect(result.overrides.foundryProjectEndpoint)
+      .toBe('https://example.services.ai.azure.com/api/projects/project-a');
+  });
+
   it('parses --deployment value into overrides.deployment', () => {
     const result = parseCliArgs(['--deployment', 'gpt-image-2']);
     expect(result.valid).toBe(true);

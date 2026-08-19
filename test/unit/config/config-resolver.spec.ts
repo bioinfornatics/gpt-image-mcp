@@ -125,6 +125,16 @@ describe('resolveConfig() — Azure deployment field', () => {
       .toBe('cli-deploy');
   });
 
+  it('resolves the Foundry project endpoint with CLI precedence', () => {
+    const resolution = resolveConfig(
+      { foundryProjectEndpoint: 'https://cli.services.ai.azure.com/api/projects/cli' },
+      { IMAGE_FOUNDRY_PROJECT_ENDPOINT: 'https://env.services.ai.azure.com/api/projects/env' },
+    );
+    expect(resolution.values['foundryProjectEndpoint'])
+      .toBe('https://cli.services.ai.azure.com/api/projects/cli');
+    expect(resolution.provenance['foundryProjectEndpoint'].source).toBe('cli');
+  });
+
   it('getConfigFieldSpec("deployment") returns the registry entry', () => {
     expect(getConfigFieldSpec('deployment')?.canonicalEnv).toBe('IMAGE_DEPLOYMENT');
     expect(getConfigFieldSpec('does-not-exist')).toBeUndefined();

@@ -285,7 +285,9 @@ Every supported flag maps to exactly one canonical `IMAGE_*` configuration key (
 | `--check-config` | — | Validate resolved configuration and exit non-zero on error, without starting the server |
 | `--show-config-sources` | — | Print each resolved config key alongside the source that provided it (`cli`, `env:IMAGE_*`, `env:<legacy-alias>`, or `default`) |
 | `--provider <name>` | `IMAGE_PROVIDER` | `openai` \| `azure` \| `together` \| `custom` |
-| `--deployment <name>` | `IMAGE_DEPLOYMENT` | Azure deployment name |
+| `--base-url <url>` | `IMAGE_BASE_URL` | Provider inference endpoint |
+| `--foundry-project-endpoint <url>` | `IMAGE_FOUNDRY_PROJECT_ENDPOINT` | Foundry project endpoint used for deployment discovery |
+| `--deployment <name>` | `IMAGE_DEPLOYMENT` | Azure default deployment |
 | `--transport <mode>` | `IMAGE_MCP_TRANSPORT` | `http` \| `stdio` |
 | `--port <number>` | `IMAGE_PORT` | HTTP listen port |
 | `--log-level <level>` | `IMAGE_LOG_LEVEL` | `debug` \| `info` \| `warn` \| `error` |

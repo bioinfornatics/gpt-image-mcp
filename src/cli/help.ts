@@ -30,7 +30,11 @@ Options:
                                  (which source supplied each value) and exit
 
   --provider <name>             Image provider: openai | azure | together | custom
-  --deployment <name>           Azure deployment name (IMAGE_DEPLOYMENT)
+  --base-url <url>               Provider inference endpoint (IMAGE_BASE_URL)
+  --foundry-project-endpoint <url>
+                                 Azure Foundry project endpoint used for deployment discovery
+                                 (IMAGE_FOUNDRY_PROJECT_ENDPOINT)
+  --deployment <name>           Azure default deployment (IMAGE_DEPLOYMENT)
   --transport <mode>            Transport: http | stdio (IMAGE_MCP_TRANSPORT)
   --port <number>                HTTP listen port (IMAGE_PORT)
   --log-level <level>           debug | info | warn | error (IMAGE_LOG_LEVEL)
@@ -46,7 +50,10 @@ Rejected options (secrets must never be passed as raw CLI arguments):
   --mcp-api-key <value>         Use --mcp-api-key-file or IMAGE_MCP_API_KEY_FILE instead
 
 Examples:
-  ${CLI_BIN_NAME} --provider openai --api-key-file /run/secrets/api_key
+  ${CLI_BIN_NAME} --provider openai --base-url https://api.openai.com/v1 --api-key-file /run/secrets/api_key
+  ${CLI_BIN_NAME} --provider azure --base-url https://example.services.ai.azure.com \
+    --foundry-project-endpoint https://example.services.ai.azure.com/api/projects/my-project \
+    --deployment MAI-Image-2.5 --transport stdio
   ${CLI_BIN_NAME} --check-config
   ${CLI_BIN_NAME} --show-config-sources
 `;
