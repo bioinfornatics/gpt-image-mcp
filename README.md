@@ -174,7 +174,7 @@ extensions:
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.2"
+      - "@bioinfornatics/gpt-image-mcp@0.1.5"
     envs:
       IMAGE_PROVIDER: openai
       IMAGE_MCP_TRANSPORT: stdio
@@ -194,7 +194,7 @@ extensions:
     cmd: npx
     args:
       - "--yes"
-      - "@bioinfornatics/gpt-image-mcp@0.1.2"
+      - "@bioinfornatics/gpt-image-mcp@0.1.5"
     envs:
       IMAGE_PROVIDER: azure
       IMAGE_BASE_URL: https://my-resource.openai.azure.com

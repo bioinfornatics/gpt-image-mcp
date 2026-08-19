@@ -29,7 +29,7 @@ extensions:
     type: stdio
     name: GPT Image MCP
     cmd: npx
-    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.2"]
+    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.5"]
     env_keys:
       - IMAGE_API_KEY
     envs:
@@ -49,7 +49,7 @@ extensions:
     type: stdio
     name: GPT Image MCP
     cmd: npx
-    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.2"]
+    args: ["--yes", "@bioinfornatics/gpt-image-mcp@0.1.5"]
     env_keys:
       - IMAGE_API_KEY
     envs:

@@ -6,7 +6,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.1.5] — 2026-08-19
 
 ### Added
 - Safe CLI configuration overrides, help/version commands, redacted configuration checks, and source provenance.
