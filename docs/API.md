@@ -1020,3 +1020,11 @@ These errors are returned at the JSON-RPC level (not inside tool results) and in
 ---
 
 *This document is auto-generated from tool schemas and maintained alongside the source code. For discrepancies between this document and actual tool behaviour, the source code is authoritative.*
+
+## Azure Foundry deployment discovery
+
+Set IMAGE_FOUNDRY_PROJECT_ENDPOINT to the HTTPS project endpoint ending in /api/projects/<project> to enable runtime deployment discovery through the documented GET /deployments?api-version=v1 API. This is separate from IMAGE_BASE_URL, which remains the inference endpoint, and from IMAGE_API_VERSION.
+
+When enabled, provider_list reports only supported image deployments discovered from the allowlisted metadata pairs Microsoft / MAI-Image-2.5 and OpenAI / gpt-image-2. provider_validate includes deployment name, underlying model name, publisher, model version and adapter. Exact deployment names are deterministic; ambiguous model aliases require an exact deployment unless the configured default is a matching deployment.
+
+image_generate fallback_model=gpt-image-2 explicitly opts into a transparent fallback only when the original model reports an output-stage CONTENT_SAFETY_BLOCK. Prompt-stage blocks never trigger fallback. JSON success output includes requested_model, effective_model, fallback_used and fallback_reason. This does not disable either model safety policy.

@@ -10,6 +10,8 @@ export interface AppConfig {
     name: ProviderName;
     apiKey?: string;
     baseUrl: string;
+    /** Optional Foundry project endpoint used only for deployment discovery. */
+    foundryProjectEndpoint?: string;
     deployment?: string;
     apiVersion: string;
     models: string[];
@@ -72,6 +74,13 @@ const schemaShape = {
     ],
     otherwise: Joi.string().uri().optional(),
   }),
+  IMAGE_FOUNDRY_PROJECT_ENDPOINT: Joi.string()
+    .uri({ scheme: ['https'] })
+    .pattern(/\.services\.ai\.azure\.com\/api\/projects\/[^/]+\/?$/)
+    .optional()
+    .messages({
+      'string.pattern.base': 'IMAGE_FOUNDRY_PROJECT_ENDPOINT must be an HTTPS Foundry project endpoint ending in /api/projects/<project>',
+    }),
   IMAGE_DEPLOYMENT: Joi.when('IMAGE_PROVIDER', {
     is: 'azure', then: Joi.string().required().messages({ 'any.required': 'IMAGE_DEPLOYMENT is required when IMAGE_PROVIDER=azure' }), otherwise: Joi.string().optional(),
   }),
@@ -104,6 +113,7 @@ export const configValidationSchema = Joi.object(schemaShape).custom((env, helpe
   const mcpMode = (env.IMAGE_MCP_AUTH_MODE ?? (transport === 'stdio' ? 'none' : azureMode === 'on_behalf_of' ? 'entra' : env.IMAGE_REQUIRE_MCP_AUTH === false ? 'none' : 'static_bearer')) as McpAuthMode;
   if (transport === 'stdio' && mcpMode !== 'none') return helpers.error('any.custom', { message: 'IMAGE_MCP_AUTH_MODE must be none for stdio transport' });
   if (azureMode === 'on_behalf_of') {
+    if (env.IMAGE_FOUNDRY_PROJECT_ENDPOINT) return helpers.error('any.custom', { message: 'IMAGE_FOUNDRY_PROJECT_ENDPOINT is not supported with on_behalf_of because deployment discovery must not be cached across user identities' });
     if (transport !== 'http' || mcpMode !== 'entra') return helpers.error('any.custom', { message: 'on_behalf_of requires IMAGE_MCP_TRANSPORT=http and IMAGE_MCP_AUTH_MODE=entra' });
     for (const field of ['IMAGE_ENTRA_TENANT_ID', 'IMAGE_ENTRA_CLIENT_ID', 'IMAGE_ENTRA_AUDIENCE', 'IMAGE_ENTRA_CLIENT_SECRET']) {
       if (!env[field]) return helpers.error('any.custom', { message: `${field} is required for on_behalf_of authentication` });
@@ -123,7 +133,7 @@ export const appConfig = (): AppConfig => {
   const transport = (process.env['IMAGE_MCP_TRANSPORT'] as 'http' | 'stdio') || 'http';
   const authMode = canonicalMcpMode(process.env['IMAGE_MCP_AUTH_MODE'] ?? (transport === 'stdio' ? 'none' : azureAuthMode === 'on_behalf_of' ? 'entra' : process.env['IMAGE_REQUIRE_MCP_AUTH'] === 'false' ? 'none' : 'static_bearer')) as McpAuthMode;
   return {
-    imageProvider: { name: provider, apiKey: process.env['IMAGE_API_KEY'], baseUrl: process.env['IMAGE_BASE_URL'] || 'https://api.openai.com/v1', deployment: process.env['IMAGE_DEPLOYMENT'], apiVersion: process.env['IMAGE_API_VERSION'] || '2025-04-01-preview', models: (process.env['IMAGE_MODELS'] || 'custom').split(',').map((s) => s.trim()), azureAuthMode, azureTenantId: process.env['IMAGE_AZURE_TENANT_ID'] },
+    imageProvider: { name: provider, apiKey: process.env['IMAGE_API_KEY'], baseUrl: process.env['IMAGE_BASE_URL'] || 'https://api.openai.com/v1', foundryProjectEndpoint: process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'], deployment: process.env['IMAGE_DEPLOYMENT'], apiVersion: process.env['IMAGE_API_VERSION'] || '2025-04-01-preview', models: (process.env['IMAGE_MODELS'] || 'custom').split(',').map((s) => s.trim()), azureAuthMode, azureTenantId: process.env['IMAGE_AZURE_TENANT_ID'] },
     entra: {
       tenantId: process.env['IMAGE_ENTRA_TENANT_ID'], clientId: process.env['IMAGE_ENTRA_CLIENT_ID'],
       audience: process.env['IMAGE_ENTRA_AUDIENCE'], requiredScope: process.env['IMAGE_ENTRA_SCOPE'] || 'mcp.access',

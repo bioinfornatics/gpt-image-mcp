@@ -128,8 +128,8 @@ describe('AzureDeploymentCatalog — parsing and pagination', () => {
     const fetchImpl = mock(async () =>
       jsonResponse({
         value: [
-          { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
-          { name: 'my-custom-deploy', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft' },
+          { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI', modelVersion: undefined },
+          { name: 'my-custom-deploy', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft', modelVersion: undefined },
         ],
       }),
     );
@@ -141,8 +141,8 @@ describe('AzureDeploymentCatalog — parsing and pagination', () => {
 
     const deployments = await catalog.listDeployments();
     expect(deployments).toEqual([
-      { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
-      { name: 'my-custom-deploy', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft' },
+      { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI', modelVersion: undefined },
+      { name: 'my-custom-deploy', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft', modelVersion: undefined },
     ]);
   });
 
@@ -155,7 +155,7 @@ describe('AzureDeploymentCatalog — parsing and pagination', () => {
     });
 
     const deployments = await catalog.listDeployments();
-    expect(deployments).toEqual([{ name: 'valid', modelName: undefined, modelPublisher: undefined }]);
+    expect(deployments).toEqual([{ name: 'valid', modelName: undefined, modelPublisher: undefined, modelVersion: undefined }]);
   });
 
   it('follows the absolute nextLink verbatim across pages until exhausted', async () => {
@@ -300,8 +300,8 @@ describe('AzureDeploymentCatalog — error classification', () => {
 
 describe('AzureDeploymentCatalog — resolution', () => {
   const deployments: AzureDeploymentInfo[] = [
-    { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
-    { name: 'prod-custom', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft' },
+    { name: 'gpt-image-2', modelName: 'gpt-image-2', modelPublisher: 'OpenAI', modelVersion: undefined },
+    { name: 'prod-custom', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft', modelVersion: undefined },
   ];
 
   function catalogWith(fetchImpl: ReturnType<typeof mock>): AzureDeploymentCatalog {
@@ -399,8 +399,8 @@ describe('AzureDeploymentCatalog — cache, refresh and concurrency', () => {
     const [r1, r2] = await Promise.all([p1, p2]);
 
     expect(calls).toBe(1);
-    expect(r1).toEqual([{ name: 'dep-concurrent', modelName: undefined, modelPublisher: undefined }]);
-    expect(r2).toEqual({ name: 'dep-concurrent', modelName: undefined, modelPublisher: undefined });
+    expect(r1).toEqual([{ name: 'dep-concurrent', modelName: undefined, modelPublisher: undefined, modelVersion: undefined }]);
+    expect(r2).toEqual({ name: 'dep-concurrent', modelName: undefined, modelPublisher: undefined, modelVersion: undefined });
   });
 
   it('does not cache a failed fetch — a subsequent call retries', async () => {

@@ -11,6 +11,8 @@ import { ImageStorageService, pathToFileUri } from '../features/image-storage.se
 import { ImageGenerateSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT, resolveModeration, isExperimentalResolution } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 import { LATEST_MODEL } from '../../config/models';
+import { providerErrorToToolResult } from './provider-error-result';
+import { imageGenerationCounter, imageModelFallbackCounter } from '../../health/metrics.controller';
 
 @Injectable()
 export class ImageGenerateTool {
@@ -172,7 +174,7 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         });
       }
 
-      const results = await this.provider.generate({
+      const request = {
         prompt,
         model: params.model,
         n: params.n,
@@ -182,6 +184,33 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         output_format: params.output_format,
         output_compression: params.output_compression,
         moderation: resolveModeration(params.moderation),
+      };
+      let fallbackUsed = false;
+      let fallbackReason: string | undefined;
+      let results: ImageResult[];
+      try {
+        results = await this.provider.generate(request);
+      } catch (error) {
+        if (error instanceof ImageProviderError &&
+            error.code === 'CONTENT_SAFETY_BLOCK' && error.stage === 'output' &&
+            params.fallback_model && params.fallback_model !== params.model) {
+          fallbackUsed = true;
+          fallbackReason = error.code;
+          imageModelFallbackCounter.inc({
+            from_model: params.model,
+            to_model: params.fallback_model,
+            reason: error.code,
+          });
+          results = await this.provider.generate({ ...request, model: params.fallback_model });
+        } else {
+          throw error;
+        }
+      }
+
+      imageGenerationCounter.inc({
+        model: results[0]?.model ?? params.model,
+        provider: this.provider.name,
+        status: fallbackUsed ? 'success_fallback' : 'success',
       });
 
       const savedPaths = await Promise.all(
@@ -197,9 +226,12 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
       }
 
       const experimental = isExperimentalResolution(params.size);
+      const fallback = fallbackUsed
+        ? { requestedModel: params.model, reason: fallbackReason! }
+        : undefined;
       const text = params.response_format === ResponseFormat.JSON
-        ? this.formatJson(results, params.model, savedPaths, workspacePaths, experimental)
-        : this.formatMarkdown(results, prompt, savedPaths, workspacePaths, experimental);
+        ? this.formatJson(results, params.model, savedPaths, workspacePaths, experimental, fallback)
+        : this.formatMarkdown(results, prompt, savedPaths, workspacePaths, experimental, fallback);
       return {
         content: [
           { type: 'text' as const, text },
@@ -218,30 +250,7 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_generate failed: ${message}`);
-      if (err instanceof ImageProviderError) {
-        return {
-          isError: true,
-          content: [{ type: 'text' as const, text: `[${err.code}] ${message}` }],
-          structuredContent: {
-            error: {
-              code: err.code,
-              provider: err.provider,
-              model: err.model,
-              retryable: err.retryable,
-              stage: err.stage,
-              image_created: false,
-              ...(err.status !== undefined ? { http_status: err.status } : {}),
-              ...(err.providerCode ? { provider_code: err.providerCode } : {}),
-              ...(err.label ? { provider_label: err.label } : {}),
-              ...(err.requestId ? { request_id: err.requestId } : {}),
-            },
-          },
-        };
-      }
-      return {
-        isError: true,
-        content: [{ type: 'text' as const, text: `Error: ${message}` }],
-      };
+      return providerErrorToToolResult(err);
     }
   }
 
@@ -251,8 +260,15 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
     savedPaths: string[],
     workspacePaths: string[] = [],
     experimental = false,
+    fallback?: { requestedModel: string; reason: string },
   ): string {
     const lines = ['# Generated Image(s)', '', `**Prompt:** ${prompt}`, ''];
+    if (fallback) {
+      lines.push(
+        `> ℹ️ Explicit fallback used: requested ${fallback.requestedModel}, effective ${results[0]?.model ?? 'unknown'} (${fallback.reason}).`,
+        '',
+      );
+    }
     if (experimental) {
       lines.push(
         '> ⚠️ **Experimental resolution:** requested size exceeds 2560×1440. ' +
@@ -276,9 +292,14 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
     savedPaths: string[],
     workspacePaths: string[] = [],
     experimental = false,
+    fallback?: { requestedModel: string; reason: string },
   ): string {
     return JSON.stringify({
       model: results[0]?.model ?? model,
+      requested_model: fallback?.requestedModel ?? model,
+      effective_model: results[0]?.model ?? model,
+      fallback_used: !!fallback,
+      ...(fallback ? { fallback_reason: fallback.reason } : {}),
       count: results.length,
       ...(experimental ? {
         warning: 'Experimental resolution: requested size exceeds 2560×1440. ' +

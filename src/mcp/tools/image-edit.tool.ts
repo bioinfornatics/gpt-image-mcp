@@ -8,6 +8,7 @@ import { ImageStorageService, pathToFileUri } from '../features/image-storage.se
 import { ImageEditSchema, ResponseFormat, PROMPT_MAX_LENGTH_GPT, isExperimentalResolution } from './schemas';
 import { sanitisePrompt, maskSecret } from '../../security/sanitise';
 import { LATEST_MODEL } from '../../config/models';
+import { providerErrorToToolResult } from './provider-error-result';
 
 @Injectable()
 export class ImageEditTool {
@@ -162,10 +163,7 @@ Returns: Base64-encoded edited image(s).`,
     } catch (err) {
       const message = maskSecret(err instanceof Error ? err.message : String(err));
       this.logger.error(`image_edit failed: ${message}`);
-      return {
-        isError: true,
-        content: [{ type: 'text' as const, text: `Error: ${message}` }],
-      };
+      return providerErrorToToolResult(err);
     }
   }
 

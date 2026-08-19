@@ -11,6 +11,12 @@ export const imageGenerationCounter = new Counter({
   labelNames: ['model', 'provider', 'status'],
 });
 
+export const imageModelFallbackCounter = new Counter({
+  name: 'gpt_image_mcp_image_model_fallbacks_total',
+  help: 'Total explicit image model fallbacks',
+  labelNames: ['from_model', 'to_model', 'reason'],
+});
+
 export const imageGenerationDuration = new Histogram({
   name: 'gpt_image_mcp_image_generation_duration_seconds',
   help: 'Image generation request duration in seconds',

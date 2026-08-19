@@ -61,9 +61,14 @@ Use provider_validate to test connectivity before generating images.`,
       custom: this.configService.get<AppConfig['imageProvider']>('imageProvider')?.models ?? ['custom'],
     };
 
-    const availableModels = this.provider.availableModels
-      ? [...this.provider.availableModels]
-      : modelsByProvider[providerName] ?? [];
+    const discoveredModels = this.provider.listAvailableModels
+      ? await this.provider.listAvailableModels()
+      : undefined;
+    const availableModels = discoveredModels
+      ? [...discoveredModels]
+      : this.provider.availableModels
+        ? [...this.provider.availableModels]
+        : modelsByProvider[providerName] ?? [];
 
     const output = {
       configured_provider: providerName,

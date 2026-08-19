@@ -98,6 +98,8 @@ export interface IImageProvider {
   readonly defaultModel?: string;
   /** Models this provider can route within the running server instance. */
   readonly availableModels?: readonly string[];
+  /** Dynamically list routable models/deployments when discovery is configured. */
+  listAvailableModels?(): Promise<readonly string[]>;
   generate(params: GenerateParams): Promise<ImageResult[]>;
   edit(params: EditParams): Promise<ImageResult[]>;
   variation(params: VariationParams): Promise<ImageResult[]>;

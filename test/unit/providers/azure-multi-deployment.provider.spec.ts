@@ -43,6 +43,50 @@ describe('AzureMultiDeploymentProvider', () => {
     expect(result[0].model).toBe('gpt-image-2');
   });
 
+  it('discovers arbitrary deployment names and routes from model publisher metadata', async () => {
+    const catalogFetch = mock(async () => response({ value: [
+      { name: 'prod-mai-west', modelName: 'MAI-Image-2.5', modelPublisher: 'Microsoft' },
+      { name: 'prod-gpt-west', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
+      { name: 'unsupported', modelName: 'other', modelPublisher: 'Contoso' },
+    ] }));
+    const generate = mock(async () => ({ data: [{ b64_json: PNG }] }));
+    const createForDeployment = mock(() => ({ images: { generate } }));
+    const discoveredConfig = {
+      ...config, deployment: 'prod-mai-west',
+      foundryProjectEndpoint: 'https://unit.services.ai.azure.com/api/projects/project-a',
+    };
+    const provider = new AzureMultiDeploymentProvider({
+      config: discoveredConfig,
+      clients: {
+        createForDeployment: createForDeployment as never,
+        createAuthHeaderProvider: mock(() => async () => ({ name: 'api-key', value: 'secret' })),
+      },
+      fetchImpl: catalogFetch as unknown as typeof fetch,
+    });
+    expect(await provider.listAvailableModels()).toEqual(['prod-mai-west', 'prod-gpt-west']);
+    await provider.generate({ prompt: 'x', model: 'gpt-image-2', size: '1024x1024' });
+    expect(createForDeployment).toHaveBeenCalledWith(discoveredConfig, 'prod-gpt-west');
+    expect((catalogFetch.mock.calls[0] as unknown as [string])[0]).toContain('api-version=v1');
+  });
+
+  it('rejects ambiguous model aliases and accepts an exact deployment name', async () => {
+    const catalogFetch = mock(async () => response({ value: [
+      { name: 'gpt-east', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
+      { name: 'gpt-west', modelName: 'gpt-image-2', modelPublisher: 'OpenAI' },
+    ] }));
+    const generate = mock(async () => ({ data: [{ b64_json: PNG }] }));
+    const createForDeployment = mock(() => ({ images: { generate } }));
+    const provider = new AzureMultiDeploymentProvider({
+      config: { ...config, deployment: 'MAI-Image-2.5', foundryProjectEndpoint: 'https://unit.services.ai.azure.com/api/projects/p' },
+      clients: { createForDeployment: createForDeployment as never,
+        createAuthHeaderProvider: mock(() => async () => ({ name: 'api-key', value: 'secret' })) },
+      fetchImpl: catalogFetch as unknown as typeof fetch,
+    });
+    await expect(provider.generate({ prompt: 'x', model: 'gpt-image-2' })).rejects.toThrow(/ambiguous/i);
+    await provider.generate({ prompt: 'x', model: 'gpt-west' });
+    expect(createForDeployment).toHaveBeenCalledWith(expect.anything(), 'gpt-west');
+  });
+
   it('rejects unknown models before creating an inference client', async () => {
     const createForDeployment = mock(() => ({}));
     const provider = new AzureMultiDeploymentProvider({

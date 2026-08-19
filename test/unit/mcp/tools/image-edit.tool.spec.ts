@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ImageEditTool } from '../../../../src/mcp/tools/image-edit.tool';
 import { PROVIDER_TOKEN } from '../../../../src/providers/provider.interface';
+import { ImageProviderError } from '../../../../src/providers/provider.interface';
 import type { IImageProvider, ImageResult } from '../../../../src/providers/provider.interface';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
 import { ImageStorageService } from '../../../../src/mcp/features/image-storage.service';
@@ -145,6 +146,17 @@ describe('ImageEditTool', () => {
       const result = await tool.execute({ image: VALID_B64, prompt: 'add a hat' });
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('API error');
+    });
+
+    it('returns the same structured provider error contract as image_generate', async () => {
+      mockProvider.edit.mockRejectedValue(new ImageProviderError({
+        code: 'CONTENT_SAFETY_BLOCK', message: 'Output candidate filtered.', provider: 'azure',
+        model: 'MAI-Image-2.5', retryable: true, stage: 'output', status: 400,
+      }));
+      const result = await tool.execute({ image: VALID_B64, prompt: 'edit' });
+      expect(result.structuredContent).toEqual({ error: expect.objectContaining({
+        code: 'CONTENT_SAFETY_BLOCK', max_retries_recommended: 1, image_created: false,
+      }) });
     });
   });
 

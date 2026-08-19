@@ -24,6 +24,11 @@ describe('MetricsController', () => {
     expect(output).toContain('gpt_image_mcp_image_generations_total');
   });
 
+  it('should include privacy-safe model fallback counter metric', async () => {
+    const output = await controller.getMetrics();
+    expect(output).toContain('gpt_image_mcp_image_model_fallbacks_total');
+  });
+
   it('should include custom MCP request counter metric', async () => {
     const output = await controller.getMetrics();
     expect(output).toContain('gpt_image_mcp_mcp_requests_total');

@@ -68,6 +68,21 @@ describe('AppConfig validation', () => {
       ).toThrow(/IMAGE_API_KEY is required/);
     });
 
+    it('accepts a separate HTTPS Foundry project endpoint for discovery', () => {
+      const result = validateConfig({ ...baseAzure,
+        IMAGE_BASE_URL: 'https://test.openai.azure.com',
+        IMAGE_FOUNDRY_PROJECT_ENDPOINT: 'https://test.services.ai.azure.com/api/projects/project-a',
+      });
+      expect(result.IMAGE_FOUNDRY_PROJECT_ENDPOINT).toContain('/api/projects/project-a');
+    });
+
+    it('rejects a non-project discovery endpoint', () => {
+      expect(() => validateConfig({ ...baseAzure,
+        IMAGE_BASE_URL: 'https://test.openai.azure.com',
+        IMAGE_FOUNDRY_PROJECT_ENDPOINT: 'https://test.openai.azure.com',
+      })).toThrow(/Foundry project endpoint/);
+    });
+
     it('should pass with complete Azure config', () => {
       const result = validateConfig({
         ...baseAzure,
@@ -98,6 +113,18 @@ describe('AppConfig validation', () => {
 
     it('rejects Azure modes for non-Azure providers', () => {
       expect(() => validateConfig({ ...openaiBase, IMAGE_AZURE_AUTH_MODE: 'azure_cli' })).toThrow(/only valid/);
+    });
+
+    it('rejects shared deployment discovery in on-behalf-of mode', () => {
+      expect(() => validateConfig({
+        ...azure,
+        IMAGE_AZURE_AUTH_MODE: 'on_behalf_of',
+        IMAGE_MCP_TRANSPORT: 'http',
+        IMAGE_MCP_AUTH_MODE: 'entra',
+        IMAGE_FOUNDRY_PROJECT_ENDPOINT: 'https://x.services.ai.azure.com/api/projects/p',
+        IMAGE_ENTRA_TENANT_ID: 'tenant', IMAGE_ENTRA_CLIENT_ID: 'client',
+        IMAGE_ENTRA_AUDIENCE: 'audience', IMAGE_ENTRA_CLIENT_SECRET: 'secret',
+      })).toThrow(/not supported with on_behalf_of/);
     });
 
     it('requires an API key in explicit api_key mode', () => {

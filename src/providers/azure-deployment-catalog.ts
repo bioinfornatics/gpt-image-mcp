@@ -35,6 +35,8 @@ export interface AzureDeploymentInfo {
   readonly modelName?: string;
   /** Authoritative model publisher reported by Azure (e.g. "OpenAI", "Microsoft"). */
   readonly modelPublisher?: string;
+  /** Authoritative deployed model version reported by Azure. */
+  readonly modelVersion?: string;
 }
 
 export interface AzureAuthHeader {
@@ -209,6 +211,7 @@ export class AzureDeploymentCatalog {
           name,
           modelName: typeof item['modelName'] === 'string' ? (item['modelName'] as string) : undefined,
           modelPublisher: typeof item['modelPublisher'] === 'string' ? (item['modelPublisher'] as string) : undefined,
+          modelVersion: typeof item['modelVersion'] === 'string' ? (item['modelVersion'] as string) : undefined,
         });
       }
 

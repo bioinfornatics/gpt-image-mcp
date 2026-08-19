@@ -118,6 +118,38 @@ describe('ImageGenerateTool', () => {
       expect(parsed.model).toBe(mockImageResult.model);
     });
 
+    it('uses an explicit gpt-image-2 fallback only after an output safety block', async () => {
+      mockProvider.availableModels = ['MAI-Image-2.5', 'gpt-image-2'];
+      mockProvider.defaultModel = 'MAI-Image-2.5';
+      mockProvider.generate
+        .mockRejectedValueOnce(new ImageProviderError({
+          code: 'CONTENT_SAFETY_BLOCK', message: 'Output filtered.', provider: 'azure',
+          model: 'MAI-Image-2.5', retryable: true, stage: 'output',
+        }))
+        .mockResolvedValueOnce([{ ...mockImageResult, model: 'gpt-image-2' }]);
+      const result = await tool.execute({
+        prompt: 'a cat', model: 'MAI-Image-2.5', fallback_model: 'gpt-image-2', response_format: 'json',
+      });
+      expect(mockProvider.generate).toHaveBeenCalledTimes(2);
+      expect(mockProvider.generate).toHaveBeenLastCalledWith(expect.objectContaining({ model: 'gpt-image-2' }));
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed).toEqual(expect.objectContaining({
+        requested_model: 'MAI-Image-2.5', effective_model: 'gpt-image-2',
+        fallback_used: true, fallback_reason: 'CONTENT_SAFETY_BLOCK',
+      }));
+    });
+
+    it('does not fallback for prompt-stage safety blocks', async () => {
+      mockProvider.availableModels = ['MAI-Image-2.5', 'gpt-image-2'];
+      mockProvider.generate.mockRejectedValue(new ImageProviderError({
+        code: 'CONTENT_SAFETY_BLOCK', message: 'Prompt filtered.', provider: 'azure',
+        model: 'MAI-Image-2.5', retryable: false, stage: 'prompt',
+      }));
+      const result = await tool.execute({ prompt: 'x', model: 'MAI-Image-2.5', fallback_model: 'gpt-image-2' });
+      expect(result.isError).toBe(true);
+      expect(mockProvider.generate).toHaveBeenCalledTimes(1);
+    });
+
     it('should not include an experimental warning for a preset size', async () => {
       const result = await tool.execute({ prompt: 'a cat', size: '1024x1024' });
       expect(result.content[0].text).not.toContain('Experimental');
@@ -242,7 +274,7 @@ describe('ImageGenerateTool', () => {
       expect(result.isError).toBe(true);
       expect(result.structuredContent).toEqual({ error: expect.objectContaining({
         code: 'CONTENT_SAFETY_BLOCK', model: 'MAI-Image-2.5', stage: 'output',
-        retryable: true, image_created: false, request_id: 'request-123',
+        retryable: true, max_retries_recommended: 1, image_created: false, request_id: 'request-123',
       }) });
       expect(result.content[0].text).not.toContain('the prompt violated');
     });

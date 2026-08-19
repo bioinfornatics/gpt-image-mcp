@@ -210,6 +210,13 @@ export const ImageGenerateSchema = z.object({
     .enum(['auto', 'low'])
     .optional()
     .describe('Content moderation level (GPT image models only)'),
+  fallback_model: z
+    .literal('gpt-image-2')
+    .optional()
+    .describe(
+      'Explicit opt-in fallback used only after a retryable provider output-safety block. ' +
+      'The fallback is transparent in the result and still applies gpt-image-2 safety controls.',
+    ),
   save_to_workspace: z
     .boolean()
     .optional()

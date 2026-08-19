@@ -25,6 +25,8 @@ export class AzureStrategy implements ProviderStrategy {
      * azure-deployment-registry.ts.
      */
     private readonly catalog?: AzureDeploymentCatalog,
+    /** Authoritative model family from Foundry deployment metadata. */
+    private readonly confirmedFamily?: string,
   ) {}
 
   resolveModel(_params: Pick<GenerateParams, 'model'>): string {
@@ -108,7 +110,7 @@ export class AzureStrategy implements ProviderStrategy {
     // `params.model` to a *different* deployment — see resolveModelAsync).
     // Capabilities are always resolved for `wireModel`, since that is the
     // deployment that will actually serve the request.
-    const family = resolveAzureModelFamily(wireModel);
+    const family = this.confirmedFamily?.trim().toLowerCase() ?? resolveAzureModelFamily(wireModel);
     const requested = model.toLowerCase().trim();
     if (requested !== family) {
       // The caller asked for a model that does not match what this
