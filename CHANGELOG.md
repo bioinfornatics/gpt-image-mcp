@@ -9,13 +9,28 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- Three Azure authentication modes: API key, local Azure CLI, and Microsoft Entra On-Behalf-Of.
-- Entra JWT validation, request-isolated OBO exchange, privacy-safe auth telemetry, and `auth doctor`.
-- Enterprise authentication guides and Azure Container Apps Bicep starter.
+- Safe CLI configuration overrides, help/version commands, redacted configuration checks, and source provenance.
+- CWD-independent quality gate and prepack build verification.
+- Byte-level PNG/JPEG/WebP validation with detected media types propagated through providers, storage, and MCP responses.
+- Arbitrary gpt-image-2 dimensions, experimental-resolution warnings, and up to 16 source images for editing.
+- Dedicated MAI-Image-2.5 adapter and Azure multi-deployment routing: IMAGE_DEPLOYMENT selects the default, while explicit MAI-Image-2.5 and gpt-image-2 requests use their respective APIs.
+- Authenticated Azure deployment catalog with cache, pagination-loop detection, page limits, and cross-origin nextLink rejection.
+- Model-aware elicitation, validation, provider listing, and actionable content-safety guidance.
+
+### Changed
+- Custom providers negotiate inline base64 responses without unsafe URL fallback.
+- Image outputs are stored and returned according to verified bytes rather than the requested format.
+- Goose documentation now explains secret-store resolution and absolute bin/start.sh usage for local clones.
 
 ### Security
-- OBO confidential secrets support `_FILE` and OS keychain backends.
-- Dependency audit is clean through moderate severity.
+- Raw CLI secrets remain rejected; use the _FILE variants.
+- Azure catalog credentials are never forwarded to cross-origin pagination URLs.
+- Live Foundry tests require explicit RUN_LIVE_TESTS=true plus an ignored local API_KEY file.
+
+### Migration notes
+- Ensure MAI-Image-2.5 and gpt-image-2 deployments exist in the configured Foundry resource when both are required. IMAGE_DEPLOYMENT is the default; the MCP model argument selects another confirmed adapter.
+- Malformed or mislabeled image bytes now fail before provider I/O.
+- Configuration precedence is CLI, canonical IMAGE_* environment variable, legacy alias, then built-in default.
 
 ## [0.1.2] — 2026-08-10
 

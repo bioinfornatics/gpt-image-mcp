@@ -9,7 +9,7 @@
     "gpt-image-mcp": {
       "_comment": "RECOMMENDED — bun x pulls the package automatically, no clone needed.",
       "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-replace-with-your-key",
@@ -21,7 +21,7 @@
     "gpt-image-mcp-pinned": {
       "_comment": "Pin a specific version for reproducibility.",
       "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp@0.1.0"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp@0.1.2"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-replace-with-your-key",
@@ -33,7 +33,7 @@
     "gpt-image-mcp-npx": {
       "_comment": "npx variant — for users without Bun installed.",
       "command": "npx",
-      "args": ["-y", "gpt-image-mcp"],
+      "args": ["-y", "@bioinfornatics/gpt-image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "openai",
         "IMAGE_API_KEY": "sk-replace-with-your-key",
@@ -44,7 +44,7 @@
     "gpt-image-mcp-azure": {
       "_comment": "Azure AI Foundry provider via bun x.",
       "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "azure",
         "IMAGE_BASE_URL": "https://my-resource.openai.azure.com",
@@ -59,7 +59,7 @@
     "gpt-image-mcp-together": {
       "_comment": "Together AI provider — FLUX models.",
       "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "together",
         "IMAGE_API_KEY": "replace-with-together-key",
@@ -71,7 +71,7 @@
     "gpt-image-mcp-custom": {
       "_comment": "Custom / OpenRouter — any OpenAI-compatible endpoint.",
       "command": "bun",
-      "args": ["x", "--bun", "gpt-image-mcp"],
+      "args": ["x", "--bun", "@bioinfornatics/gpt-image-mcp"],
       "env": {
         "IMAGE_PROVIDER": "custom",
         "IMAGE_BASE_URL": "https://openrouter.ai/api/v1",
