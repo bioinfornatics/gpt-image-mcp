@@ -14,6 +14,11 @@ dist/
 .env.*.local
 # Do NOT ignore .env.example — it must be committed as a template
 
+# Local live-test credential file (never commit, never print). Read only by
+# opt-in live integration tests, gated additionally by RUN_LIVE_TESTS=true.
+/API_KEY
+API_KEY
+
 # ─── Test & coverage ──────────────────────────────────────────────────────────
 coverage/
 .nyc_output/
