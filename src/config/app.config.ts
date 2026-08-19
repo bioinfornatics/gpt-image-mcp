@@ -1,7 +1,7 @@
 import Joi from 'joi';
 import { LATEST_MODEL } from './models';
 
-export type ProviderName = 'openai' | 'azure' | 'together' | 'custom';
+export type ProviderName = 'openai' | 'azure' | 'openrouter' | 'together' | 'custom';
 export type AzureAuthMode = 'api_key' | 'azure_cli' | 'on_behalf_of';
 export type McpAuthMode = 'none' | 'static_bearer' | 'entra';
 
@@ -54,9 +54,9 @@ const canonicalMcpMode = (value: unknown): unknown => {
 
 const schemaShape = {
   IMAGE_MCP_SECRET_BACKEND: Joi.string().valid('file', 'keytar', 'env').optional().default('file'),
-  IMAGE_PROVIDER: Joi.string().valid('openai', 'azure', 'together', 'custom').required().messages({
-    'any.required': 'IMAGE_PROVIDER is required (openai|azure|together|custom)',
-    'any.only': 'IMAGE_PROVIDER must be "openai", "azure", "together", or "custom"',
+  IMAGE_PROVIDER: Joi.string().valid('openai', 'azure', 'openrouter', 'together', 'custom').required().messages({
+    'any.required': 'IMAGE_PROVIDER is required (openai|azure|openrouter|together|custom)',
+    'any.only': 'IMAGE_PROVIDER must be "openai", "azure", "openrouter", "together", or "custom"',
   }),
   IMAGE_AZURE_AUTH_MODE: Joi.any().custom(canonicalAzureMode).optional(),
   IMAGE_AZURE_TENANT_ID: Joi.string().optional(),
@@ -70,6 +70,7 @@ const schemaShape = {
   IMAGE_BASE_URL: Joi.when('IMAGE_PROVIDER', {
     switch: [
       { is: 'azure', then: Joi.string().uri().required().messages({ 'any.required': 'IMAGE_BASE_URL is required when IMAGE_PROVIDER=azure (e.g. https://my-resource.openai.azure.com)' }) },
+      { is: 'openrouter', then: Joi.string().uri().optional().default('https://openrouter.ai/api/v1') },
       { is: 'custom', then: Joi.string().uri().required().messages({ 'any.required': 'IMAGE_BASE_URL is required when IMAGE_PROVIDER=custom' }) },
     ],
     otherwise: Joi.string().uri().optional(),
@@ -133,7 +134,7 @@ export const appConfig = (): AppConfig => {
   const transport = (process.env['IMAGE_MCP_TRANSPORT'] as 'http' | 'stdio') || 'http';
   const authMode = canonicalMcpMode(process.env['IMAGE_MCP_AUTH_MODE'] ?? (transport === 'stdio' ? 'none' : azureAuthMode === 'on_behalf_of' ? 'entra' : process.env['IMAGE_REQUIRE_MCP_AUTH'] === 'false' ? 'none' : 'static_bearer')) as McpAuthMode;
   return {
-    imageProvider: { name: provider, apiKey: process.env['IMAGE_API_KEY'], baseUrl: process.env['IMAGE_BASE_URL'] || 'https://api.openai.com/v1', foundryProjectEndpoint: process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'], deployment: process.env['IMAGE_DEPLOYMENT'], apiVersion: process.env['IMAGE_API_VERSION'] || '2025-04-01-preview', models: (process.env['IMAGE_MODELS'] || 'custom').split(',').map((s) => s.trim()), azureAuthMode, azureTenantId: process.env['IMAGE_AZURE_TENANT_ID'] },
+    imageProvider: { name: provider, apiKey: process.env['IMAGE_API_KEY'], baseUrl: process.env['IMAGE_BASE_URL'] || (provider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1'), foundryProjectEndpoint: process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'], deployment: process.env['IMAGE_DEPLOYMENT'], apiVersion: process.env['IMAGE_API_VERSION'] || '2025-04-01-preview', models: (process.env['IMAGE_MODELS'] || 'custom').split(',').map((s) => s.trim()), azureAuthMode, azureTenantId: process.env['IMAGE_AZURE_TENANT_ID'] },
     entra: {
       tenantId: process.env['IMAGE_ENTRA_TENANT_ID'], clientId: process.env['IMAGE_ENTRA_CLIENT_ID'],
       audience: process.env['IMAGE_ENTRA_AUDIENCE'], requiredScope: process.env['IMAGE_ENTRA_SCOPE'] || 'mcp.access',

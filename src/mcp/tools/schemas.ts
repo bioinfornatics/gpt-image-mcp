@@ -206,6 +206,10 @@ export const ImageGenerateSchema = z.object({
     .max(100)
     .optional()
     .describe('Compression level 0–100 for webp/jpeg (GPT image models only)'),
+  resolution: z.enum(['512', '1K', '2K', '4K']).optional()
+    .describe('OpenRouter resolution tier'),
+  aspect_ratio: z.string().optional()
+    .describe('OpenRouter aspect ratio, for example 1:1 or 16:9'),
   moderation: z
     .enum(['auto', 'low'])
     .optional()
@@ -280,6 +284,10 @@ export const ImageEditSchema = z
     quality: z.enum(['auto', 'high', 'medium', 'low']).optional().default('auto'),
     output_format: z.enum(['png', 'jpeg', 'webp']).optional(),
     output_compression: z.number().int().min(0).max(100).optional(),
+    resolution: z.enum(['512', '1K', '2K', '4K']).optional()
+      .describe('OpenRouter resolution tier'),
+    aspect_ratio: z.string().optional()
+      .describe('OpenRouter aspect ratio, for example 1:1 or 16:9'),
     input_fidelity: z
       .enum(['low', 'high'])
       .optional()
@@ -313,7 +321,7 @@ export const ImageVariationSchema = z.object({
 });
 
 export const ProviderValidateSchema = z.object({
-  provider: z.enum(['openai', 'azure']).describe('The provider to validate'),
+  provider: z.enum(['openai', 'azure', 'openrouter']).describe('The provider to validate'),
 });
 
 /**

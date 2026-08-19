@@ -12,6 +12,7 @@ describe('help', () => {
       '--base-url',
       '--foundry-project-endpoint',
       '--deployment',
+      '--model',
       '--transport',
       '--port',
       '--log-level',

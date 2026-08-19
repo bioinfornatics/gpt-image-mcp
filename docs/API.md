@@ -730,3 +730,17 @@ Set IMAGE_FOUNDRY_PROJECT_ENDPOINT to the HTTPS project endpoint ending in /api/
 When enabled, provider_list reports only supported image deployments discovered from the allowlisted metadata pairs Microsoft / MAI-Image-2.5 and OpenAI / gpt-image-2. provider_validate includes deployment name, underlying model name, publisher, model version and adapter. Exact deployment names are deterministic; ambiguous model aliases require an exact deployment unless the configured default is a matching deployment.
 
 image_generate fallback_model=gpt-image-2 explicitly opts into a transparent fallback only when the original model reports an output-stage CONTENT_SAFETY_BLOCK. Prompt-stage blocks never trigger fallback. JSON success output includes requested_model, effective_model, fallback_used and fallback_reason. This does not disable either model safety policy.
+## OpenRouter Image API
+
+Use `IMAGE_PROVIDER=openrouter` or the canonical `https://openrouter.ai/api/v1` base URL. The server calls `POST /api/v1/images` and discovers models through `GET /api/v1/images/models`.
+
+| Model | Resolution | Aspect ratios | Input references | n |
+|---|---|---|---:|---:|
+| `google/gemini-3.1-flash-image` (Nano Banana 2) | `512`, `1K`, `2K`, `4K` | `1:1`, `1:4`, `1:8`, `2:3`, `3:2`, `3:4`, `4:1`, `4:3`, `4:5`, `5:4`, `8:1`, `9:16`, `16:9`, `21:9` | 14 | 1 |
+| `microsoft/mai-image-2.5` | omit | `auto`, `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3` | 1 | 1 |
+
+```json
+{"model":"google/gemini-3.1-flash-image","prompt":"Editorial storefront at blue hour","resolution":"2K","aspect_ratio":"16:9","n":1}
+```
+
+For image-to-image, use `image_edit`; the provider converts `image` or `images[]` to OpenRouter `input_references`. Masks, `input_fidelity`, and image variation are not supported by this adapter.

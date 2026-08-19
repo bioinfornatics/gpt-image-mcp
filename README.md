@@ -442,3 +442,16 @@ See [`docs/TDD_STRATEGY.md`](docs/TDD_STRATEGY.md) for the full TDD workflow.
 
 [CeCILL-2.1](./LICENSE) — a French open-source licence compatible with GNU GPL, endorsed by CEA, CNRS, and Inria.  
 © 2026 PhD Jonathan MERCIER
+
+### OpenRouter (Nano Banana 2 or MAI-Image-2.5)
+
+OpenRouter is inferred from `https://openrouter.ai/api/v1`. Configure its key as `IMAGE_API_KEY`:
+
+```bash
+IMAGE_API_KEY=... npx --yes @bioinfornatics/gpt-image-mcp \
+  --base-url https://openrouter.ai/api/v1 \
+  --model google/gemini-3.1-flash-image \
+  --transport stdio
+```
+
+See [`examples/goose-openrouter.yaml`](examples/goose-openrouter.yaml) and the capability table in [`docs/API.md`](docs/API.md#openrouter-image-api).

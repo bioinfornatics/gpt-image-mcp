@@ -33,6 +33,7 @@ const VALUE_FLAGS = new Set([
   '--base-url',
   '--foundry-project-endpoint',
   '--deployment',
+  '--model',
   '--transport',
   '--port',
   '--log-level',
@@ -139,6 +140,9 @@ export function parseCliArgs(argv: readonly string[]): CliParseResult {
           break;
         case '--deployment':
           overrides.deployment = value;
+          break;
+        case '--model':
+          overrides.defaultModel = value;
           break;
         case '--transport':
           overrides.transport = value;

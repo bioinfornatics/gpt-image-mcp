@@ -14,6 +14,13 @@ import {
 // ImageGenerateSchema
 // ---------------------------------------------------------------------------
 describe('ImageGenerateSchema', () => {
+  it('accepts OpenRouter resolution and aspect_ratio fields', () => {
+    const result = ImageGenerateSchema.safeParse({
+      prompt: 'x', model: 'google/gemini-3.1-flash-image', resolution: '2K', aspect_ratio: '16:9',
+    });
+    expect(result.success).toBe(true);
+  });
+
   describe('quality enum', () => {
     it('accepts valid quality values: auto, high, medium, low', () => {
       for (const q of ['auto', 'high', 'medium', 'low'] as const) {

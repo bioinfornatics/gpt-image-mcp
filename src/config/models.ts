@@ -42,4 +42,12 @@ export const AZURE_MODELS = [
   'MAI-Image-2.5',        // Public Preview — Microsoft MAI Image, served via dedicated /mai/v1 endpoint
 ] as const;
 
-export type ModelName = (typeof OPENAI_MODELS)[number] | (typeof AZURE_MODELS)[number];
+export const OPENROUTER_IMAGE_MODELS = [
+  'google/gemini-3.1-flash-image',
+  'microsoft/mai-image-2.5',
+] as const;
+
+export const OPENROUTER_DEFAULT_MODEL = OPENROUTER_IMAGE_MODELS[0];
+
+export type ModelName = (typeof OPENAI_MODELS)[number] | (typeof AZURE_MODELS)[number] |
+  (typeof OPENROUTER_IMAGE_MODELS)[number];

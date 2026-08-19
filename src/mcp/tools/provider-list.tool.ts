@@ -47,6 +47,7 @@ Use provider_validate to test connectivity before generating images.`,
       openai: [...OPENAI_MODELS],
       // gpt-image-2 is Public Preview on Azure (no application needed).
       // gpt-image-1.x variants still require limited-access registration.
+      openrouter: ['google/gemini-3.1-flash-image', 'microsoft/mai-image-2.5'],
       azure: AZURE_MODELS.map(m =>
         (m === 'gpt-image-1' || m === 'gpt-image-1.5' || m === 'gpt-image-1-mini')
           ? `${m} (limited access)`

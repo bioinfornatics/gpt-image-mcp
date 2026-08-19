@@ -8,6 +8,8 @@ export interface GenerateParams {
   output_format?: 'png' | 'jpeg' | 'webp';
   output_compression?: number;
   moderation?: 'auto' | 'low';
+  resolution?: '512' | '1K' | '2K' | '4K';
+  aspect_ratio?: string;
 }
 
 export interface EditParams {
@@ -23,6 +25,8 @@ export interface EditParams {
   output_compression?: number;
   background?: 'transparent' | 'opaque' | 'auto';
   input_fidelity?: 'low' | 'high';  // gpt-image-1.x identity preservation; MUST NOT be sent for gpt-image-2
+  resolution?: '512' | '1K' | '2K' | '4K';
+  aspect_ratio?: string;
 }
 
 export interface VariationParams {
@@ -91,7 +95,7 @@ export interface ValidationResult {
 }
 
 export interface IImageProvider {
-  readonly name: 'openai' | 'azure' | 'together' | 'custom';
+  readonly name: 'openai' | 'azure' | 'openrouter' | 'together' | 'custom';
   /** Fixed model/deployment selected by provider configuration, when callers cannot switch models per request. */
   readonly configuredModel?: string;
   /** Model selected when a caller omits model. */

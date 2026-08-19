@@ -35,7 +35,7 @@ export class OpenAICompatibleProvider implements IImageProvider {
     this.logger = new Logger(`OpenAICompatibleProvider[${strategy.name}]`);
   }
 
-  get name(): 'openai' | 'azure' | 'together' | 'custom' {
+  get name(): 'openai' | 'azure' | 'openrouter' | 'together' | 'custom' {
     return this.strategy.name;
   }
 

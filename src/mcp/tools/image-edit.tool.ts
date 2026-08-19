@@ -122,6 +122,8 @@ Returns: Base64-encoded edited image(s).`,
         output_format: params.output_format,
         output_compression: params.output_compression,
         input_fidelity: params.input_fidelity,
+        resolution: params.resolution,
+        aspect_ratio: params.aspect_ratio,
       });
 
       const savedPaths = await Promise.all(

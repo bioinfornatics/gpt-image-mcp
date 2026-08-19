@@ -40,7 +40,7 @@ Use this before generating images to confirm your credentials are correct.`,
     if (!parseResult.success) {
       return {
         isError: true,
-        content: [{ type: 'text' as const, text: 'Invalid parameters: provider must be "openai" or "azure"' }],
+        content: [{ type: 'text' as const, text: 'Invalid parameters: provider must be "openai", "azure", or "openrouter"' }],
       };
     }
 

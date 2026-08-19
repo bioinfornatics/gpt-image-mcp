@@ -8,7 +8,7 @@ import type { GenerateParams, EditParams } from '../provider.interface';
  */
 export interface ProviderStrategy {
   /** Provider name returned by IImageProvider.name */
-  readonly name: 'openai' | 'azure' | 'together' | 'custom';
+  readonly name: 'openai' | 'azure' | 'openrouter' | 'together' | 'custom';
 
   /** Prefix for log messages, e.g. "[Azure]" or "" */
   readonly logPrefix: string;

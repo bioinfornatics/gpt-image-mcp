@@ -65,6 +65,12 @@ describe('parseCliArgs', () => {
       .toBe('https://example.services.ai.azure.com/api/projects/project-a');
   });
 
+  it('parses --model into overrides.defaultModel', () => {
+    const result = parseCliArgs(['--model', 'google/gemini-3.1-flash-image']);
+    expect(result.valid).toBe(true);
+    expect(result.overrides.defaultModel).toBe('google/gemini-3.1-flash-image');
+  });
+
   it('parses --deployment value into overrides.deployment', () => {
     const result = parseCliArgs(['--deployment', 'gpt-image-2']);
     expect(result.valid).toBe(true);

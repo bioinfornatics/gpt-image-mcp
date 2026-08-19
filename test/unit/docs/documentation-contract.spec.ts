@@ -40,7 +40,7 @@ describe('documentation contracts', () => {
   });
 
   it('ships standalone copy-ready Goose examples', () => {
-    for (const path of ['examples/goose-openai.yaml', 'examples/goose-azure-foundry.yaml', 'examples/goose-http.yaml']) {
+    for (const path of ['examples/goose-openai.yaml', 'examples/goose-azure-foundry.yaml', 'examples/goose-http.yaml', 'examples/goose-openrouter.yaml']) {
       expect(read(path)).toContain('extensions:');
     }
   });

@@ -69,6 +69,7 @@ async function dispatchCli(argv: readonly string[]): Promise<number | undefined>
   if (overrides.baseUrl) process.env['IMAGE_BASE_URL'] = overrides.baseUrl;
   if (overrides.foundryProjectEndpoint) process.env['IMAGE_FOUNDRY_PROJECT_ENDPOINT'] = overrides.foundryProjectEndpoint;
   if (overrides.deployment) process.env['IMAGE_DEPLOYMENT'] = overrides.deployment;
+  if (overrides.defaultModel) process.env['IMAGE_DEFAULT_MODEL'] = overrides.defaultModel;
   if (parsed.overrides.transport) process.env['IMAGE_MCP_TRANSPORT'] = parsed.overrides.transport;
   if (parsed.overrides.port) process.env['IMAGE_PORT'] = parsed.overrides.port;
   if (parsed.overrides.logLevel) process.env['IMAGE_LOG_LEVEL'] = parsed.overrides.logLevel;

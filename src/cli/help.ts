@@ -29,13 +29,14 @@ Options:
   --show-config-sources         Like --check-config, but also print provenance
                                  (which source supplied each value) and exit
 
-  --provider <name>             Image provider: openai | azure | together | custom
+  --provider <name>             Image provider: openai | azure | openrouter | together | custom
                                  (azure is inferred for an exact https://<resource>.services.ai.azure.com root)
   --base-url <url>               Provider inference endpoint (IMAGE_BASE_URL)
   --foundry-project-endpoint <url>
                                  Azure Foundry project endpoint used for deployment discovery
                                  (IMAGE_FOUNDRY_PROJECT_ENDPOINT)
   --deployment <name>           Azure default deployment (IMAGE_DEPLOYMENT)
+  --model <id>                  Default model for non-Azure providers (IMAGE_DEFAULT_MODEL)
   --transport <mode>            Transport: http | stdio (IMAGE_MCP_TRANSPORT)
   --port <number>                HTTP listen port (IMAGE_PORT)
   --log-level <level>           debug | info | warn | error (IMAGE_LOG_LEVEL)

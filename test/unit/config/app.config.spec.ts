@@ -44,6 +44,17 @@ describe('AppConfig validation', () => {
     });
   });
 
+  describe('OpenRouter provider', () => {
+    it('accepts OpenRouter with a key and defaults its base URL', () => {
+      const result = validateConfig({ IMAGE_PROVIDER: 'openrouter', IMAGE_API_KEY: 'or-key', IMAGE_MCP_TRANSPORT: 'stdio' });
+      expect(result.IMAGE_BASE_URL).toBe('https://openrouter.ai/api/v1');
+    });
+
+    it('requires an API key', () => {
+      expect(() => validateConfig({ IMAGE_PROVIDER: 'openrouter', IMAGE_MCP_TRANSPORT: 'stdio' })).toThrow(/IMAGE_API_KEY/);
+    });
+  });
+
   describe('Azure provider', () => {
     const baseAzure = {
       IMAGE_PROVIDER: 'azure',

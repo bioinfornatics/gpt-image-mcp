@@ -184,6 +184,8 @@ Error cases: invalid model name, prompt too long, n>10, provider auth failure.`,
         output_format: params.output_format,
         output_compression: params.output_compression,
         moderation: resolveModeration(params.moderation),
+        resolution: params.resolution,
+        aspect_ratio: params.aspect_ratio,
       };
       let fallbackUsed = false;
       let fallbackReason: string | undefined;

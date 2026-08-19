@@ -9,6 +9,7 @@ import { TogetherStrategy } from './strategies/together.strategy';
 import { CustomStrategy } from './strategies/custom.strategy';
 import { AzureOpenAIClientFactory, DefaultAzureCredentialProviderFactory } from './azure-openai-client.factory';
 import { AzureMultiDeploymentProvider } from './azure-multi-deployment.provider';
+import { OpenRouterImageProvider } from './openrouter.provider';
 import type { AppConfig } from '../config/app.config';
 
 @Module({
@@ -22,6 +23,9 @@ import type { AppConfig } from '../config/app.config';
         if (ip.name === 'azure') {
           return new AzureMultiDeploymentProvider({ config: ip, clients: azureClients });
         }
+        if (ip.name === 'openrouter') return new OpenRouterImageProvider({
+          apiKey: ip.apiKey!, baseUrl: ip.baseUrl, defaultModel: config.get<AppConfig['defaults']>('defaults')?.model,
+        });
         if (ip.name === 'together') return new OpenAICompatibleProvider(new OpenAI({ baseURL: 'https://api.together.xyz/v1', apiKey: ip.apiKey! }), new TogetherStrategy());
         if (ip.name === 'custom') return new OpenAICompatibleProvider(new OpenAI({ baseURL: ip.baseUrl, apiKey: ip.apiKey || 'none' }), new CustomStrategy());
         return new OpenAICompatibleProvider(new OpenAI({ apiKey: ip.apiKey!, baseURL: ip.baseUrl }), new OpenAIStrategy());
