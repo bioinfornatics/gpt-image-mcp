@@ -44,7 +44,8 @@ describe('ImageStorageService', () => {
     expect(await service.getOutputDirectory()).toBe(path.join(os.homedir(), 'Images', 'image-mcp'));
   });
 
-  it('encodes file paths as file URIs', () => {
+  it('encodes POSIX file paths as file URIs', () => {
+    if (process.platform === 'win32') return;
     expect(pathToFileUri('/tmp/My Image.png')).toBe('file:///tmp/My%20Image.png');
   });
 
