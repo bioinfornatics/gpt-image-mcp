@@ -172,48 +172,27 @@ All text fields (`prompt`) passed to the OpenAI API are potentially adversariall
 - An upstream LLM constructing a harmful prompt — rely on OpenAI's content moderation.
 - Jailbreaking instructions embedded in user messages — out of scope for this server.
 
-### 3.2 Path Traversal
+### 3.2 Workspace Path and Link Safety
 
-The `save_to_workspace` field accepts a relative path where generated images will be saved. This field is a primary path-traversal vector.
+`save_to_workspace` is a boolean. The caller cannot choose a filename or relative output path. When enabled, the server obtains fresh MCP Roots and creates a generated-name file under `<root>/generated/`.
 
-**Validation rules (all must pass):**
+Security controls:
 
-```typescript
-import path from 'node:path';
+- only local `file:` roots are accepted; non-local authorities, UNC/network shares, HTTP and SMB are rejected;
+- `file:///C:/...` and `file://localhost/C:/...` are normalized with Windows drive semantics;
+- `IMAGE_WORKSPACE_ALLOWED_ROOTS` is split with the platform delimiter (`:` on POSIX, `;` on Windows);
+- lexical confinement uses `path.relative`, including cross-drive and sibling-prefix rejection;
+- the root and `generated` directory are checked with `lstat` and `realpath`;
+- pre-existing symlinks and Windows junctions are rejected;
+- destination files are created exclusively (`wx`, mode `0600`) with random UUID names.
 
-function validateSavePath(input: string, workspaceRoot: string): string {
-  // 1. Reject null bytes
-  if (input.includes('\0')) throw new Error('Invalid path: null byte');
+A portable Node implementation cannot completely eliminate a concurrent local TOCTOU attack by a process that can replace directories between validation and open. Workspace roots should therefore be owned by the server user and not writable by untrusted local users.
 
-  // 2. Resolve against workspace root
-  const resolved = path.resolve(workspaceRoot, input);
+Response semantics:
 
-  // 3. Must remain within workspace root
-  if (!resolved.startsWith(workspaceRoot + path.sep) &&
-      resolved !== workspaceRoot) {
-    throw new Error('Path traversal attempt rejected');
-  }
-
-  // 4. Extension allowlist
-  const ext = path.extname(resolved).toLowerCase();
-  const allowed = ['.png', '.jpg', '.jpeg', '.webp'];
-  if (!allowed.includes(ext)) {
-    throw new Error(`Disallowed file extension: ${ext}`);
-  }
-
-  return resolved;
-}
-```
-
-**Rejected patterns:**
-
-| Input | Reason |
-|-------|--------|
-| `../../etc/passwd` | Traverses above workspace root |
-| `../secrets/.env` | Traverses above workspace root |
-| `foo\0bar.png` | Null byte injection |
-| `image.exe` | Disallowed extension |
-| `/absolute/path.png` | Absolute path outside workspace |
+- `saved_to`: absolute path of the automatic persisted copy;
+- `file_uri`: canonical `file:` URI for `saved_to`;
+- `workspace_copy`: optional absolute path of the additional MCP Roots copy.
 
 ### 3.3 Image File Input Validation
 
@@ -473,36 +452,12 @@ MCP Roots exposes the set of workspace directories the MCP host has granted to t
 
 **Security rules:**
 
-1. **Validate every `save_to_workspace` path against the granted roots** — never save outside granted roots.
+1. **Treat `save_to_workspace` as a boolean** and generate filenames server-side under a granted root.
 2. **Roots must be absolute paths** — reject any root that is not absolute.
 3. **Re-validate roots on each request** — roots may change between requests; do not cache indefinitely.
 4. **If no roots are granted**, disable file-save functionality entirely (return an error rather than guessing a path).
 
-```typescript
-async function validateAgainstRoots(
-  savePath: string,
-  mcpRoots: Root[]
-): Promise<string> {
-  const absoluteRoots = mcpRoots
-    .map(r => r.uri.replace('file://', ''))
-    .filter(r => path.isAbsolute(r));
-
-  const resolved = path.resolve(savePath);
-
-  const isAllowed = absoluteRoots.some(root =>
-    resolved.startsWith(root + path.sep) || resolved === root
-  );
-
-  if (!isAllowed) {
-    throw new McpError(
-      ErrorCode.InvalidParams,
-      `Save path is outside all granted workspace roots`
-    );
-  }
-
-  return resolved;
-}
-```
+The implementation canonicalizes local file URIs, validates the server allowlist, rejects links/junctions, and opens the generated file exclusively.
 
 ---
 
@@ -515,7 +470,7 @@ Every CI pipeline run (PR and main branch push) must include:
 ```yaml
 # .github/workflows/ci.yml
 - name: Security audit
-  run: npm audit --audit-level=high
+  run: bun audit --audit-level=high
   # Fails CI if any HIGH or CRITICAL vulnerabilities found
 ```
 
@@ -527,7 +482,7 @@ If a Docker image is built, scan it with [Trivy](https://github.com/aquasecurity
 
 ```yaml
 - name: Trivy vulnerability scan
-  uses: aquasecurity/trivy-action@master
+  uses: aquasecurity/trivy-action@<immutable-release-sha>
   with:
     image-ref: image-mcp:${{ github.sha }}
     format: table
@@ -538,13 +493,12 @@ If a Docker image is built, scan it with [Trivy](https://github.com/aquasecurity
 
 ### 7.3 Pinned Lockfile
 
-- `package-lock.json` **must** be committed to the repository.
-- All CI installs must use `npm ci` (not `npm install`) to ensure lockfile integrity.
-- `package-lock.json` must not be in `.gitignore`.
+- `bun.lock` must be committed.
+- CI installs use `bun install --frozen-lockfile` to enforce lockfile integrity.
 
 ```bash
 # Correct CI install
-npm ci --ignore-scripts
+bun install --frozen-lockfile
 ```
 
 `--ignore-scripts` prevents malicious postinstall scripts from running in CI.
@@ -562,7 +516,7 @@ Use `npm audit fix` for automated patches; review diffs before merging.
 
 ### 7.5 Supply Chain Integrity
 
-- Enable `npm provenance` for published packages.
+- Enable npm provenance after npmjs Trusted Publishing is configured; until then npmjs publication remains explicitly gated.
 - Consider `npm shrinkwrap` for deployment artifacts.
 - Review new dependencies for: download count, maintainer reputation, license compatibility.
 
@@ -737,7 +691,7 @@ The following table maps relevant [OWASP Top 10 (2021)](https://owasp.org/www-pr
 | A05 | Security Misconfiguration | ✅ Yes | No default credentials; startup warnings for missing keys; `.gitignore` rules; `--ignore-scripts` in CI |
 | A06 | Vulnerable & Outdated Components | ✅ Yes | `npm audit` in CI; Trivy scan; pinned lockfile; rotation schedule |
 | A07 | Identification & Authentication Failures | ✅ Yes | Bearer token auth; rate limiting; constant-time comparison |
-| A08 | Software & Data Integrity Failures | ✅ Yes | Pinned lockfile (`npm ci`); npm provenance; supply chain review |
+| A08 | Software & Data Integrity Failures | ✅ Yes | Pinned `bun.lock`, frozen installs, immutable action SHAs, audit and container scanning |
 | A09 | Security Logging & Monitoring Failures | ✅ Yes | Secret masking in logs; access log requirements; incident response procedures |
 | A10 | Server-Side Request Forgery (SSRF) | ✅ Yes | URL scheme allowlist; block `169.254.0.0/16`; reject `file://` and `localhost` image URLs |
 

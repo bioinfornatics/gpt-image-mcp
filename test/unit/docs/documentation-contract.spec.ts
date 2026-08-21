@@ -9,6 +9,7 @@ describe('documentation contracts', () => {
   const readme = read('README.md');
   const api = read('docs/API.md');
   const goose = read('docs/HOWTO_GOOSE.md');
+  const security = read('docs/SECURITY.md');
 
   it('matches the package Node.js engine', () => {
     expect(readme).toContain('Node.js ≥ 20');
@@ -37,6 +38,16 @@ describe('documentation contracts', () => {
   it('does not recommend historical package downgrades in the current Goose guide', () => {
     expect(goose).not.toContain('to `@0.1.2`');
     expect(goose).toContain('Validate the configured Azure provider');
+  });
+
+  it('documents local-only Roots, link protection, TOCTOU limits, and response path semantics', () => {
+    for (const term of ['IMAGE_WORKSPACE_ALLOWED_ROOTS', 'symlink', 'junction', 'TOCTOU']) {
+      expect(security).toContain(term);
+    }
+    expect(readme).toContain('`saved_to`');
+    expect(readme).toContain('`file_uri`');
+    expect(readme).toContain('`workspace_copy`');
+    expect(readme).toContain('UNC/network authorities');
   });
 
   it('ships standalone copy-ready Goose examples', () => {

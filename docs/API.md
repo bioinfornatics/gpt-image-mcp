@@ -744,3 +744,7 @@ Use `IMAGE_PROVIDER=openrouter` or the canonical `https://openrouter.ai/api/v1` 
 ```
 
 For image-to-image, use `image_edit`; the provider converts `image` or `images[]` to OpenRouter `input_references`. Masks, `input_fidelity`, and image variation are not supported by this adapter.
+
+## Metrics rename migration
+
+The provider-neutral rename changed the Prometheus prefix from `gpt_image_mcp_` to `image_mcp_` in v0.2.0. Update dashboards and alerts to the new metric names; the old names are not emitted in parallel to avoid double counting.

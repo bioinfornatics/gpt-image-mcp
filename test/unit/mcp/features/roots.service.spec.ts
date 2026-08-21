@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { pathToFileURL } from 'url';
 import { RootsService } from '../../../../src/mcp/features/roots.service';
 
 // Helper: create a RootsService with an optional IMAGE_WORKSPACE_ALLOWED_ROOTS override
@@ -86,6 +87,16 @@ describe('RootsService', () => {
       expect((await fs.stat(filePath!)).isFile()).toBe(true);
     });
 
+    it('saves through a native file URI without duplicating a Windows drive', async () => {
+      const mockServer = { listRoots: jest.fn().mockResolvedValue({ roots: [{ uri: pathToFileURL(tmpDir).href }] }) };
+      const filePath = await service.saveImageToWorkspace(mockServer as any, Buffer.from('native').toString('base64'));
+      expect(filePath).not.toBeNull();
+      expect(path.isAbsolute(filePath!)).toBe(true);
+      expect(filePath!).toStartWith(path.join(tmpDir, 'generated'));
+      expect(filePath!).not.toMatch(/[A-Za-z]:\\[A-Za-z]:\\/);
+      expect((await fs.readFile(filePath!)).toString()).toBe('native');
+    });
+
     it('should create generated/ subdirectory', async () => {
       const mockServer = {
         listRoots: jest.fn().mockResolvedValue({
@@ -123,6 +134,21 @@ describe('RootsService', () => {
       );
       expect(filePath).not.toBeNull();
       expect(filePath!.endsWith('.webp')).toBe(true);
+    });
+
+    it('should reject a generated directory that is a symlink or junction', async () => {
+      const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-roots-outside-'));
+      const generated = path.join(tmpDir, 'generated');
+      try {
+        await fs.symlink(outside, generated, process.platform === 'win32' ? 'junction' : 'dir');
+        const mockServer = { listRoots: jest.fn().mockResolvedValue({ roots: [{ uri: pathToFileURL(tmpDir).href }] }) };
+        const filePath = await service.saveImageToWorkspace(mockServer as any, Buffer.from('blocked').toString('base64'));
+        expect(filePath).toBeNull();
+        expect(await fs.readdir(outside)).toEqual([]);
+      } finally {
+        await fs.rm(generated, { recursive: true, force: true });
+        await fs.rm(outside, { recursive: true, force: true });
+      }
     });
 
     it('should use server.listRoots not server.request when saving', async () => {
@@ -165,6 +191,23 @@ describe('RootsService', () => {
         Buffer.from('x').toString('base64'),
       );
       expect(filePath).not.toBeNull();
+    });
+
+    it('should reject a symlinked root whose real target is outside the allowlist', async () => {
+      const allowed = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-roots-allowed-'));
+      const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-roots-outside-'));
+      const link = path.join(allowed, 'linked-root');
+      try {
+        await fs.symlink(outside, link, process.platform === 'win32' ? 'junction' : 'dir');
+        const svc = makeService(allowed);
+        const mockServer = { listRoots: jest.fn().mockResolvedValue({ roots: [{ uri: pathToFileURL(link).href }] }) };
+        expect(await svc.saveImageToWorkspace(mockServer as any, 'ZmFrZQ==')).toBeNull();
+        expect(await fs.readdir(outside)).toEqual([]);
+      } finally {
+        await fs.rm(link, { recursive: true, force: true });
+        await fs.rm(allowed, { recursive: true, force: true });
+        await fs.rm(outside, { recursive: true, force: true });
+      }
     });
 
     it('should reject a root outside the allowlist', async () => {

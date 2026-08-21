@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Server } from '@modelcontextprotocol/server';
 import * as fs from 'fs/promises';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { maskSecret } from '../../security/sanitise';
 import { fileUriToLocalPath, isPathWithin } from './path-utils';
@@ -80,7 +81,7 @@ export class RootsService {
       }
 
       // H6: validate root against server-side allowlist
-      if (!this.isRootAllowed(rootPath)) {
+      if (!await this.isRootAllowed(rootPath)) {
         this.logger.warn(
           `Root rejected by allowlist: ${rootPath}. ` +
           `Set IMAGE_WORKSPACE_ALLOWED_ROOTS to permit it.`,
@@ -97,11 +98,24 @@ export class RootsService {
 
   // ─── private ──────────────────────────────────────────────────────────────
 
-  private isRootAllowed(rootPath: string): boolean {
+  private async isRootAllowed(rootPath: string): Promise<boolean> {
     // No allowlist configured → accept all roots (single-user / dev mode)
     if (this.allowedRootPrefixes.length === 0) return true;
 
-    return this.allowedRootPrefixes.some((prefix) => isPathWithin(prefix, rootPath));
+    try {
+      const rootReal = await fs.realpath(rootPath);
+      for (const prefix of this.allowedRootPrefixes) {
+        try {
+          const prefixReal = await fs.realpath(prefix);
+          if (isPathWithin(prefixReal, rootReal)) return true;
+        } catch {
+          // Ignore unavailable allowlist entries; they grant no access.
+        }
+      }
+    } catch {
+      return false;
+    }
+    return false;
   }
 
   private async writeImage(
@@ -111,20 +125,54 @@ export class RootsService {
   ): Promise<string | null> {
     // Timestamp-only filename — no user input. Resolve and validate before
     // creating any directory so malformed roots cannot create side effects.
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `img_${timestamp}.${format}`;
     const rootResolved = path.resolve(rootPath);
-    const resolved = path.resolve(rootResolved, 'generated', filename);
-    if (!isPathWithin(rootResolved, resolved) || resolved === rootResolved) {
-      this.logger.warn(`Path traversal blocked: ${resolved}`);
+    let rootReal: string;
+    try {
+      const rootStat = await fs.lstat(rootResolved);
+      if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) return null;
+      rootReal = await fs.realpath(rootResolved);
+    } catch (error) {
+      this.logger.warn(`Workspace root unavailable: ${maskSecret(String(error))}`);
       return null;
     }
 
-    await fs.mkdir(path.dirname(resolved), { recursive: true });
-    const buffer = Buffer.from(b64Data.replace(/^data:[^;]+;base64,/, ''), 'base64');
-    await fs.writeFile(resolved, buffer);
-    this.logger.log(`Image saved: ${resolved}`);
-    return resolved;
+    const generated = path.join(rootReal, 'generated');
+    try {
+      await fs.mkdir(generated, { mode: 0o700 });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        this.logger.warn(`Cannot create workspace directory: ${maskSecret(String(error))}`);
+        return null;
+      }
+    }
+
+    try {
+      const generatedStat = await fs.lstat(generated);
+      if (!generatedStat.isDirectory() || generatedStat.isSymbolicLink()) {
+        this.logger.warn('Workspace generated directory is a symlink/junction or not a directory.');
+        return null;
+      }
+      const generatedReal = await fs.realpath(generated);
+      if (!isPathWithin(rootReal, generatedReal) || generatedReal === rootReal) return null;
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `img_${timestamp}_${randomUUID()}.${format}`;
+      const resolved = path.resolve(generatedReal, filename);
+      if (!isPathWithin(generatedReal, resolved) || resolved === generatedReal) return null;
+
+      const buffer = Buffer.from(b64Data.replace(/^data:[^;]+;base64,/, ''), 'base64');
+      const handle = await fs.open(resolved, 'wx', 0o600);
+      try {
+        await handle.writeFile(buffer);
+      } finally {
+        await handle.close();
+      }
+      this.logger.log(`Image saved: ${resolved}`);
+      return resolved;
+    } catch (error) {
+      this.logger.warn(`Unsafe or unavailable workspace path: ${maskSecret(String(error))}`);
+      return null;
+    }
   }
 
   private uriToPath(uri: string): string | null {

@@ -138,6 +138,8 @@ Azure users can choose among **API key**, **Azure CLI**, and **Microsoft Entra O
 
 Every generated, edited, or variation image is returned as native MCP image content and persisted automatically. The default directory is the freedesktop `XDG_PICTURES_DIR/image-mcp` on Linux (falling back to `~/Images/image-mcp`), `~/Pictures/image-mcp` on macOS, and `%USERPROFILE%\\Pictures\\image-mcp` on Windows. `save_to_workspace: true` additionally creates a copy in the MCP workspace.
 
+Response paths are explicit: `saved_to` is the absolute automatically persisted file, `file_uri` is the canonical `file:` URI for that same file, and `workspace_copy` is present only when `save_to_workspace: true` successfully creates an additional copy under an MCP Root. `IMAGE_WORKSPACE_ALLOWED_ROOTS` uses `:` between POSIX roots and `;` between Windows roots. Only local file roots are supported; UNC/network authorities such as `file://server/share` are rejected.
+
 ---
 
 ## MCP Client Setup

@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { isPathWithin } from '../mcp/features/path-utils';
 
 /**
  * Masks secrets in strings to prevent accidental logging.
@@ -75,11 +76,15 @@ export function detectForgeryIntent(prompt: string): boolean {
 /**
  * Validates a file path is within an allowed root and has no traversal.
  */
-export function validateFilePath(filePath: string, allowedRoot: string): string {
-  const resolved = path.resolve(filePath);
-  const root = path.resolve(allowedRoot);
+export function validateFilePath(
+  filePath: string,
+  allowedRoot: string,
+  pathApi: typeof path.posix | typeof path.win32 = path,
+): string {
+  const resolved = pathApi.resolve(filePath);
+  const root = pathApi.resolve(allowedRoot);
 
-  if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+  if (!isPathWithin(root, resolved, pathApi)) {
     throw new Error(
       `Path traversal detected: "${filePath}" is outside the allowed workspace root.`
     );

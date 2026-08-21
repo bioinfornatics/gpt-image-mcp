@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { maskSecret, sanitisePrompt, validateFilePath, detectForgeryIntent } from '../../../src/security/sanitise';
 
 describe('maskSecret', () => {
@@ -107,6 +108,15 @@ describe('validateFilePath', () => {
     const result = validateFilePath('/workspace/generated/img.png', '/workspace');
     expect(result).toContain('/workspace');
     expect(result).toContain('img.png');
+  });
+
+  it('uses the shared Windows containment semantics', () => {
+    expect(validateFilePath('c:\\Workspace\\generated\\img.png', 'C:\\workspace', path.win32))
+      .toBe('c:\\Workspace\\generated\\img.png');
+    expect(() => validateFilePath('C:\\workspace-other\\img.png', 'C:\\workspace', path.win32))
+      .toThrow(/path traversal/i);
+    expect(() => validateFilePath('D:\\img.png', 'C:\\workspace', path.win32))
+      .toThrow(/path traversal/i);
   });
 });
 
