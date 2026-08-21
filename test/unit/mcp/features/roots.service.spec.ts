@@ -92,7 +92,8 @@ describe('RootsService', () => {
       const filePath = await service.saveImageToWorkspace(mockServer as any, Buffer.from('native').toString('base64'));
       expect(filePath).not.toBeNull();
       expect(path.isAbsolute(filePath!)).toBe(true);
-      expect(filePath!).toStartWith(path.join(tmpDir, 'generated'));
+      const generatedReal = await fs.realpath(path.join(tmpDir, 'generated'));
+      expect(path.relative(generatedReal, filePath!).startsWith('..')).toBe(false);
       expect(filePath!).not.toMatch(/[A-Za-z]:\\[A-Za-z]:\\/);
       expect((await fs.readFile(filePath!)).toString()).toBe('native');
     });
@@ -124,7 +125,7 @@ describe('RootsService', () => {
     it('should handle file://localhost/path URI', async () => {
       const mockServer = {
         listRoots: jest.fn().mockResolvedValue({
-          roots: [{ uri: `file://localhost${tmpDir}` }],
+          roots: [{ uri: new URL(pathToFileURL(tmpDir).href.replace('file:///', 'file://localhost/')).href }],
         }),
       };
       const filePath = await service.saveImageToWorkspace(
@@ -253,7 +254,8 @@ describe('RootsService', () => {
         Buffer.from('x').toString('base64'),
       );
       expect(filePath).not.toBeNull();
-      expect(filePath!.startsWith(tmpDir)).toBe(true);
+      const tmpReal = await fs.realpath(tmpDir);
+      expect(path.relative(tmpReal, filePath!).startsWith('..')).toBe(false);
     });
 
     it('should reject non-file:// URIs (http, smb, etc.)', async () => {

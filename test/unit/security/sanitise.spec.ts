@@ -100,12 +100,12 @@ describe('sanitisePrompt', () => {
 describe('validateFilePath', () => {
   it('should throw on path traversal attempt', () => {
     expect(() =>
-      validateFilePath('/workspace/../../etc/passwd', '/workspace'),
+      validateFilePath('/workspace/../../etc/passwd', '/workspace', path.posix),
     ).toThrow(/path traversal/i);
   });
 
   it('should accept valid path within root', () => {
-    const result = validateFilePath('/workspace/generated/img.png', '/workspace');
+    const result = validateFilePath('/workspace/generated/img.png', '/workspace', path.posix);
     expect(result).toContain('/workspace');
     expect(result).toContain('img.png');
   });
