@@ -10,6 +10,7 @@ import { PROVIDER_TOKEN } from '../../../src/providers/provider.interface';
 import { ElicitationService } from '../../../src/mcp/features/elicitation.service';
 import { SamplingService } from '../../../src/mcp/features/sampling.service';
 import { RootsService } from '../../../src/mcp/features/roots.service';
+import packageJson from '../../../package.json';
 
 const noopTool = { register: jest.fn() };
 const mockProvider = { name: 'openai', generate: jest.fn(), edit: jest.fn(), variation: jest.fn(), validate: jest.fn() };
@@ -47,8 +48,11 @@ describe('McpServerService', () => {
     void service.server;
   });
 
-  it('should create McpServer with correct name and version', () => {
-    expect(service.server).toBeDefined();
+  it('should create McpServer with package name and version', () => {
+    const inner = service.server.server as unknown as {
+      _serverInfo: { name: string; version: string };
+    };
+    expect(inner._serverInfo).toEqual({ name: 'image-mcp', version: packageJson.version });
   });
 
   it('should create isolated server instances for stateless HTTP requests', () => {

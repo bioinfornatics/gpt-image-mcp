@@ -5,6 +5,7 @@ import { ImageEditTool } from './tools/image-edit.tool';
 import { ImageVariationTool } from './tools/image-variation.tool';
 import { ProviderListTool } from './tools/provider-list.tool';
 import { ProviderValidateTool } from './tools/provider-validate.tool';
+import { getVersion } from '../cli/help';
 
 
 @Injectable()
@@ -23,7 +24,7 @@ export class McpServerService {
   /** Create an isolated MCP server for one stateless HTTP request. */
   createServer(): McpServer {
     const server = new McpServer(
-      { name: 'image-mcp', version: '0.1.0' },
+      { name: 'image-mcp', version: getVersion() },
       { capabilities: this.capabilities },
     );
     this.registerTools(server);

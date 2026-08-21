@@ -3,7 +3,7 @@
 > Formerly **gpt-image-mcp**. The npm package is now `@bioinfornatics/image-mcp`; the legacy `gpt-image-mcp` executable remains as a temporary alias. Existing `IMAGE_*` environment variables are unchanged.
 
 > **MCP server** for AI image generation via **OpenAI** and **Azure OpenAI** gpt-image-* models.  
-> Built with **Bun + NestJS** · **Streamable HTTP + stdio** transports · **305 tests, 92 % coverage**
+> Built with **Bun + NestJS** · **Streamable HTTP + stdio** transports · **811 tests, 92 % coverage**
 
 ---
 

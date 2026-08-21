@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.1] — 2026-08-21
+
+### Fixed
+- Advertise the installed package version during MCP initialization instead of the stale `0.1.0` protocol version.
+- Preserve Windows drive paths in MCP Roots and compare canonical runner paths reliably.
+- Harden workspace writes against symlink and junction escapes.
+
+### Changed
+- Pin CI actions by immutable commit and gate npmjs publication until package-scope authorization is enabled.
+- Refresh the documented test count to 811 passing tests.
+
 ## [0.2.0] — 2026-08-20
 
 ### Added
