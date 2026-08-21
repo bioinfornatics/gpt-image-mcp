@@ -3,6 +3,7 @@ import type { Server } from '@modelcontextprotocol/server';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { maskSecret } from '../../security/sanitise';
+import { fileUriToLocalPath, isPathWithin } from './path-utils';
 
 export interface WorkspaceRoot {
   uri: string;
@@ -15,10 +16,12 @@ export class RootsService {
 
   /**
    * Server-side allowlist of permitted workspace root prefixes.
-   * Read from IMAGE_WORKSPACE_ALLOWED_ROOTS (colon-separated absolute paths).
+   * Read from IMAGE_WORKSPACE_ALLOWED_ROOTS using the platform path delimiter
+   * (`:` on POSIX, `;` on Windows).
    *
    * Examples:
    *   IMAGE_WORKSPACE_ALLOWED_ROOTS=/home/user/workspace:/home/user/documents
+   *   IMAGE_WORKSPACE_ALLOWED_ROOTS=C:\\workspace;D:\\documents
    *   IMAGE_WORKSPACE_ALLOWED_ROOTS=/tmp/generated        (single path)
    *
    * If the env var is empty or unset, ALL file:// roots are accepted
@@ -29,7 +32,7 @@ export class RootsService {
   private readonly allowedRootPrefixes: string[] = (
     process.env['IMAGE_WORKSPACE_ALLOWED_ROOTS'] ?? ''
   )
-    .split(':')
+    .split(path.delimiter)
     .map((p) => p.trim())
     .filter(Boolean)
     .map((p) => path.resolve(p)); // normalise (remove trailing slash, resolve ..)
@@ -98,12 +101,7 @@ export class RootsService {
     // No allowlist configured → accept all roots (single-user / dev mode)
     if (this.allowedRootPrefixes.length === 0) return true;
 
-    const normalised = path.resolve(rootPath);
-    return this.allowedRootPrefixes.some(
-      (prefix) =>
-        normalised === prefix ||
-        normalised.startsWith(prefix + path.sep),
-    );
+    return this.allowedRootPrefixes.some((prefix) => isPathWithin(prefix, rootPath));
   }
 
   private async writeImage(
@@ -111,37 +109,25 @@ export class RootsService {
     b64Data: string,
     format: 'png' | 'jpeg' | 'webp',
   ): Promise<string | null> {
-    // Create generated/ subdirectory
-    const outputDir = path.join(rootPath, 'generated');
-    await fs.mkdir(outputDir, { recursive: true });
-
-    // Timestamp-only filename — no user input
+    // Timestamp-only filename — no user input. Resolve and validate before
+    // creating any directory so malformed roots cannot create side effects.
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `img_${timestamp}.${format}`;
-    const filePath = path.join(outputDir, filename);
-
-    // Final path-traversal guard
-    const resolved = path.resolve(filePath);
     const rootResolved = path.resolve(rootPath);
-    if (!resolved.startsWith(rootResolved + path.sep)) {
-      this.logger.warn(`Path traversal blocked: ${filePath}`);
+    const resolved = path.resolve(rootResolved, 'generated', filename);
+    if (!isPathWithin(rootResolved, resolved) || resolved === rootResolved) {
+      this.logger.warn(`Path traversal blocked: ${resolved}`);
       return null;
     }
 
+    await fs.mkdir(path.dirname(resolved), { recursive: true });
     const buffer = Buffer.from(b64Data.replace(/^data:[^;]+;base64,/, ''), 'base64');
-    await fs.writeFile(filePath, buffer);
-    this.logger.log(`Image saved: ${filePath}`);
-    return filePath;
+    await fs.writeFile(resolved, buffer);
+    this.logger.log(`Image saved: ${resolved}`);
+    return resolved;
   }
 
   private uriToPath(uri: string): string | null {
-    if (!uri.startsWith('file://')) return null;
-    // Handle file:///path (triple slash) and file://host/path
-    const withoutScheme = uri.slice('file://'.length);
-    // Strip optional localhost host
-    const p = withoutScheme.startsWith('localhost')
-      ? withoutScheme.slice('localhost'.length)
-      : withoutScheme;
-    return decodeURIComponent(p) || null;
+    return fileUriToLocalPath(uri);
   }
 }

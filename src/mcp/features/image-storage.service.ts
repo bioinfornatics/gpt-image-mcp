@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { getXdgPaths } from '../../config/xdg-paths';
 import { decodeImageData, type ImageFormat } from '../../providers/image-media';
+import { localPathToFileUri } from './path-utils';
 export type { ImageFormat } from '../../providers/image-media';
 
 @Injectable()
@@ -67,6 +68,5 @@ export class ImageStorageService {
 export { imageMimeType } from '../../providers/image-media';
 
 export function pathToFileUri(filePath: string): string {
-  const normalized = path.resolve(filePath).split(path.sep).map(encodeURIComponent).join('/');
-  return `file://${normalized.startsWith('/') ? '' : '/'}${normalized}`;
+  return localPathToFileUri(filePath);
 }

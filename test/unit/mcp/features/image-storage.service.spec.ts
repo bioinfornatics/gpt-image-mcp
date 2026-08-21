@@ -48,6 +48,11 @@ describe('ImageStorageService', () => {
     expect(pathToFileUri('/tmp/My Image.png')).toBe('file:///tmp/My%20Image.png');
   });
 
+  it('encodes Windows file paths without escaping or duplicating the drive', () => {
+    expect(pathToFileUri('C:\\somewhere\\My Image.png'))
+      .toBe('file:///C:/somewhere/My%20Image.png');
+  });
+
   it('maps jpeg to the standard MIME type', () => {
     expect(imageMimeType('jpeg')).toBe('image/jpeg');
     expect(imageMimeType('png')).toBe('image/png');
